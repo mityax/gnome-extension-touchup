@@ -7,12 +7,14 @@ const Lang = imports.lang;
 
 let gesture = new EdgeDragAction.EdgeDragAction(St.Side.BOTTOM, Shell.ActionMode.NORMAL);
 
-function init() {
+let scale_factor;
 
+function init() {
+    scale_factor = St.ThemeContext.get_for_stage(global.stage).scale_factor * 5;
 }
 
 function enable() {
-    EdgeDragAction.EDGE_THRESHOLD *= St.ThemeContext.get_for_stage(global.stage).scale_factor;
+    EdgeDragAction.EDGE_THRESHOLD *= scale_factor;
     log("Scale factor: " + St.ThemeContext.get_for_stage(global.stage).scale_factor + ", new EDGE_THRESHOLD: " + EdgeDragAction.EDGE_THRESHOLD);
 
     gesture.connect('progress', Lang.bind(this, function(progress) {
@@ -25,6 +27,6 @@ function enable() {
 }
 
 function disable() {
-    EdgeDragAction.EDGE_THRESHOLD /= St.ThemeContext.get_for_stage(global.stage).scale_factor;
+    EdgeDragAction.EDGE_THRESHOLD /= scale_factor;
     global.stage.remove_action(gesture);
 }
