@@ -8,11 +8,12 @@ import {Bin} from '../../jsx/components/containers';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
 import {foregroundColorFor, getStyle, print} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
-//import {WorkspaceAnimation} from "@girs/gnome-shell/ui/workspaceAnimation";
 import BinAlignment = Clutter.BinAlignment;
-
+import {TouchSwipeGesture} from '$src/utils/swipeTracker';
+import Shell from "@girs/shell-13";
 
 const LEFT_EDGE_OFFSET = 100;
+const WS_SWITCH_DIST_THRESHOLD = 200;
 
 export default class NavigationBar extends St.Widget {
     private monitor: Monitor;
@@ -26,7 +27,7 @@ export default class NavigationBar extends St.Widget {
     constructor(monitor: Monitor, mode: 'gestures' | 'buttons') {
         const panelStyle = getStyle(St.Widget, 'panel');
         super({
-            name: 'navigation-bar',
+            name: 'gnometouchNavigationBar',
             style_class: 'bottom-panel solid',
             reactive: true,
             track_hover: true,
@@ -41,13 +42,13 @@ export default class NavigationBar extends St.Widget {
         this.mode = mode;
 
         this.width = monitor.width;
-        this.height = mode == 'gestures' ? 28 : 50;
+        this.height = mode == 'gestures' ? 38 : 60;
         this.x = 0;
         this.y = monitor.height - this.height;
 
         this.add_child(
             <Bin
-                width={200}
+                width={250}
                 height={Math.floor(Math.min(this.height * 0.6, this.height - 2, 7))}
                 style={{
                     backgroundColor: foregroundColorFor(panelStyle.get_background_color() || 'black', 0.9),
@@ -56,38 +57,45 @@ export default class NavigationBar extends St.Widget {
             </Bin>
         );
 
-        //this.gestureDetector = new GestureDetector();
-        //this.connect('event', (e) => this.gestureDetector.pushEvent(e));
-        this.connect('event', (a, b, c) => {
-            //print("Event: ", b.type(), b.get_coords())
+        this._setupHorizontalSwipeAction();
+
+        this._setupBottomDragAction();
+    }
+
+    private _setupHorizontalSwipeAction() {
+        const wsController = Main.wm._workspaceAnimation;
+
+        const gesture = new TouchSwipeGesture();
+        this.add_action_full('workspace-switch-gesture', Clutter.EventPhase.BUBBLE, gesture);
+        gesture.orientation = Clutter.Orientation.HORIZONTAL;
+
+        let initialProgress = 0;
+        let baseDist = 900;
+
+        gesture.connect('begin', (_: any, time: number, xPress: number, yPress: number) => {
+            wsController._switchWorkspaceBegin({
+                confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
+                    baseDist = baseDistance;
+                    initialProgress = progress;
+                }
+            }, Main.layoutManager.primaryIndex); // TODO: supply correct monitor
         });
-
-        //const workspaceAnimationController = new WorkspaceAnimation.WorkspaceAnimationController();
-
-        const swipeAction = new Clutter.SwipeAction({
-            threshold_trigger_distance_y: 10,
-
+        gesture.connect('update', (_: any, time: number, delta, dist) => {
+            wsController._switchWorkspaceUpdate({}, initialProgress + dist / baseDist);
         });
-        this.add_action_full('swipetracker', Clutter.EventPhase.BUBBLE, swipeAction);
-        swipeAction.connect('swipe', (_, actor, direction) => {
-            if (direction == Clutter.SwipeDirection.RIGHT) {
-                /*workspaceAnimationController.animateSwitch(0, to, direction, () => {
-                    this._shellwm.completed_switch_workspace();
-                    this._switchInProgress = false;
-                });*/
-                print("Swipe right");
-            } else if (direction == Clutter.SwipeDirection.LEFT) {
-                print("Swipe left");
-
+        gesture.connect('end', (_: any, time: number, distance: number) => {
+            if (Math.abs(distance) > WS_SWITCH_DIST_THRESHOLD) {
+                distance = baseDist * (distance/Math.abs(distance));
             }
-            print(`Swipe: ${direction}`)
-            return true;
+            wsController._switchWorkspaceEnd({}, 300, initialProgress + Math.round(distance / baseDist));
         });
+    }
 
+    private _setupBottomDragAction() {
         const bottomDragAction = global.stage.get_action('osk')!;
 
         let baseDist = 300;
-        let gestureIsGoingOn= false;
+        let gestureIsGoingOn = false;
 
         PatchManager.patchSignalHandler(bottomDragAction, 'activated', (_action) => {
             if (_action.get_press_coords(0)[0] > LEFT_EDGE_OFFSET) {

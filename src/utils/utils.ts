@@ -28,6 +28,24 @@ export function foregroundColorFor(color: Clutter.Color, opacity: number = 1) {
 }
 
 
+export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.Actor | undefined {
+    let children = topActor.get_children();
+
+    for (let child of children) {
+        if (child.name === name) {
+            return child;
+        } else if (child.get_n_children()) {
+            let result = findActorByName(child, name);
+
+            if (result) {
+                return result;
+            }
+        }
+    }
+}
+
+
+
 export function print(...text: any[]) {
     console.log("GJS:gnometouch:", ...text.map(item => {
         try {
