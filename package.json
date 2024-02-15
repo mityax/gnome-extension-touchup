@@ -1,0 +1,32 @@
+{
+  "name": "gnometouch",
+  "version": "1.0.0",
+  "description": "Enhances various aspects of the GNOME experience when using a touch device.",
+  "author": "mityax",
+  "type": "module",
+  "main": "dist/extension.js",
+  "private": true,
+  "scripts": {
+    "clear": "rm -rf dist",
+    "build:app": "node esbuild.js",
+    "build": "npm run clear && npm run build:app",
+    "validate": "tsc --noEmit",
+    "dev": "npm run build && dbus-run-session -- $(pwd)/run.sh  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
+    "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh"
+  },
+  "devDependencies": {
+    "@girs/clutter-13": "^13.0.0-3.2.6",
+    "@girs/gjs": "^3.2.6",
+    "@girs/gnome-shell": "^45.0.0-beta3",
+    "@girs/gobject-2.0": "^2.78.0-3.2.6",
+    "@girs/st-13": "^13.0.0-3.2.6",
+    "@tsconfig/recommended": "^1.0.3",
+    "adm-zip": "^0.5.10",
+    "better-typescript-lib": "^2.5.0",
+    "esbuild": "^0.18.3",
+    "esbuild-gjs": "^1.0.0",
+    "esbuild-plugin-copy": "^2.1.1",
+    "typescript": "^5.3.2",
+    "core-js": "^3.33.3"
+  }
+}

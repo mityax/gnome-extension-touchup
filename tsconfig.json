@@ -1,0 +1,23 @@
+{
+  "extends": "@tsconfig/recommended/tsconfig.json",
+  "compileOnSave": true,
+  "compilerOptions": {
+    "sourceMap": true,
+    "types": [
+      "@girs/gjs",
+      "@girs/gtk-4.0",
+      "@girs/gjs/dom"
+    ],
+    "paths" : {
+      "$src/*": ["./src/*"]
+    },
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+  },
+  "files": [
+    "src/extension.ts"
+  ],
+}
+

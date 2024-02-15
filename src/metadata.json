@@ -1,8 +1,8 @@
 {
     "name": "Gnome Touch",
-    "description": "Enhances gnome shell on devices with a touch screen by adding addutional, common gestures.",
+    "description": "Enhances various aspects of the GNOME experience when using a touch device.",
     "url": "https://github.com/mityax/gnome-touch",
     "uuid": "gnometouch@mityax.github.com",
-    "shell-version": ["40", "41", "42", "43"],
+    "shell-version": ["45"],
     "gettext-domain": "gnometouch"
 }
