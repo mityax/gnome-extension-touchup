@@ -1,5 +1,5 @@
 import St from "@girs/st-13";
-import {JSXComponent, Ref} from "../jsx-runtime";
+import {JSXComponent} from "../jsx-runtime";
 
 
 export class Row extends JSXComponent<

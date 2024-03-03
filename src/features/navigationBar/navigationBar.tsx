@@ -4,21 +4,22 @@ import Clutter from "@girs/clutter-13";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 
-import {Bin} from '../../jsx/components/containers';
+import {Bin} from '$src/jsx/components/containers';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {foregroundColorFor, getStyle, print} from "$src/utils/utils";
+import {clamp, foregroundColorFor, getStyle, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
-import BinAlignment = Clutter.BinAlignment;
 import {TouchSwipeGesture} from '$src/utils/swipeTracker';
-import Shell from "@girs/shell-13";
+import BinAlignment = Clutter.BinAlignment;
+import Action = Clutter.Action;
+import Stage = Clutter.Stage;
 
 const LEFT_EDGE_OFFSET = 100;
-const WS_SWITCH_DIST_THRESHOLD = 200;
+const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
 
 export default class NavigationBar extends St.Widget {
     private monitor: Monitor;
     private mode: "gestures" | "buttons";
-    //private gestureDetector: GestureDetector;
+    private readonly scaleFactor: number;
 
     static {
         GObject.registerClass(this);
@@ -28,11 +29,11 @@ export default class NavigationBar extends St.Widget {
         const panelStyle = getStyle(St.Widget, 'panel');
         super({
             name: 'gnometouchNavigationBar',
-            style_class: 'bottom-panel solid',
+            styleClass: 'bottom-panel solid',
             reactive: true,
-            track_hover: true,
+            trackHover: true,
             canFocus: true,
-            layout_manager: new Clutter.BinLayout({
+            layoutManager: new Clutter.BinLayout({
                 yAlign: BinAlignment.CENTER,
             }),
             backgroundColor: panelStyle.get_background_color(),
@@ -40,19 +41,20 @@ export default class NavigationBar extends St.Widget {
 
         this.monitor = monitor;
         this.mode = mode;
+        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
         this.width = monitor.width;
-        this.height = mode == 'gestures' ? 38 : 60;
+        this.height = (mode == 'gestures' ? 22 : 40) * this.scaleFactor;
         this.x = 0;
         this.y = monitor.height - this.height;
 
         this.add_child(
             <Bin
-                width={250}
-                height={Math.floor(Math.min(this.height * 0.6, this.height - 2, 7))}
+                width={clamp(monitor.width * 0.18, 50 * this.scaleFactor, 250 * this.scaleFactor)}
+                height={Math.floor(Math.min(this.height * 0.6, 5 * this.scaleFactor, this.height - 2))}
                 style={{
                     backgroundColor: foregroundColorFor(panelStyle.get_background_color() || 'black', 0.9),
-                    borderRadius: '10px',
+                    borderRadius: '20px',
                 }}>
             </Bin>
         );
@@ -63,10 +65,11 @@ export default class NavigationBar extends St.Widget {
     }
 
     private _setupHorizontalSwipeAction() {
-        const wsController = Main.wm._workspaceAnimation;
+        //@ts-ignore
+        const wsController: UnknownClass = Main.wm._workspaceAnimation;
 
         const gesture = new TouchSwipeGesture();
-        this.add_action_full('workspace-switch-gesture', Clutter.EventPhase.BUBBLE, gesture);
+        this.add_action_full('workspace-switch-gesture', Clutter.EventPhase.BUBBLE, gesture as Action);
         gesture.orientation = Clutter.Orientation.HORIZONTAL;
 
         let initialProgress = 0;
@@ -83,11 +86,11 @@ export default class NavigationBar extends St.Widget {
         gesture.connect('update', (_: any, time: number, delta, dist) => {
             wsController._switchWorkspaceUpdate({}, initialProgress + dist / baseDist);
         });
-        gesture.connect('end', (_: any, time: number, distance: number) => {
-            if (Math.abs(distance) > WS_SWITCH_DIST_THRESHOLD) {
-                distance = baseDist * (distance/Math.abs(distance));
+        gesture.connect('end', (_: any, time: number, distance: number, strokeDelta: number) => {
+            if (Math.abs(strokeDelta) > WORKSPACE_SWITCH_MIN_SWIPE_LENGTH * this.scaleFactor) {
+                strokeDelta = baseDist * (strokeDelta >= 0 ? -1 : 1);
             }
-            wsController._switchWorkspaceEnd({}, 300, initialProgress + Math.round(distance / baseDist));
+            wsController._switchWorkspaceEnd({}, 500, initialProgress + Math.round(strokeDelta / baseDist));
         });
     }
 
@@ -96,46 +99,49 @@ export default class NavigationBar extends St.Widget {
 
         let baseDist = 300;
         let gestureIsGoingOn = false;
+        let currentProgress = 0;
 
+        //@ts-ignore
         PatchManager.patchSignalHandler(bottomDragAction, 'activated', (_action) => {
-            if (_action.get_press_coords(0)[0] > LEFT_EDGE_OFFSET) {
-                Main.overview._gestureEnd({}, 300, 1);
+            if (Main.keyboard._keyboard && _action.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                //@ts-ignore
+                Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
             } else {
-                if (Main.keyboard._keyboard)
-                    Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(currentProgress), 1, 2));
             }
             gestureIsGoingOn = false;
         });
 
+        //@ts-ignore
         PatchManager.patchSignalHandler(bottomDragAction, 'progress', (_action, progress) => {
-            if (_action.get_press_coords(0)[0] > LEFT_EDGE_OFFSET) {
+            if (Main.keyboard._keyboard && _action.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                Main.keyboard._keyboard.gestureProgress(progress);
+            } else {
                 if (!gestureIsGoingOn) {
+                    currentProgress = 0;
                     Main.overview._gestureBegin({
                         confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
                             baseDist = baseDistance;
                         }
                     });
                 } else {
-                    Main.overview._gestureUpdate(_action, progress / baseDist);
+                    currentProgress = progress / (baseDist / 3);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus baseDist / 3
+                    Main.overview._gestureUpdate(_action, currentProgress);
                 }
-            } else {
-                if (Main.keyboard._keyboard)
-                    Main.keyboard._keyboard.gestureProgress(progress);
             }
             gestureIsGoingOn = true;
         });
 
+        //@ts-ignore
         PatchManager.patchSignalHandler(bottomDragAction, 'gesture-cancel', (_action) => {
-            // if 'activated' has not yet been triggered, consider gesture cancelled:
-            if (_action.get_press_coords(0)[0] > LEFT_EDGE_OFFSET) {
+            if (Main.keyboard._keyboard && _action.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                Main.keyboard._keyboard.gestureCancel();
+            } else {
+                // if 'activated' has not yet been triggered, consider gesture cancelled:
                 if (gestureIsGoingOn) {
                     Main.overview._gestureEnd({}, 300, 0);
                 }
-            } else {
-                if (Main.keyboard._keyboard)
-                    Main.keyboard._keyboard.gestureCancel();
             }
-
             gestureIsGoingOn = false;
         });
     }

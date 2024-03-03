@@ -1,21 +1,23 @@
 import * as esbuild from "esbuild";
 import GjsPlugin from "esbuild-gjs";
 import copy from "esbuild-plugin-copy";
-import { dirname, resolve } from 'path';
+import { dirname, resolve, join } from 'path';
 import { fileURLToPath } from 'url';
 import AdmZip from "adm-zip";
 import metadata from "./src/metadata.json" assert { type: 'json' };
+import {sassPlugin} from 'esbuild-sass-plugin'
+import * as fs from "fs";
+import mv from "mv";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 
 await esbuild.build({
-    entryPoints: ["src/extension.ts"],
+    entryPoints: ["src/extension.ts", "src/sass/stylesheet-light.sass", "src/sass/stylesheet-dark.sass"],
     target: "firefox68", // Spider Monkey 68
     format: "esm",
     bundle: true,
-    outfile: "dist/extension.js",
     plugins: [
         GjsPlugin({}),
         copy({
@@ -24,17 +26,21 @@ await esbuild.build({
                 to: ['metadata.json'],
             }
         }),
-        copy({
-            assets: {
-                from: ['./src/stylesheet.css'],
-                to: ['stylesheet.css'],
-            }
+        sassPlugin({
+            filter: /.*\.sass/,
         }),
     ],
+    outdir: 'dist',
     treeShaking: true,
     jsx: 'automatic',
     jsxImportSource: "$src/jsx",
     jsxFactory: "jsx",
+}).then(async () => {
+    const sassDist = resolve(__dirname, `dist/sass`);
+    for (let fn of fs.readdirSync(sassDist)) {
+        await mv(join(sassDist, fn), resolve(__dirname, `dist/${fn}`), {mkdirp: false}, console.error);
+    }
+    fs.rmSync(sassDist, {recursive: true});
 }).then(() => {
     const zipFilename = `${metadata.uuid}.zip`;
     const zipDist = resolve(__dirname, `dist/${zipFilename}`);

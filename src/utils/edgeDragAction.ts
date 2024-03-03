@@ -7,7 +7,6 @@ import GObject from '@girs/gobject-2.0';
 import Mtk from '@girs/mtk-13';
 import St from '@girs/st-13';
 import Shell from "@girs/shell-13";
-import GLib from "@girs/glib-2.0";
 
 
 const EDGE_THRESHOLD = 20;

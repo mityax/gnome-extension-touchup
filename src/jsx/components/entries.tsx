@@ -2,15 +2,12 @@ import '@girs/gjs';
 
 import St from "@girs/st-13";
 import {JSXComponent, Ref} from "../jsx-runtime";
-import GObject from "@girs/gobject-2.0";
 import * as Main from "@girs/gnome-shell/ui/main";
 
-import {Bin, ScrollView} from './containers';
+import {ScrollView} from './containers';
 import Pango from "@girs/pango-1.0";
-import {print} from "../../utils";
-import {css} from "../css";
-import WrapMode = Pango.WrapMode;
 import Clutter from "@girs/clutter-13";
+import WrapMode = Pango.WrapMode;
 
 
 export class Entry extends JSXComponent<

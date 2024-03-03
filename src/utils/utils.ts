@@ -3,6 +3,15 @@ import St from "@girs/st-13";
 import Clutter from "@girs/clutter-13";
 import {AnyClass} from "@girs/gobject-2.0";
 
+
+/**
+ * Used as a placeholder for external classes that we have no
+ * type definitions of, to get rid of typescript errors.
+ */
+export type UnknownClass = Record<string, any>;
+
+
+
 export function getStyle(widgetType: AnyClass = St.Widget, elementId: string = '', elementClass: string = '') {
     const ctx = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage);
     const node = St.ThemeNode.new(
@@ -46,13 +55,31 @@ export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.
 
 
 
-export function print(...text: any[]) {
+export function log(...text: any[]) {
     console.log("GJS:gnometouch:", ...text.map(item => {
+        let json;
         try {
             if (typeof item === 'object' || Array.isArray(item)) {
-                return JSON.stringify(item);
+                json = JSON.stringify(item);
             }
         } catch (e) {}
-        return item;
+
+        if (typeof item === 'object' && item.constructor && item.constructor.name) {
+            if (json) {
+                return `<${item.constructor.name} object ${json.length > 300 ? json.substring(0, 300) + ' [...]' : json}>`;
+            } else {
+                return `<${item.constructor.name} object (not stringifyable)>`;
+            }
+        }
+
+        return json || item;
     }));
+}
+
+
+export function clamp(x: number, min: number, max: number) {
+    if (max < min) {
+        [min, max] = [max, min];
+    }
+    return Math.min(Math.max(x, min), max);
 }

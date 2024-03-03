@@ -15,12 +15,13 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
                 'orientation': GObject.ParamSpec.enum(
                     'orientation', 'orientation', 'orientation',
                     GObject.ParamFlags.READWRITE,
+                    //@ts-ignore
                     Clutter.Orientation, Clutter.Orientation.HORIZONTAL),
             },
             Signals: {
                 'begin':  {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE]},
-                'update': {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE]},
-                'end':    {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE]},
+                'update': {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE]},
+                'end':    {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE]},
                 'cancel': {param_types: [GObject.TYPE_UINT, GObject.TYPE_DOUBLE]},
             }
         }, this);
@@ -29,14 +30,19 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
     declare private _allowedModes: Shell.ActionMode;
     declare private _distance: number;
     declare private _lastPosition: number;
+    declare private _strokeDelta: number;
 
+    // for ts:
+    declare orientation: Clutter.Orientation;
+
+    //@ts-ignore
     _init(allowedModes: Shell.ActionMode = Shell.ActionMode.ALL, nTouchPoints: number = 1, thresholdTriggerEdge: Clutter.GestureTriggerEdge = Clutter.GestureTriggerEdge.AFTER) {
         super._init();
         this.set_n_touch_points(nTouchPoints);
         this.set_threshold_trigger_edge(thresholdTriggerEdge);
 
         this._allowedModes = allowedModes;
-        this._distance = global.screen_height;
+        this._distance = global.screenHeight;
         this._lastPosition = 0;
     }
 
@@ -84,9 +90,17 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
         let delta = pos - this._lastPosition;
         this._lastPosition = pos;
 
+        if ((delta < 0 && this._strokeDelta <= 0) || (delta > 0 && this._strokeDelta >= 0)) {
+            // swipe has continued in the same direction
+            this._strokeDelta += delta;
+        } else {
+            // swipe direction has been changed
+            this._strokeDelta = delta;
+        }
+
         let time = this.get_last_event(0).get_time();
 
-        this.emit('update', time, -delta, initialPos - pos);
+        this.emit('update', time, -delta, initialPos - pos, this._strokeDelta);
 
         return true;
     }
@@ -98,7 +112,7 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
 
         let time = this.get_last_event(0).get_time();
 
-        this.emit('end', time, initialPos - pos);
+        this.emit('end', time, initialPos - pos, this._strokeDelta);
     }
 
     vfunc_gesture_cancel(_actor: Clutter.Actor) {

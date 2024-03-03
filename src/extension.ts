@@ -1,31 +1,50 @@
 import '@girs/gnome-shell/extensions/global';
 
 import * as Main from '@girs/gnome-shell/ui/main';
-
-import St from "@girs/st-13";
-import Clutter from "@girs/clutter-13";
 import NavigationBar from "$src/features/navigationBar/navigationBar";
-import Shell from "@girs/shell-13";
-import {EdgeDragAction} from "$src/utils/edgeDragAction";
 import {PatchManager} from "$src/utils/patchManager";
-import {findActorByName} from "$src/utils/utils";
+import {OSKKeyPopups} from "$src/features/osk/oskKeyPopups";
+import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
+import * as PanelMenu from '@girs/gnome-shell/ui/panelMenu';
+import St from "@girs/st-13";
 import GLib from "@girs/glib-2.0";
+import {log} from '$src/utils/utils';
 
 
 export default class GnomeTouchExtension {
     private metadata: Record<string, any>;
-    private scale_factor: number;
     private bar?: NavigationBar;
+    private oskKeyPopups?: OSKKeyPopups;
+    private virtualTouchpad?: VirtualTouchpad;
+    private virtualTouchpadOpenButton?: St.Button;
 
     constructor(metadata: Record<string, any>) {
         this.metadata = metadata;
-        this.scale_factor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scale_factor * 5;
     }
 
     enable() {
         // TODO: find touch-enabled monitors, keyword: ClutterInputDevice
         const monitor = Main.layoutManager.primaryMonitor!;
         this.bar = new NavigationBar(monitor, 'gestures');
+        this.oskKeyPopups = new OSKKeyPopups();
+        this.virtualTouchpad = new VirtualTouchpad(monitor);
+
+        this.virtualTouchpadOpenButton = new St.Button({
+            child: new St.Icon({
+                iconName: 'input-touchpad-symbolic',  // 'computer-apple-ipad-symbolic'
+                styleClass: 'system-status-icon',
+                reactive: true,
+            }),
+        });
+        //@ts-ignore
+        Main.panel._leftBox.insert_child_at_index(this.virtualTouchpadOpenButton, 1);
+        this.virtualTouchpadOpenButton.connect('clicked', () => {
+            this.virtualTouchpad!.open();
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                this.virtualTouchpad!.close();
+                return GLib.SOURCE_REMOVE;
+            });
+        })
 
         PatchManager.patch(() => {
             Main.layoutManager.addChrome(this.bar!, {
@@ -41,33 +60,35 @@ export default class GnomeTouchExtension {
             return () => Main.uiGroup.style_class = Main.uiGroup.style_class.replaceAll(/ gnometouch-\S+/g, '');
         })
 
-        PatchManager.patch(() => {
+        // To find dash to dock container:
+        /*PatchManager.patch(() => {
             const dashToDockContainer = findActorByName(global.stage, 'dashtodockContainer');
-            print("DashToDock container:", dashToDockContainer);
+
             const originalMarginBottom = dashToDockContainer?.marginBottom || 0;
             if (dashToDockContainer) {
-                GLib.timeout_add_seconds(
-                    GLib.PRIORITY_DEFAULT,
-                    5,
-                    () => {
-                        print("Setting margin... ", originalMarginBottom + 38)
-                        // FIXME: None of these work:
-                        //dashToDockContainer.marginBottom = originalMarginBottom + 38;
-                        //dashToDockContainer.y -= 38;
-                        //dashToDockContainer.set_translation(0, -38, 0);
-                        return false;
-                    }
-                )
+
             }
             return () => {
                 if (dashToDockContainer) {
                     dashToDockContainer!.marginBottom = originalMarginBottom;
                 }
             };
-        })
+        });*/
+
+        // To get/listen to touch mode:
+        // this._seat = Clutter.get_default_backend().get_default_seat();
+        // this._seat.connect('notify::touch-mode', this._syncEnabled.bind(this));
+
+        // Monitors-changed:
+        // Main.layoutManager.connectObject('monitors-changed',
+        //             this._relayout.bind(this), this);
     }
 
     disable() {
         PatchManager.clear();
+        this.bar?.destroy();
+        this.oskKeyPopups?.destroy();
+        this.virtualTouchpad?.destroy();
+        this.virtualTouchpadOpenButton?.destroy();
     }
 }

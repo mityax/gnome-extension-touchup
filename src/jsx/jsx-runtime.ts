@@ -1,7 +1,6 @@
 import {filterObject, mapObject} from "./utils";
-import St from "@girs/st-13";
 import Clutter from "@girs/clutter-13";
-import { css } from "./css";
+import {css} from "./css";
 
 declare namespace JSX {
     interface ElementAttributesProperty {

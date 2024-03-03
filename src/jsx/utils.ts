@@ -9,6 +9,7 @@ export function filterObject<T extends object>(
     fn: (entry: ObjectEntry<T>, i: number, arr: ObjectEntry<T>[]) => boolean
 ) {
     return Object.fromEntries(
+        //@ts-ignore
         (Object.entries(obj) as ObjectEntry<T>[]).filter(fn)
     ) as Partial<T>
 }

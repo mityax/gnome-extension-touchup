@@ -1,5 +1,5 @@
-import St from "@girs/st-13";
 import Clutter from "@girs/clutter-13";
+import {log} from '$src/utils/utils';
 
 export function css(v: any): string | null {
     let res: string | null = null;
@@ -21,7 +21,7 @@ export function css(v: any): string | null {
             }
         }
     } else {
-        print(`Warning: cannot convert \`${typeof v}\` to CSS: `, v);
+        log(`Warning: cannot convert \`${typeof v}\` to CSS: `, v);
         res = v.toString();
     }
 
