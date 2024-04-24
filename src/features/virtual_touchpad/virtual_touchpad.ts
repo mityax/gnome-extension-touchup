@@ -1,35 +1,78 @@
 import St from "@girs/st-13";
-import {css} from "../../jsx/css";
-import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {Patch, PatchManager} from "$src/utils/patchManager";
+import {css} from "../../utils/ui/css";
+import {Monitor, MonitorConstraint} from "@girs/gnome-shell/ui/layout";
+import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
-import {log} from "$src/utils/utils";
 import Clutter from "@girs/clutter-13";
+import {Widgets} from "$src/utils/ui/widgets";
+import {log, randomChoice} from "$src/utils/utils";
+import ActorAlign = Clutter.ActorAlign;
+import EventPhase = Clutter.EventPhase;
 
 
 export class VirtualTouchpad {
     public static readonly PATCH_SCOPE = 'virtual-touchpad';
     private readonly actor: St.Widget;
-    private openPatch: Patch;
 
     constructor(monitor: Monitor) {
-        this.actor = new St.Bin({
+        const buttonRef = new Widgets.Ref<Widgets.Button>();
+        this.actor = new St.Widget({
             name: 'gnometouch-virtual-touchpad',
-            style: css({
-                backgroundColor: 'red',
-            })
+            visible: false,
+            reactive: true,
+            trackHover: true,
+            canFocus: true,
+            backgroundColor: Clutter.Color.from_string('black')[1],
+            constraints: new Clutter.BindConstraint({
+                source: Main.uiGroup,
+                coordinate: Clutter.BindCoordinate.ALL,
+            }),
         });
-        this.actor.width = monitor.width;
-        this.actor.height = monitor.height;
-        this.actor.x = 0;
-        this.actor.y = 0;
-        this.actor.hide();
+        this.actor.add_child(new Widgets.Button({
+            child: new Widgets.Icon({iconName: 'edit-delete-symbolic', style: 'color: white;'}),
+            ref: buttonRef,
+            reactive: true,
+            trackHover: true,
+            canFocus: true,
+            xAlign: ActorAlign.END,
+            yAlign: ActorAlign.START,
+            connect: {
+                'button-press-event': () => {
+                    log('Button-pressed!!!');
+                    this.close();
+                },
+                'clicked': () => {
+                    log('Clicked!!!');
+                    this.close();
+                },
+            },
+        }));
+        this.actor.add_constraint(new MonitorConstraint({
+            //@ts-ignore
+            index: monitor.index,
+            workArea: true,
+        }));
+
+        /*let st = new TouchSwipeGesture();
+        this.actor.add_action_full('test', EventPhase.BUBBLE, st);
+        st.connect('end', () => {
+            log("Swept!");
+        })*/
+        let ac = new Clutter.TapAction({});
+        this.actor.add_action_full('test', EventPhase.CAPTURE, ac);
+        ac.connect('tap', () => {
+            log('Tap action activated');
+            this.actor.backgroundColor = Clutter.Color.from_string(randomChoice([
+                "red", 'blue', 'green', 'purple', 'yellow', 'orange', 'black', 'white'
+            ]))[1];
+        })
+
 
         PatchManager.patch(() => {
-            Main.uiGroup.set_child_above_sibling(this.actor, Main.layoutManager.screenShieldGroup);
             Main.layoutManager.addChrome(this.actor, {
                 affectsStruts: false,
                 trackFullscreen: false,
+                affectsInputRegion: true,
             });
 
             return () => Main.layoutManager.removeChrome(this.actor);
@@ -42,6 +85,14 @@ export class VirtualTouchpad {
 
     close() {
         this.actor.hide();
+    }
+
+    toggle() {
+        if (this.actor.visible) {
+            this.actor.hide();
+        } else {
+            this.actor.show();
+        }
     }
 
     destroy() {

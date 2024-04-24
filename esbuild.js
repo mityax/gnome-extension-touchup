@@ -32,9 +32,6 @@ await esbuild.build({
     ],
     outdir: 'dist',
     treeShaking: true,
-    jsx: 'automatic',
-    jsxImportSource: "$src/jsx",
-    jsxFactory: "jsx",
 }).then(async () => {
     const sassDist = resolve(__dirname, `dist/sass`);
     for (let fn of fs.readdirSync(sassDist)) {

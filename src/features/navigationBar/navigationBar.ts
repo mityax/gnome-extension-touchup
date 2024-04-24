@@ -3,12 +3,11 @@ import GObject from "@girs/gobject-2.0";
 import Clutter from "@girs/clutter-13";
 
 import * as Main from '@girs/gnome-shell/ui/main';
-
-import {Bin} from '$src/jsx/components/containers';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
 import {clamp, foregroundColorFor, getStyle, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
-import {TouchSwipeGesture} from '$src/utils/swipeTracker';
+import {TouchSwipeGesture} from '$src/utils/ui/swipeTracker';
+import {css} from "$src/utils/ui/css";
 import BinAlignment = Clutter.BinAlignment;
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
@@ -48,16 +47,14 @@ export default class NavigationBar extends St.Widget {
         this.x = 0;
         this.y = monitor.height - this.height;
 
-        this.add_child(
-            <Bin
-                width={clamp(monitor.width * 0.18, 50 * this.scaleFactor, 250 * this.scaleFactor)}
-                height={Math.floor(Math.min(this.height * 0.6, 5 * this.scaleFactor, this.height - 2))}
-                style={{
-                    backgroundColor: foregroundColorFor(panelStyle.get_background_color() || 'black', 0.9),
-                    borderRadius: '20px',
-                }}>
-            </Bin>
-        );
+        this.add_child(new St.Bin({
+            width: clamp(monitor.width * 0.18, 50 * this.scaleFactor, 250 * this.scaleFactor),
+            height: Math.floor(Math.min(this.height * 0.6, 5 * this.scaleFactor, this.height - 2)),
+            style: css({
+                backgroundColor: foregroundColorFor(panelStyle.get_background_color() || 'black', 0.9),
+                borderRadius: '20px',
+            })
+        }));
 
         this._setupHorizontalSwipeAction();
 

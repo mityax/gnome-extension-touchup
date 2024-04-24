@@ -1,7 +1,7 @@
 import '@girs/gnome-shell/extensions/global';
 import St from "@girs/st-13";
 import Clutter from "@girs/clutter-13";
-import {AnyClass} from "@girs/gobject-2.0";
+import GObject from "@girs/gobject-2.0";
 
 
 /**
@@ -12,7 +12,7 @@ export type UnknownClass = Record<string, any>;
 
 
 
-export function getStyle(widgetType: AnyClass = St.Widget, elementId: string = '', elementClass: string = '') {
+export function getStyle(widgetType: GObject.AnyClass = St.Widget, elementId: string = '', elementClass: string = '') {
     const ctx = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage);
     const node = St.ThemeNode.new(
         ctx,
@@ -83,3 +83,39 @@ export function clamp(x: number, min: number, max: number) {
     }
     return Math.min(Math.max(x, min), max);
 }
+
+
+export function randomChoice<T>(arr: T[]): T {
+    return arr[Math.floor(arr.length * Math.random())];
+}
+
+
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+export type ObjectEntry<T> = {
+    [K in keyof T]: [K, T[K]]
+}[keyof T]
+
+export function filterObject<T extends object>(
+    obj: T,
+    fn: (entry: ObjectEntry<T>, i: number, arr: ObjectEntry<T>[]) => boolean
+) {
+    return Object.fromEntries(
+        //@ts-ignore
+        (Object.entries(obj) as ObjectEntry<T>[]).filter(fn)
+    ) as Partial<T>
+}
+
+
+export function mapObject<T extends object>(
+    obj: T,
+    fn: (entry: ObjectEntry<T>, i: number, arr: ObjectEntry<T>[]) => ObjectEntry<T>
+) {
+    return Object.fromEntries(
+        //@ts-ignore
+        (Object.entries(obj) as ObjectEntry<T>[]).map(fn)
+    );
+}
+
+
+

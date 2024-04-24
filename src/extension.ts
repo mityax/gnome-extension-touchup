@@ -30,22 +30,24 @@ export default class GnomeTouchExtension {
         this.virtualTouchpad = new VirtualTouchpad(monitor);
 
         this.virtualTouchpadOpenButton = new St.Button({
+            styleClass: 'panel-button',
             child: new St.Icon({
                 iconName: 'input-touchpad-symbolic',  // 'computer-apple-ipad-symbolic'
                 styleClass: 'system-status-icon',
                 reactive: true,
             }),
         });
-        //@ts-ignore
-        Main.panel._leftBox.insert_child_at_index(this.virtualTouchpadOpenButton, 1);
-        this.virtualTouchpadOpenButton.connect('clicked', () => {
-            this.virtualTouchpad!.open();
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-                this.virtualTouchpad!.close();
-                return GLib.SOURCE_REMOVE;
-            });
-        })
+        this.virtualTouchpadOpenButton.connect('clicked', () => this.virtualTouchpad!.toggle())
 
+        // Add virtual touchpad open button to panel:
+        PatchManager.patch(() => {
+            //@ts-ignore
+            Main.panel._leftBox.insert_child_at_index(this.virtualTouchpadOpenButton, 1);
+            //@ts-ignore
+            return () => Main.panel._leftBox.remove_child(this.virtualTouchpadOpenButton);
+        }, {scope: VirtualTouchpad.PATCH_SCOPE, debugName: 'add-virtual-touchpad-open-button'})
+
+        // Add navigation bar:
         PatchManager.patch(() => {
             Main.layoutManager.addChrome(this.bar!, {
                 affectsStruts: true,
