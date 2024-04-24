@@ -1,8 +1,8 @@
 import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-13";
+import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
-import Shell from "@girs/shell-13";
+import Shell from "@girs/shell-14";
 
 export class TouchSwipeGesture extends Clutter.GestureAction {
     static {

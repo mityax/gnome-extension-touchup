@@ -15,11 +15,11 @@
     "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh"
   },
   "devDependencies": {
-    "@girs/clutter-13": "^13.0.0-3.2.6",
-    "@girs/gjs": "^3.2.6",
-    "@girs/gnome-shell": "^45.0.0-beta3",
-    "@girs/gobject-2.0": "^2.78.0-3.2.6",
-    "@girs/st-13": "^13.0.0-3.2.6",
+    "@girs/clutter-14": "^14.0.0-3.3.0",
+    "@girs/gjs": "^4.0.0-beta.3",
+    "@girs/gnome-shell": "^46.0.0-beta6",
+    "@girs/gobject-2.0": "^2.78.0-3.3.0",
+    "@girs/st-14": "^14.0.0-3.3.0",
     "@tsconfig/recommended": "^1.0.3",
     "adm-zip": "^0.5.10",
     "better-typescript-lib": "^2.5.0",

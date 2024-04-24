@@ -3,6 +3,6 @@
     "description": "Enhances various aspects of the GNOME experience when using a touch device.",
     "url": "https://github.com/mityax/gnome-touch",
     "uuid": "gnometouch@mityax.github.com",
-    "shell-version": ["45", "46"],
+    "shell-version": ["46"],
     "gettext-domain": "gnometouch"
 }

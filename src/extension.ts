@@ -6,7 +6,7 @@ import {PatchManager} from "$src/utils/patchManager";
 import {OSKKeyPopups} from "$src/features/osk/oskKeyPopups";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
 import * as PanelMenu from '@girs/gnome-shell/ui/panelMenu';
-import St from "@girs/st-13";
+import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
 import {log} from '$src/utils/utils';
 

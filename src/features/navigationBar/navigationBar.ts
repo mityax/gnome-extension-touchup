@@ -1,16 +1,19 @@
-import St from "@girs/st-13";
+import St from "@girs/st-14";
 import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-13";
+import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {clamp, foregroundColorFor, getStyle, UnknownClass} from "$src/utils/utils";
+import {clamp, foregroundColorFor, getStyle, log, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
 import {TouchSwipeGesture} from '$src/utils/ui/swipeTracker';
 import {css} from "$src/utils/ui/css";
-import BinAlignment = Clutter.BinAlignment;
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
+import ContentGravity = Clutter.ContentGravity;
+import ActorAlign = Clutter.ActorAlign;
+import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
+import Meta from "@girs/meta-14";
 
 const LEFT_EDGE_OFFSET = 100;
 const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
@@ -19,6 +22,7 @@ export default class NavigationBar extends St.Widget {
     private monitor: Monitor;
     private mode: "gestures" | "buttons";
     private readonly scaleFactor: number;
+    private windowPositionTracker: WindowPositionTracker;
 
     static {
         GObject.registerClass(this);
@@ -32,32 +36,47 @@ export default class NavigationBar extends St.Widget {
             reactive: true,
             trackHover: true,
             canFocus: true,
-            layoutManager: new Clutter.BinLayout({
-                yAlign: BinAlignment.CENTER,
-            }),
-            backgroundColor: panelStyle.get_background_color(),
+            layoutManager: new Clutter.BinLayout(),
+            x: 0,
+            width: monitor.width,
         });
 
         this.monitor = monitor;
         this.mode = mode;
-        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
-        this.width = monitor.width;
+        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
         this.height = (mode == 'gestures' ? 22 : 40) * this.scaleFactor;
-        this.x = 0;
         this.y = monitor.height - this.height;
 
+        log([this.height * 0.8, 6.5 * this.scaleFactor, this.height - 2]);
+        // Create and add the pill:
         this.add_child(new St.Bin({
-            width: clamp(monitor.width * 0.18, 50 * this.scaleFactor, 250 * this.scaleFactor),
-            height: Math.floor(Math.min(this.height * 0.6, 5 * this.scaleFactor, this.height - 2)),
+            width: clamp(monitor.width * 0.2, 70 * this.scaleFactor, 250 * this.scaleFactor),
+            height: Math.floor(Math.min(this.height * 0.8, 6.5 * this.scaleFactor, this.height - 2)),
+            yAlign: ActorAlign.CENTER,
+            xAlign: ActorAlign.CENTER,
             style: css({
                 backgroundColor: foregroundColorFor(panelStyle.get_background_color() || 'black', 0.9),
                 borderRadius: '20px',
             })
         }));
 
-        this._setupHorizontalSwipeAction();
+        this.windowPositionTracker = new WindowPositionTracker(windows => {
+            // Check if at least one window is near enough to the navigation bar:
+            const top = this.get_transformed_position()[1];
+            const isNearEnough = windows.some((metaWindow: Meta.Window) => {
+                const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
+                return windowBottom > top - 5 * this.scaleFactor;
+            });
 
+            if (Main.panel.has_style_pseudo_class('overview') || !isNearEnough) {
+                this.add_style_class_name('transparent');
+            } else {
+                this.remove_style_class_name('transparent');
+            }
+        });
+
+        this._setupHorizontalSwipeAction();
         this._setupBottomDragAction();
     }
 
@@ -141,5 +160,10 @@ export default class NavigationBar extends St.Widget {
             }
             gestureIsGoingOn = false;
         });
+    }
+
+    destroy() {
+        super.destroy();
+        this.windowPositionTracker.destroy();
     }
 }

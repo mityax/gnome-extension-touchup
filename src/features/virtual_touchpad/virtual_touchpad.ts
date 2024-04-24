@@ -1,9 +1,9 @@
-import St from "@girs/st-13";
+import St from "@girs/st-14";
 import {css} from "../../utils/ui/css";
 import {Monitor, MonitorConstraint} from "@girs/gnome-shell/ui/layout";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
-import Clutter from "@girs/clutter-13";
+import Clutter from "@girs/clutter-14";
 import {Widgets} from "$src/utils/ui/widgets";
 import {log, randomChoice} from "$src/utils/utils";
 import ActorAlign = Clutter.ActorAlign;

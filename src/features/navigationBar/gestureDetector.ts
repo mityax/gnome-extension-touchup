@@ -1,4 +1,4 @@
-import Clutter from "@girs/clutter-13";
+import Clutter from "@girs/clutter-14";
 import GObject from "@girs/gobject-2.0";
 
 type _SemanticEvent = {

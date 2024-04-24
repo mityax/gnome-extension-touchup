@@ -5,7 +5,7 @@ import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import {log, UnknownClass} from '$src/utils/utils';
 import {PatchManager} from "$src/utils/patchManager";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
-import St from "@girs/st-13";
+import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
 
 
