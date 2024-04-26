@@ -37,20 +37,33 @@ export function foregroundColorFor(color: Clutter.Color, opacity: number = 1) {
 }
 
 
-export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.Actor | undefined {
+/**
+ * Recursively walks the topActor's nested children until a child is found that satisfies `test`.
+ * If no such child is found, returns `null`
+ */
+export function findActorBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor) => boolean): Clutter.Actor | null {
     let children = topActor.get_children();
 
     for (let child of children) {
-        if (child.name === name) {
+        if (test(child)) {
             return child;
         } else if (child.get_n_children()) {
-            let result = findActorByName(child, name);
-
+            let result = findActorBy(child, test);
             if (result) {
                 return result;
             }
         }
     }
+
+    return null;
+}
+
+/**
+ * Recursively walks the topActor's nested children until a child with the given `name` is found.
+ * If no such child is found, returns `null`
+ */
+export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.Actor | null {
+    return findActorBy(topActor, a => a.name === name);
 }
 
 

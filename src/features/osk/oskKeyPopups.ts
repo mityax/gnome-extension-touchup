@@ -2,11 +2,14 @@ import * as Main from '@girs/gnome-shell/ui/main';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {log, UnknownClass} from '$src/utils/utils';
+import {findActorBy, log, UnknownClass} from '$src/utils/utils';
 import {PatchManager} from "$src/utils/patchManager";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
 import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
+import Clutter from "@girs/clutter-14";
+import GObject from "@girs/gobject-2.0";
+import AnyClass = GObject.AnyClass;
 
 
 export class OSKKeyPopups {
@@ -96,21 +99,14 @@ export class OSKKeyPopups {
     }
 
     private _extractKeyPrototype(keyboard: Keyboard.Keyboard) {
-        let proto;
-        for (let child of keyboard._aspectContainer.get_children()) {
-            // Note: one could possibly also write prototype extraction logic
-            // for 'EmojiSelection' and 'Keypad' to be more failsafe
-            if (child.constructor.name === 'KeyContainer' && Array.isArray(child._rows) && child._rows.length > 0) {
-                for (let row of child._rows) {
-                    if (Array.isArray(row.keys) && row.keys.length > 0) {
-                        proto = Object.getPrototypeOf(row.keys[0].key);
-                        if (proto) {
-                            return proto;
-                        }
-                    }
-                }
-            }
-        }
+        let r = findActorBy(
+            keyboard._aspectContainer,
+            a => a.constructor.name === 'Key' && !!Object.getPrototypeOf(a),
+        );
+
+        return r !== null
+            ? Object.getPrototypeOf(r)
+            : null;
     }
 
     destroy() {
