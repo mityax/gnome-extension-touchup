@@ -7,9 +7,6 @@ import {PatchManager} from "$src/utils/patchManager";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
 import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
-import Clutter from "@girs/clutter-14";
-import GObject from "@girs/gobject-2.0";
-import AnyClass = GObject.AnyClass;
 
 
 export class OSKKeyPopups {
@@ -30,7 +27,7 @@ export class OSKKeyPopups {
             self._patchKeyMethods(self.keyPrototype);
 
             // Undo the outer patch, so it is only called once (it's only responsible for
-            // retrieving the `Key` prototype, which is "key", pun intended, to creating
+            // retrieving the `Key` prototype, which is key (pun intended) to create
             // the OSK popups):
             setupPatch?.undo();
         }, {scope: OSKKeyPopups.PATCH_SCOPE});

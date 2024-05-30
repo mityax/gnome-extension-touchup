@@ -1,5 +1,4 @@
 import St from "@girs/st-14";
-import {css} from "../../utils/ui/css";
 import {Monitor, MonitorConstraint} from "@girs/gnome-shell/ui/layout";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
@@ -14,7 +13,7 @@ export class VirtualTouchpad {
     public static readonly PATCH_SCOPE = 'virtual-touchpad';
     private readonly actor: St.Widget;
 
-    constructor(monitor: Monitor) {
+    constructor() {
         const buttonRef = new Widgets.Ref<Widgets.Button>();
         this.actor = new St.Widget({
             name: 'gnometouch-virtual-touchpad',
@@ -48,9 +47,8 @@ export class VirtualTouchpad {
             },
         }));
         this.actor.add_constraint(new MonitorConstraint({
-            //@ts-ignore
-            index: monitor.index,
             workArea: true,
+            primary: true,  // TODO: show on touch-enabled monitor instead of primary one
         }));
 
         /*let st = new TouchSwipeGesture();

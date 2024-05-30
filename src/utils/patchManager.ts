@@ -141,7 +141,7 @@ export class PatchManager {
             }
         }
 
-        this._patches = this._patches.filter(value => !scope || scope === value.scope);
+        this._patches = this._patches.filter(p => !scope || p.scope !== scope);
     }
 
     static disable(scope?: string | null) {
