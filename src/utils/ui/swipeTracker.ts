@@ -66,6 +66,7 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
         this._lastPosition = [x, y];
 
         this.emit('begin', time, xPress, yPress);
+        this.emit('event', this.get_last_event(0));
         return true;
     }
 
@@ -90,6 +91,7 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
 
         this.emit('update', time, /*[-deltaX, -deltaY], [*/ initialX - x, initialY - y /*], this._strokeDelta*/);
 
+        this.emit('event', this.get_last_event(0));
         return true;
     }
 
@@ -100,12 +102,14 @@ export class TouchSwipeGesture extends Clutter.GestureAction {
         let time = this.get_last_event(0).get_time();
 
         this.emit('end', time, this._strokeDelta[0], this._strokeDelta[1]);
+        this.emit('event', this.get_last_event(0));
     }
 
     vfunc_gesture_cancel(_actor: Clutter.Actor) {
         let time = Clutter.get_current_event_time();
 
         this.emit('cancel', time);
+        this.emit('event', this.get_last_event(0));
     }
 }
 

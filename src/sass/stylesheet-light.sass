@@ -1,6 +1,12 @@
 @import "base"
 
 
-#gnometouch-navbar
-  background-color: desaturate(#f6f5f4, 100%)  // color fetched from repo: https://github.com/search?q=repo%3AGNOME/gnome-shell%20%24light_2&type=code
+.gnometouch-navbar
+  $bar: &
+
+  &:not(#{$bar}--transparent)
+    background-color: desaturate(#f6f5f4, 100%) // color fetched from repo: https://github.com/search?q=repo%3AGNOME/gnome-shell%20%24light_2&type=code
+
+    #{$bar}__pill
+      background-color: black
 

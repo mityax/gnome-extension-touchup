@@ -6,8 +6,17 @@
     padding-bottom: 41px !important
 
 
-#gnometouch-navbar
+.gnometouch-navbar
+    $bar: &
     transition-duration: 250ms
 
-    &.transparent
+    &--transparent
         background-color: rgba(0,0,0,0)
+
+        #{$bar}__pill
+            transition: background-color
+            transition-duration: 0.5s
+            background-color: desaturate(#f6f5f4, 100%)
+
+            &--dark
+                background-color: desaturate(#191919, 100%)

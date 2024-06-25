@@ -65,7 +65,7 @@ export default class GnomeTouchExtension {
 
         if (touchMode) {
             Main.layoutManager.addChrome(this.bar!, {
-                affectsStruts: true,
+                affectsStruts: false,
                 trackFullscreen: true,
             });
             Main.uiGroup.add_style_class_name('gnometouch-navbar-visible');

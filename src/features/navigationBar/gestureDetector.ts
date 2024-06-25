@@ -1,41 +1,33 @@
 import Clutter from "@girs/clutter-14";
 import GObject from "@girs/gobject-2.0";
+import {log} from "../../utils/utils";
 
 type _SemanticEvent = {
     type: 'up' | 'move' | 'down',
     x: number,
     y: number,
+    timestamp: number,
+    e: Clutter.Event,
 }
 
 export default class GestureDetector {
-    static {
-        GObject.registerClass({
-            Signals: {
-                'swipe-up': {
-                    param_types: []
-                },
-                'swipe-up-and-hold': {
-                    param_types: []
-                },
-                'swipe-left': {
-                    param_types: []
-                },
-                'swipe-right': {
-                    param_types: []
-                },
-            },
-        }, this);
-    }
-
     private recordedEvents: Array<_SemanticEvent> = [];
 
     pushEvent(event: Clutter.Event) {
+        log('Gesture motion dela: ', event.get_gesture_motion_delta());
+        log('Gesture motion dela (unaccelerated): ', event.get_gesture_motion_delta_unaccelerated());
+        if (this.recordedEvents.length > 0) {
+            log('Angle: ', this.recordedEvents.at(-1)!.e.get_angle(event))
+        }
+
         if (event.type() == Clutter.EventType.TOUCH_BEGIN ||
             event.type() == Clutter.EventType.BUTTON_PRESS) {
             this.recordedEvents.push({
                 type: 'down',
                 x: event.get_coords()[0],
                 y: event.get_coords()[1],
+                timestamp: event.get_time(),
+                e: event,
             })
         } else if (event.type() == Clutter.EventType.MOTION ||
                    event.type() == Clutter.EventType.TOUCH_UPDATE) {
@@ -43,6 +35,8 @@ export default class GestureDetector {
                 type: 'move',
                 x: event.get_coords()[0],
                 y: event.get_coords()[1],
+                timestamp: event.get_time(),
+                e: event,
             })
         } else if (event.type() == Clutter.EventType.BUTTON_RELEASE ||
                    event.type() == Clutter.EventType.TOUCH_END ||
@@ -51,6 +45,8 @@ export default class GestureDetector {
                 type: 'up',
                 x: event.get_coords()[0],
                 y: event.get_coords()[1],
+                timestamp: event.get_time(),
+                e: event,
             })
         }
     }

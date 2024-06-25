@@ -44,7 +44,7 @@ export namespace Widgets {
         }
     }
 
-    export class Icon extends St.Button {
+    export class Icon extends St.Icon {
         static {
             GObject.registerClass(this);
         }
@@ -55,7 +55,7 @@ export namespace Widgets {
         }
     }
 
-    export class Label extends St.Button {
+    export class Label extends St.Label {
         static {
             GObject.registerClass(this);
         }
@@ -66,7 +66,7 @@ export namespace Widgets {
         }
     }
 
-    export class Bin extends St.Button {
+    export class Bin extends St.Bin {
         static {
             GObject.registerClass(this);
         }

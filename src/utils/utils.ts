@@ -28,15 +28,6 @@ export function getStyle(widgetType: GObject.AnyClass = St.Widget, elementId: st
 }
 
 
-export function foregroundColorFor(color: Clutter.Color, opacity: number = 1) {
-    return Clutter.Color.from_string(
-        color.to_hls()[1] > 0.5
-            ? `rgba(0,0,0,${opacity})`
-            : `rgba(255,255,255,${opacity})`,
-        )[1];
-}
-
-
 /**
  * Recursively walks the topActor's nested children until a child is found that satisfies `test`.
  * If no such child is found, returns `null`
@@ -70,6 +61,14 @@ export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.
 
 export function log(...text: any[]) {
     console.log("GJS:gnometouch:", ...text.map(item => {
+        if (item && item instanceof Error) {
+            console.error(item, item.message || '', "\n", item.stack)
+        }
+
+        if (item === '') return "<empty string>";
+
+        if (['number', 'string'].indexOf(typeof item) !== -1) return `${item}`;
+
         let json;
         try {
             if (typeof item === 'object' || Array.isArray(item)) {
@@ -77,7 +76,7 @@ export function log(...text: any[]) {
             }
         } catch (e) {}
 
-        if (typeof item === 'object' && item.constructor && item.constructor.name) {
+        if (item && typeof item === 'object' && item.constructor && item.constructor.name) {
             if (json) {
                 return `<${item.constructor.name} object ${json.length > 300 ? json.substring(0, 300) + ' [...]' : json}>`;
             } else {
