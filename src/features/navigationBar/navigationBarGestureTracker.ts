@@ -3,7 +3,7 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import Shell from "@girs/shell-14";
-import {log} from "$src/utils/utils";
+import {debugLog, log} from "$src/utils/utils";
 import {Widgets} from "$src/utils/ui/widgets";
 import GLib from "@girs/glib-2.0";
 import {css} from "$src/utils/ui/css";
@@ -115,7 +115,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
             St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor
         );
 
-        log("Swipe: ", swipe);
+        debugLog("Swipe: ", swipe);
 
         if (swipe) {
             // up = 0, right = 90, down = 180, left = 270
@@ -175,7 +175,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
 
 
 
-const SIGNIFICANT_ANGLE_CHANGE = 15; // degrees
+const SIGNIFICANT_ANGLE_CHANGE = 30; // degrees
 const PAUSE_TOLERANCE = 12; // delta_pixels
 const SIGNIFICANT_PAUSE = 1000; // milliseconds
 
@@ -187,7 +187,7 @@ function detectStraightLineSwipe(events: _SemanticEvent[], scalingFactor: number
 
     let initialAngle = angleBetween(events[1].x - events[0].x, events[1].y - events[0].y);
     let totalDx = 0, totalDy = 0, totalDt = 0;
-    let pauseTime = 0;
+    let pauseTime = 0, pauseDx = 0, pauseDy = 0;
 
     for (let i = 1; i < events.length; i++) {
         const currentEvent = events[i];
@@ -198,31 +198,39 @@ function detectStraightLineSwipe(events: _SemanticEvent[], scalingFactor: number
               dt = currentEvent.timestamp - previousEvent.timestamp;
         const d  = Math.sqrt(dx**2 + dy**2);
 
-        //log(`dx=${dx}\t\tdy=${dy}\t\tdt=${dt}\t\t\tspeed=${d / dt}\t\tangle=${angleBetween(dx, dy)}`)
+        debugLog(`event #${i}: \tdx=${dx.toFixed(1)}\tdy=${dy.toFixed(1)}\tdt=${dt} ms\t|\t` +
+                      `speed=${(d / dt).toFixed(4)} px/ms\tangle=${angleBetween(dx, dy).toFixed(1)} deg`)
 
         if (dt === 0 && dx === 0 && dy === 0) continue;
 
-        if (d <= PAUSE_TOLERANCE * scalingFactor) {
+        if (Math.sqrt(pauseDx**2 + pauseDy**2) <= PAUSE_TOLERANCE * scalingFactor) {
             pauseTime += dt;
+            pauseDx += dx;
+            pauseDy += dy;
         } else {
             pauseTime = 0;
+            pauseDx = 0;
+            pauseDy = 0;
         }
 
         if (pauseTime >= SIGNIFICANT_PAUSE) {
             totalDx = totalDy = totalDt = 0; // Significant pause detected
-            //log(`Significant pause! (${pauseTime} ms > ${SIGNIFICANT_PAUSE} ms)`)
+            debugLog(`  - significant pause! (${pauseTime} ms > ${SIGNIFICANT_PAUSE} ms; d=${Math.sqrt(pauseDx**2 + pauseDy**2)})`)
             continue;
         }
 
-        if (d > PAUSE_TOLERANCE * scalingFactor) {  // only check angle if there's enough movement
+        if (pauseTime === 0 && d > PAUSE_TOLERANCE * scalingFactor) {  // only check angle if there's enough movement
             const currentAngle = angleBetween(dx, dy);
-            const angleDiff = Math.abs(currentAngle - initialAngle);
+            const angleDiff = currentAngle - initialAngle;
 
             initialAngle = currentAngle;
 
-            if (angleDiff > SIGNIFICANT_ANGLE_CHANGE) {
-                totalDx = totalDy = totalDt = 0; // Significant angle change detected
-                //log(`Angle change! (${currentAngle - initialAngle} deg, dx=${dx}, dy=${dy})`)
+            if (Math.abs(angleDiff) > SIGNIFICANT_ANGLE_CHANGE) {
+                // Significant angle change detected
+                debugLog(`  - angle change! (${angleDiff} deg, dx=${dx}, dy=${dy})`)
+                totalDx = dx;
+                totalDy = dy;
+                totalDt = dt;
                 continue;
             }
         }

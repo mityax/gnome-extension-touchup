@@ -2,7 +2,7 @@
 
 gnome-extensions uninstall "$extensionId"
 
-gnome-shell --nested --wayland &
+GNOMETOUCH_DEBUG_MODE=true gnome-shell --nested --wayland &
 
 PID=$!
 

@@ -18,7 +18,9 @@ export default class WindowPositionTracker {
 
         this._actorSignalIds.set(Main.overview, [
             Main.overview.connect('showing', this._update.bind(this)),
-            Main.overview.connect('hiding', this._update.bind(this))
+            Main.overview.connect('hiding', this._update.bind(this)),
+            Main.overview.connect('shown', this._update.bind(this)),
+            Main.overview.connect('hidden', this._update.bind(this)),
         ]);
 
         this._actorSignalIds.set(Main.sessionMode, [

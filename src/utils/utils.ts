@@ -2,6 +2,7 @@ import '@girs/gnome-shell/extensions/global';
 import St from "@girs/st-14";
 import Clutter from "@girs/clutter-14";
 import GObject from "@girs/gobject-2.0";
+import GnomeTouchExtension from "$src/extension";
 
 
 /**
@@ -86,6 +87,12 @@ export function log(...text: any[]) {
 
         return json || item;
     }));
+}
+
+export function debugLog(...text: any[]) {
+    if (GnomeTouchExtension.isDebugMode) {
+        log(...text);
+    }
 }
 
 

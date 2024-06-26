@@ -11,6 +11,7 @@ import GLib from "@girs/glib-2.0";
 import {log} from '$src/utils/utils';
 import Clutter from "@girs/clutter-14";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
+import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
 
 
 export default class GnomeTouchExtension {
@@ -58,6 +59,8 @@ export default class GnomeTouchExtension {
         })
 
         this._syncUI();
+
+        this.enableIntegrations();
     }
 
     private _syncUI() {
@@ -87,5 +90,14 @@ export default class GnomeTouchExtension {
         this.oskKeyPopups?.destroy();
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
+    }
+
+    private enableIntegrations() {
+        const d = new DashToDockIntegration();
+        d.enable();
+    }
+
+    static get isDebugMode() {
+        return /^(true|1|yes)$/.test(GLib.getenv('GNOMETOUCH_DEBUG_MODE') || 'false');
     }
 }

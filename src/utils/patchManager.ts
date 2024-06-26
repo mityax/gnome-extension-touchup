@@ -1,7 +1,7 @@
 import GObject from "@girs/gobject-2.0";
 //@ts-ignore
 import {InjectionManager} from '@girs/gnome-shell/extensions/extension';
-import {log, UnknownClass} from "$src/utils/utils";
+import {debugLog, log, UnknownClass} from "$src/utils/utils";
 
 
 type NoArgsFunc = () => (() => any);
@@ -187,14 +187,14 @@ export class Patch {
 
     undo(force: boolean = false) {
         if (!force && !this.isApplied) return;
-        log(`Undoing patch ${this.debugName} (scope: ${this.scope})`);
+        debugLog(`Undoing patch ${this.debugName} (scope: ${this.scope})`);
         this.undoFunc?.call(this);
         this._applied = false;
     }
 
     reapply(force: boolean = false) {
         if (!force && this.isApplied) return;
-        log(`Applying patch ${this.debugName} (scope: ${this.scope})`);
+        debugLog(`Applying patch ${this.debugName} (scope: ${this.scope})`);
         this.undoFunc = this.func();
         this._applied = true;
     }

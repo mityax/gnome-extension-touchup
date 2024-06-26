@@ -4,7 +4,7 @@ import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
 import Clutter from "@girs/clutter-14";
 import {Widgets} from "$src/utils/ui/widgets";
-import {log, randomChoice} from "$src/utils/utils";
+import {debugLog, log, randomChoice} from "$src/utils/utils";
 import ActorAlign = Clutter.ActorAlign;
 import EventPhase = Clutter.EventPhase;
 
@@ -37,11 +37,11 @@ export class VirtualTouchpad {
             yAlign: ActorAlign.START,
             connect: {
                 'button-press-event': () => {
-                    log('Button-pressed!!!');
+                    debugLog('Button-pressed!!!');
                     this.close();
                 },
                 'clicked': () => {
-                    log('Clicked!!!');
+                    debugLog('Clicked!!!');
                     this.close();
                 },
             },
@@ -54,12 +54,12 @@ export class VirtualTouchpad {
         /*let st = new TouchSwipeGesture();
         this.actor.add_action_full('test', EventPhase.BUBBLE, st);
         st.connect('end', () => {
-            log("Swept!");
+            debugLog("Swept!");
         })*/
         let ac = new Clutter.TapAction({});
         this.actor.add_action_full('test', EventPhase.CAPTURE, ac);
         ac.connect('tap', () => {
-            log('Tap action activated');
+            debugLog('Tap action activated');
             this.actor.backgroundColor = Clutter.Color.from_string(randomChoice([
                 "red", 'blue', 'green', 'purple', 'yellow', 'orange', 'black', 'white'
             ]))[1];

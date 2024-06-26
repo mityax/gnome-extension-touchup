@@ -4,23 +4,21 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {clamp, getStyle, log, UnknownClass} from "$src/utils/utils";
+import {clamp, debugLog, getStyle, log, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
 import {css} from "$src/utils/ui/css";
 import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
 import Meta from "@girs/meta-14";
 import {NavigationBarGestureTracker} from "$src/features/navigationBar/navigationBarGestureTracker";
-import GLib from "@girs/glib-2.0";
 import Shell from "@girs/shell-14";
 import Gio from "@girs/gio-2.0";
 import Cairo from "cairo";
 import GdkPixbuf from "@girs/gdkpixbuf-2.0";
+import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
+import {IntervalRunner} from "$src/utils/intervalRunner";
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
 import ActorAlign = Clutter.ActorAlign;
-import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
-import * as GnomeSession from '@girs/gnome-shell/misc/gnomeSession';
-import {IntervalRunner} from "$src/utils/intervalRunner";
 
 const LEFT_EDGE_OFFSET = 100;
 const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
@@ -143,7 +141,7 @@ export default class NavigationBar extends St.Widget {
             // Height:
             Math.floor(Math.min(this.height * 0.8, 4.5 * this.scaleFactor, this.height - 2))
         )
-        log('pill size: ', this.pill.size)
+        debugLog('pill size: ', this.pill.size)
     }
 
     private _setupGestureTracker() {
@@ -158,6 +156,7 @@ export default class NavigationBar extends St.Widget {
         let baseDistY = 300;
         let initialWorkspaceProgress = 0;
         let currentWorkspaceProgress = 0;
+        let initialOverviewProgress = 0;
         let currentOverviewProgress = 0;
 
         gesture.connect('begin', (_: any, time: number, xPress: number, yPress: number) => {
@@ -173,7 +172,7 @@ export default class NavigationBar extends St.Widget {
             Main.overview._gestureBegin({
                 confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
                     baseDistY = baseDistance;
-                    currentOverviewProgress = progress;
+                    initialOverviewProgress = currentOverviewProgress = progress;
                 }
             });
         });
@@ -187,7 +186,7 @@ export default class NavigationBar extends St.Widget {
             if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
                 Main.keyboard._keyboard.gestureProgress(distY / baseDistY);
             } else {
-                currentOverviewProgress = distY / (baseDistY / 3);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus baseDist / 3
+                currentOverviewProgress = initialOverviewProgress + distY / (baseDistY * 0.3);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus we only take a fraction of it
                 Main.overview._gestureUpdate(gesture, currentOverviewProgress);
             }
         });
@@ -195,7 +194,7 @@ export default class NavigationBar extends St.Widget {
         gesture.connect('end', (_: any, direction: string, speed: number) => {
             // Workspace switching:
             if (direction === 'left' || direction === 'right') {
-                log(`currenWorkspaceProgress=${currentWorkspaceProgress}, change: ${(direction == 'left' ? 0.5 : -0.5)}`)
+                debugLog(`currenWorkspaceProgress=${currentWorkspaceProgress}, change: ${(direction == 'left' ? 0.5 : -0.5)}`)
                 wsController._switchWorkspaceEnd({}, 500, currentWorkspaceProgress + (direction == 'left' ? 0.5 : -0.5));
             } else {
                 wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
@@ -211,7 +210,7 @@ export default class NavigationBar extends St.Widget {
                 if (direction === 'up' || direction === null) {  // `null` means user holds still at the end
                     Main.overview._gestureEnd({}, 300, clamp(Math.round(currentOverviewProgress), 1, 2));
                 } else {
-                    Main.overview._gestureEnd({}, 300, 0);
+                    Main.overview._gestureEnd({}, 300, initialOverviewProgress);
                 }
             }
         });
@@ -257,7 +256,8 @@ export default class NavigationBar extends St.Widget {
         ]);
         const luminance = calculateLuminance(...avgColor);
 
-        pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
+        // Save pxibuf as png image to tempdir to inspect:
+        // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
 
         if (luminance > 0.5) {
             this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
