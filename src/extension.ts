@@ -12,6 +12,8 @@ import {log} from '$src/utils/utils';
 import Clutter from "@girs/clutter-14";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
 import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
+import {NotificationGestures} from "$src/features/notifications/notificationGestures";
+import {DevelopmentRestartButton} from "$src/features/developmentTools/developmentRestartButton";
 
 
 export default class GnomeTouchExtension {
@@ -20,6 +22,8 @@ export default class GnomeTouchExtension {
     private oskKeyPopups?: OSKKeyPopups;
     private virtualTouchpad?: VirtualTouchpad;
     private virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
+    private notificationGestures?: NotificationGestures;
+    private developmentRestartButton?: DevelopmentRestartButton;
 
     constructor(metadata: Record<string, any>) {
         this.metadata = metadata;
@@ -28,7 +32,12 @@ export default class GnomeTouchExtension {
     enable() {
         this.bar = new NavigationBar('gestures');
         this.oskKeyPopups = new OSKKeyPopups();
+        this.notificationGestures = new NotificationGestures();
         this.virtualTouchpad = new VirtualTouchpad();
+
+        if (GnomeTouchExtension.isDebugMode) {
+            this.developmentRestartButton = new DevelopmentRestartButton();
+        }
 
         // Add virtual touchpad open button to panel:
         this.virtualTouchpadOpenButton = new VirtualTouchpadQuickSettingsItem(() => this.virtualTouchpad?.toggle());
@@ -88,8 +97,10 @@ export default class GnomeTouchExtension {
         PatchManager.clear();
         this.bar?.destroy();
         this.oskKeyPopups?.destroy();
+        this.notificationGestures?.destroy();
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
+        this.developmentRestartButton?.destroy();
     }
 
     private enableIntegrations() {

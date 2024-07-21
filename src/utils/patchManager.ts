@@ -1,12 +1,12 @@
 import GObject from "@girs/gobject-2.0";
 //@ts-ignore
 import {InjectionManager} from '@girs/gnome-shell/extensions/extension';
-import {debugLog, log, UnknownClass} from "$src/utils/utils";
+import {debugLog, log, repr, UnknownClass} from "$src/utils/utils";
 
 
 type NoArgsFunc = () => (() => any);
 type AnyFunc = (...args: any) => ((...args: any) => any);
-type PatchOptions = {scope?: string | null, supportsReapply?: boolean, debugName?: string | null};
+type PatchOptions = {scope?: string | symbol | null, supportsReapply?: boolean, debugName?: string | null};
 
 
 /**
@@ -134,7 +134,7 @@ export class PatchManager {
      *
      * @param scope If given, only patches belonging to the given scope are cleared.
      */
-    static clear(scope?: string | null) {
+    static clear(scope?: string | symbol | null) {
         for (let patch of this._patches) {
             if (!scope || scope === patch.scope) {
                 patch.undo();
@@ -144,7 +144,7 @@ export class PatchManager {
         this._patches = this._patches.filter(p => !scope || p.scope !== scope);
     }
 
-    static disable(scope?: string | null) {
+    static disable(scope?: string | symbol | null) {
         for (let patch of this._patches) {
             if (patch.isApplied) {
                 if (!scope || scope === patch.scope) {
@@ -154,10 +154,10 @@ export class PatchManager {
         }
     }
 
-    static enable(scope?: string | null) {
+    static enable(scope?: string | symbol | null) {
         for (let patch of this._patches) {
             if (!patch.supportsReapply) {
-                throw `Patch (debugName="${patch.debugName}", scope="${patch.scope}") cannot be reapplied.`
+                throw `Patch (debugName="${patch.debugName}", scope="${repr(patch.scope)}") cannot be reapplied.`
             }
             if (!patch.isApplied) {
                 if (!scope || scope === patch.scope) {
@@ -171,13 +171,13 @@ export class PatchManager {
 
 export class Patch {
     readonly debugName: string | null;
-    readonly scope: string | null;
+    readonly scope: string | symbol | null;
     private readonly func: (...args: any) => any;
     private undoFunc?: (...args: any) => any;
     private _applied: boolean = false;
     readonly supportsReapply: boolean;
 
-    constructor({scope, func, undoFunc, supportsReapply = true, debugName}: {scope?: string | null, func: (...args: any) => any, undoFunc?: (...args: any) => any, supportsReapply?: boolean, debugName?: string | null}) {
+    constructor({scope, func, undoFunc, supportsReapply = true, debugName}: {scope?: string | symbol | null, func: (...args: any) => any, undoFunc?: (...args: any) => any, supportsReapply?: boolean, debugName?: string | null}) {
         this.func = func;
         this.undoFunc = undoFunc;
         this.scope = scope ?? null;
@@ -187,14 +187,14 @@ export class Patch {
 
     undo(force: boolean = false) {
         if (!force && !this.isApplied) return;
-        debugLog(`Undoing patch ${this.debugName} (scope: ${this.scope})`);
+        debugLog(`Undoing patch ${this.debugName} (scope: ${repr(this.scope)})`);
         this.undoFunc?.call(this);
         this._applied = false;
     }
 
     reapply(force: boolean = false) {
         if (!force && this.isApplied) return;
-        debugLog(`Applying patch ${this.debugName} (scope: ${this.scope})`);
+        debugLog(`Applying patch ${this.debugName} (scope: ${repr(this.scope)})`);
         this.undoFunc = this.func();
         this._applied = true;
     }
@@ -208,7 +208,7 @@ export class Patch {
 export class MultiPatch extends Patch {
     private readonly patches: Patch[];
 
-    constructor({patches, scope, debugName}: {patches: Patch[], scope?: string | null, debugName?: string | null}) {
+    constructor({patches, scope, debugName}: {patches: Patch[], scope?: string | symbol | null, debugName?: string | null}) {
         super({
             func: () => patches.forEach(p => p.reapply()),
             undoFunc: () => patches.forEach(p => p.undo()),

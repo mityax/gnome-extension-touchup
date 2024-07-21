@@ -11,7 +11,8 @@
     "build:app": "node esbuild.js",
     "build": "npm run clear && npm run build:app",
     "validate": "tsc --noEmit",
-    "dev": "npm run build && dbus-run-session -- $(pwd)/run.sh  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
+    "dev": "dbus-run-session -- $(pwd)/run.sh --build  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
+    "dev-tty": "dbus-run-session $(pwd)/run.sh --tty --build",
     "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh"
   },
   "devDependencies": {
@@ -24,6 +25,7 @@
     "@girs/cairo-1.0": "^1.0.0-3.3.0",
     "@girs/cogl-14": "^14.0.0-3.3.0",
     "@girs/gdkpixbuf-2.0": "^2.0.0-3.3.0",
+    "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.9",
     "@tsconfig/recommended": "^1.0.3",
     "adm-zip": "^0.5.10",
     "better-typescript-lib": "^2.5.0",

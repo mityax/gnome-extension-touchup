@@ -6,7 +6,7 @@ import Meta from "@girs/meta-14";
 import Clutter from "@girs/clutter-14";
 
 export class DashToDockIntegration {
-    static readonly PATCH_SCOPE = 'integration-dashtodock';
+    static readonly PATCH_SCOPE: unique symbol = Symbol('integration-dashtodock');
 
     enable() {
         return; // TODO: fix

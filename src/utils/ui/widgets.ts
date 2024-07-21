@@ -14,7 +14,7 @@ export namespace Widgets {
     };
 
     function filterConfig<T>(config: UiProps<T>): any {
-        const filterOut = ['ref', 'connect', 'children'];
+        const filterOut = ['ref', 'connect', 'children', 'child'];
         return filterObject(
             config,
             //@ts-ignore
@@ -126,6 +126,30 @@ export namespace Widgets {
             initWidget(this, config);
             if (config.children) {
                 config.children.forEach(c => this.add_child(c));
+            }
+        }
+    }
+
+    export class ScrollView extends St.ScrollView {
+        static {
+            GObject.registerClass(this);
+        }
+
+        constructor(config: Omit<St.ScrollView.ConstructorProperties, 'child'> & UiProps<St.ScrollView> & {
+            child?: St.Widget
+        }) {
+            super({
+                ...filterConfig(config)
+            });
+            initWidget(this, config);
+            if (config.child) {
+                if (typeof config.child.hadjustment !== 'undefined') {
+                    this.set_child(config.child as unknown as St.Scrollable);
+                } else {
+                    const s = new St.Viewport();
+                    s.add_child(config.child);
+                    this.set_child(s)
+                }
             }
         }
     }

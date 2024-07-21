@@ -10,7 +10,7 @@ import EventPhase = Clutter.EventPhase;
 
 
 export class VirtualTouchpad {
-    public static readonly PATCH_SCOPE = 'virtual-touchpad';
+    public static readonly PATCH_SCOPE: unique symbol = Symbol('virtual-touchpad');
     private readonly actor: St.Widget;
 
     constructor() {

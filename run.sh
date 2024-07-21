@@ -1,15 +1,27 @@
 #!/bin/bash
 
+
+projectDir=$(pwd)
+zipFile="$(ls ./dist/*.zip)"
+extensionId="$(basename "$zipFile" .zip)"
+
+if [[ $* == *--build* ]]; then
+  npm run build
+fi
+
 gnome-extensions uninstall "$extensionId"
 
-GNOMETOUCH_DEBUG_MODE=true gnome-shell --nested --wayland &
+sleep 0.5s
+
+if [[ $* == *--tty* ]]; then
+  (export $(cat .env | xargs) && GNOMETOUCH_PROJECT_DIR=$projectDir gnome-shell --wayland) &
+else
+  (export $(cat .env | xargs) && GNOMETOUCH_PROJECT_DIR=$projectDir gnome-shell --nested --wayland) &
+fi
 
 PID=$!
 
 sleep 1s
-
-zipFile="$(ls ./dist/*.zip)"
-extensionId="$(basename "$zipFile" .zip)"
 
 echo "Installing extension (from $zipFile)..."
 gnome-extensions install -f "$zipFile" && echo "done."

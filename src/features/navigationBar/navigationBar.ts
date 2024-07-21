@@ -43,7 +43,7 @@ if (typeof Cairo.format_stride_for_width === 'undefined') {
 
 
 export default class NavigationBar extends St.Widget {
-    static readonly PATCH_SCOPE = 'navigation-bar';
+    static readonly PATCH_SCOPE: unique symbol = Symbol('navigation-bar');
 
     private monitor: Monitor;
     private mode: "gestures" | "buttons";
@@ -141,7 +141,7 @@ export default class NavigationBar extends St.Widget {
             // Height:
             Math.floor(Math.min(this.height * 0.8, 4.5 * this.scaleFactor, this.height - 2))
         )
-        debugLog('pill size: ', this.pill.size)
+        debugLog('pill size: ', this.pill.width, 'x', this.pill.height)
     }
 
     private _setupGestureTracker() {
@@ -153,7 +153,7 @@ export default class NavigationBar extends St.Widget {
         gesture.orientation = null; // Clutter.Orientation.HORIZONTAL;
 
         let baseDistX = 900;
-        let baseDistY = 300;
+        let baseDistY = global.screenHeight;
         let initialWorkspaceProgress = 0;
         let currentWorkspaceProgress = 0;
         let initialOverviewProgress = 0;
@@ -166,14 +166,17 @@ export default class NavigationBar extends St.Widget {
                     baseDistX = baseDistance;
                     initialWorkspaceProgress = currentWorkspaceProgress = progress;
                 }
-            }, Main.layoutManager.primaryIndex); // TODO: supply correct monitor
+            }, this.monitor.index);
 
             // Overview toggling:
             Main.overview._gestureBegin({
                 confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
                     baseDistY = baseDistance;
-                    initialOverviewProgress = currentOverviewProgress = progress;
-                }
+
+                    // the following tenary expression is needed to fix a bug (presumably in Gnome Shell's
+                    // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
+                    // gesture begin, even though the overview is not visible:
+                    initialOverviewProgress = currentOverviewProgress = Main.overview._visible ? progress : 0;           }
             });
         });
 
@@ -231,12 +234,10 @@ export default class NavigationBar extends St.Widget {
         const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
         const wholeScreenTexture = content.get_texture();
 
-        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
-
         const area = {
-            x: this.pill.x - 20 * scaleFactor,
+            x: this.pill.x - 20 * this.scaleFactor,
             y: this.y,
-            w: this.pill.width + 40 * scaleFactor,
+            w: this.pill.width + 40 * this.scaleFactor,
             h: this.height,
         };
 
@@ -244,7 +245,7 @@ export default class NavigationBar extends St.Widget {
         // @ts-ignore (ts doesn't understand Gio._promisify())
         const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
             wholeScreenTexture, area.x, area.y, area.w, area.h,
-            scaleFactor, null, 0, 0, 1, stream
+            this.scaleFactor, null, 0, 0, 1, stream
         );
         stream.close(null);
 

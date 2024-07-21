@@ -10,7 +10,7 @@ import GLib from "@girs/glib-2.0";
 
 
 export class OSKKeyPopups {
-    public static readonly PATCH_SCOPE = 'osk-key-popups';
+    public static readonly PATCH_SCOPE: unique symbol = Symbol('osk-key-popups');
     private keyPrototype: any;
 
     constructor() {
