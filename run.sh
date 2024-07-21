@@ -1,13 +1,14 @@
 #!/bin/bash
 
 
+if [[ $* == *--build* ]]; then
+  npm run build
+fi
+
 projectDir=$(pwd)
 zipFile="$(ls ./dist/*.zip)"
 extensionId="$(basename "$zipFile" .zip)"
 
-if [[ $* == *--build* ]]; then
-  npm run build
-fi
 
 gnome-extensions uninstall "$extensionId"
 

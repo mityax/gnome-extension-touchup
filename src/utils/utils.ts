@@ -2,10 +2,7 @@ import '@girs/gnome-shell/extensions/global';
 import St from "@girs/st-14";
 import Clutter from "@girs/clutter-14";
 import GObject from "@girs/gobject-2.0";
-import GnomeTouchExtension from "$src/extension";
-import GLib from "@girs/glib-2.0";
-import Gio, {Cancellable} from "@girs/gio-2.0";
-import FileCreateFlags = Gio.FileCreateFlags;
+import Gio from "@girs/gio-2.0";
 
 
 /**
@@ -61,70 +58,6 @@ export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.
     return findActorBy(topActor, a => a.name === name);
 }
 
-
-
-//// LOGGING /////
-const logFile = GLib.getenv('GNOMETOUCH_LOGFILE') ?? '/tmp/gnometouch.log';  // TODO: remove default value
-
-
-export function log(...text: any[]) {
-    console.log("GJS:gnometouch:", ...text.map(item => {
-        if (item && item instanceof Error) {
-            console.error(item, item.message || '', "\n", item.stack)
-        }
-
-        return repr(item);
-    }));
-
-    if (logFile) {
-        const stream = Gio.File.new_for_path(logFile).append_to(FileCreateFlags.NONE, null);
-
-        const msg = text.map(item => {
-            return item && item instanceof Error
-                ? `Error (${item}): ` + (item.message || '')
-                : repr(item);
-        }).join(" ");
-
-        // @ts-ignore
-        stream.write_bytes(new GLib.Bytes(`${new Date().toISOString()}: ${msg}\n`), null);
-    }
-}
-
-
-export function debugLog(...text: any[]) {
-    if (GnomeTouchExtension.isDebugMode || logFile) {
-        log(...text);
-    }
-}
-
-
-/**
- * Tries to convert anything into a string representation that provides suitable debugging
- * information to developers
- */
-export function repr(item: any): string {
-    if (item === '') return "<empty string>";
-    if (typeof item === 'symbol') return `<#${item.description}>`;
-
-    if (['number', 'string'].indexOf(typeof item) !== -1) return `${item}`;
-
-    let json;
-    try {
-        if (typeof item === 'object' || Array.isArray(item)) {
-            json = JSON.stringify(item);
-        }
-    } catch (e) {}
-
-    if (item && typeof item === 'object' && item.constructor && item.constructor.name) {
-        if (json) {
-            return `<${item.constructor.name} object ${json.length > 300 ? json.substring(0, 300) + ' [...]' : json}>`;
-        } else {
-            return `<${item.constructor.name} object (not stringifyable)>`;
-        }
-    }
-
-    return json || `${item}`;
-}
 
 export function clamp(x: number, min: number, max: number) {
     if (max < min) {

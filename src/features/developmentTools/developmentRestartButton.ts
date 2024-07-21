@@ -1,11 +1,9 @@
 import '@girs/gnome-shell/extensions/global';
-import * as Main from '@girs/gnome-shell/ui/main';
 
 import Meta from "@girs/meta-14";
 import St from "@girs/st-14";
 
 import Gio from "@girs/gio-2.0";
-import {debugLog} from "$src/utils/utils";
 import {ModalDialog} from "@girs/gnome-shell/ui/modalDialog";
 import {MessageDialogContent} from "@girs/gnome-shell/ui/dialog";
 import GLib from "@girs/glib-2.0";
@@ -13,18 +11,23 @@ import Clutter from "@girs/clutter-14";
 import Graphene from "@girs/graphene-1.0";
 import {Widgets} from "$src/utils/ui/widgets";
 import PolicyType = St.PolicyType;
+import GObject from "@girs/gobject-2.0";
+import {debugLog} from "$src/utils/logging";
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
 
-export class DevelopmentRestartButton {
-    private readonly button: St.Bin;
+export class DevelopmentRestartButton extends St.Bin {
+    static {
+        GObject.registerClass(this);
+    }
+
     private readonly icon: St.Icon;
     private readonly projectDir  = GLib.getenv('GNOMETOUCH_PROJECT_DIR');
 
     constructor() {
-        this.button = new St.Bin({
+        super({
             styleClass: 'panel-button',
             reactive: true,
             canFocus: true,
@@ -32,30 +35,21 @@ export class DevelopmentRestartButton {
             yExpand: false,
             trackHover: true,
         });
-        this.button.connect('button-press-event', this._onButtonPressed.bind(this));
-        this.button.connect('touch-event', this._onButtonPressed.bind(this));
+        this.connect('button-press-event', this._onButtonPressed.bind(this));
+        this.connect('touch-event', this._onButtonPressed.bind(this));
 
         this.icon = new St.Icon({
             iconName: 'view-refresh',
             styleClass: 'system-status-icon',
             opacity: this.projectDir ? 255 : 128,
+            iconSize: 18,
             pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
         });
-        this.button.set_child(this.icon);
-        this.enable();
-    }
-
-    enable() {
-        Main.panel._rightBox.insert_child_at_index(this.button, 0);
-    }
-
-    disable() {
-        Main.panel._rightBox.remove_child(this.button);
+        this.set_child(this.icon);
     }
 
     destroy() {
-        this.disable();
-        this.button.destroy();
+        super.destroy();
         this.icon.destroy();
     }
 
@@ -84,8 +78,7 @@ export class DevelopmentRestartButton {
             });
             debugLog("CWD: ", this.projectDir);
             launcher.set_cwd(this.projectDir!);
-            const proc = launcher.spawnv(['npm', 'run', 'build']);
-
+            const proc = launcher.spawnv(['npm', 'run', 'install']);
             const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 
             debugLog(`Exit code (${proc.get_successful() ? 'successful' : 'unsuccessful'}): `, proc.get_exit_status());
@@ -155,6 +148,7 @@ export class DevelopmentRestartButton {
         let running = true;
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
             if (running) {
+                //@ts-ignore
                 this.icon.ease({
                     rotationAngleZ: (this.icon.rotationAngleZ + 7) % 360,
                     duration: 10,

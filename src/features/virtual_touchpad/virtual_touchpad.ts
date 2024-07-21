@@ -4,9 +4,10 @@ import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
 import Clutter from "@girs/clutter-14";
 import {Widgets} from "$src/utils/ui/widgets";
-import {debugLog, log, randomChoice} from "$src/utils/utils";
+import {randomChoice} from "$src/utils/utils";
 import ActorAlign = Clutter.ActorAlign;
 import EventPhase = Clutter.EventPhase;
+import {debugLog} from "$src/utils/logging";
 
 
 export class VirtualTouchpad {

@@ -28,7 +28,7 @@ npm run dev-tty
 
  - To **rebuild and restart**, just click the reload icon in the top bar
  - To **exit** the shell, press `Alt + F2` and type `debugexit`.
- - To **view logs** in your IDE, use `npm run logs`
+ - To **view logs** live in your IDE, use `npm run logs`
 
 Therefore, a typical development workflow would be to switch between
 the first TTY (the one where your IDE is) and the second – whenever you make changes in your IDE, just 

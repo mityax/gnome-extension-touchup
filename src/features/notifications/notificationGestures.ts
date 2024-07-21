@@ -3,9 +3,9 @@ import {PatchManager} from "$src/utils/patchManager";
 import {Message, MessageListSection} from "@girs/gnome-shell/ui/messageList";
 import St from "@girs/st-14";
 import Clutter from "@girs/clutter-14";
-import {debugLog, repr} from "$src/utils/utils";
 import {Pattern, TouchGesture2dRecognizer} from "$src/utils/ui/touchGesture2dRecognizer";
 import GLib from "@girs/glib-2.0";
+import {debugLog, repr} from "$src/utils/logging";
 
 
 export class NotificationGestures {

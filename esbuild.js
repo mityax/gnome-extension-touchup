@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 await esbuild.build({
     entryPoints: ["src/extension.ts", "src/sass/stylesheet-light.sass", "src/sass/stylesheet-dark.sass"],
-    target: "firefox68", // Spider Monkey 68
+    target: "firefox115", // Spider Monkey 115  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
     plugins: [
@@ -46,9 +46,9 @@ await esbuild.build({
     zip.addLocalFolder(resolve(__dirname, "dist"));
     zip.writeZip(zipDist);
 
-    console.log(`Build complete. Zip file: ${zipFilename}\n`);
-    console.log(`Install with: gnome-extensions install ${zipFilename}`)
-    console.log(`Update with: gnome-extensions install --force ${zipFilename}`)
+    console.log(`Build complete. Zip file: dist/${zipFilename}\n`);
+    console.log(`Install with: gnome-extensions install dist/${zipFilename}`)
+    console.log(`Update with: gnome-extensions install --force dist/${zipFilename}`)
     console.log(`Enable with: gnome-extensions enable ${metadata.uuid}`)
     console.log('');
     console.log(`Disable with: gnome-extensions disable ${metadata.uuid}`)

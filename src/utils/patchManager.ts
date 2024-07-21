@@ -1,7 +1,8 @@
 import GObject from "@girs/gobject-2.0";
 //@ts-ignore
 import {InjectionManager} from '@girs/gnome-shell/extensions/extension';
-import {debugLog, log, repr, UnknownClass} from "$src/utils/utils";
+import {UnknownClass} from "$src/utils/utils";
+import {debugLog, repr} from "$src/utils/logging";
 
 
 type NoArgsFunc = () => (() => any);
@@ -127,6 +128,7 @@ export class PatchManager {
             }, opts);
         }
     }
+
 
     /**
      * Undo all patches made so far. This function should usually only be called when the

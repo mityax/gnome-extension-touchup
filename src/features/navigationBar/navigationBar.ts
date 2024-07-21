@@ -4,7 +4,7 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {clamp, debugLog, getStyle, log, UnknownClass} from "$src/utils/utils";
+import {clamp, getStyle, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
 import {css} from "$src/utils/ui/css";
 import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
@@ -19,6 +19,7 @@ import {IntervalRunner} from "$src/utils/intervalRunner";
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
 import ActorAlign = Clutter.ActorAlign;
+import {debugLog} from "$src/utils/logging";
 
 const LEFT_EDGE_OFFSET = 100;
 const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
@@ -141,7 +142,7 @@ export default class NavigationBar extends St.Widget {
             // Height:
             Math.floor(Math.min(this.height * 0.8, 4.5 * this.scaleFactor, this.height - 2))
         )
-        debugLog('pill size: ', this.pill.width, 'x', this.pill.height)
+        debugLog('Pill size: ', this.pill.width, 'x', this.pill.height)
     }
 
     private _setupGestureTracker() {
@@ -229,6 +230,8 @@ export default class NavigationBar extends St.Widget {
     }
 
     private async updatePillBrightness() {
+        return;
+        
         const shooter = new Shell.Screenshot();
         // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
         const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
@@ -248,6 +251,7 @@ export default class NavigationBar extends St.Widget {
             this.scaleFactor, null, 0, 0, 1, stream
         );
         stream.close(null);
+        stream.run_dispose();  // seems to fix a memory leak (?)
 
         const verticalPadding = (area.h - this.pill.height) / 2;
 

@@ -2,6 +2,7 @@
     "name": "Gnome Touch",
     "description": "Enhances various aspects of the GNOME experience when using a touch device.",
     "url": "https://github.com/mityax/gnome-touch",
+    "version": "1.0.0",
     "uuid": "gnometouch@mityax.github.com",
     "shell-version": ["46"],
     "gettext-domain": "gnometouch"

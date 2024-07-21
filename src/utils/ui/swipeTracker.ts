@@ -3,7 +3,7 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import Shell from "@girs/shell-14";
-import {debugLog, log} from "$src/utils/utils";
+import {debugLog} from "../logging";
 
 export class TouchSwipeGesture extends Clutter.GestureAction {
     static {

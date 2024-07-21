@@ -3,13 +3,8 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import Shell from "@girs/shell-14";
-import {debugLog, log} from "$src/utils/utils";
-import {Widgets} from "$src/utils/ui/widgets";
-import GLib from "@girs/glib-2.0";
-import {css} from "$src/utils/ui/css";
-import St from "@girs/st-14";
-import Stage = Clutter.Stage;
 import {TouchGesture2dRecognizer} from "$src/utils/ui/touchGesture2dRecognizer";
+import {debugLog} from "$src/utils/logging";
 
 
 type _SemanticEvent = {

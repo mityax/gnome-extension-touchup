@@ -5,15 +5,13 @@ import NavigationBar from "$src/features/navigationBar/navigationBar";
 import {PatchManager} from "$src/utils/patchManager";
 import {OSKKeyPopups} from "$src/features/osk/oskKeyPopups";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
-import * as PanelMenu from '@girs/gnome-shell/ui/panelMenu';
-import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
-import {log} from '$src/utils/utils';
 import Clutter from "@girs/clutter-14";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
 import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
-import {DevelopmentRestartButton} from "$src/features/developmentTools/developmentRestartButton";
+import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
+import {debugLog} from "$src/utils/logging";
 
 
 export default class GnomeTouchExtension {
@@ -23,21 +21,22 @@ export default class GnomeTouchExtension {
     private virtualTouchpad?: VirtualTouchpad;
     private virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
     private notificationGestures?: NotificationGestures;
-    private developmentRestartButton?: DevelopmentRestartButton;
+    private developmentTools?: DevelopmentTools;
 
     constructor(metadata: Record<string, any>) {
         this.metadata = metadata;
     }
 
     enable() {
+        debugLog("*************************************************")
+        debugLog(`          Starting Gnome Touch v. ${this.metadata.version}          `)
+        debugLog("*************************************************")
+        debugLog()
+
         this.bar = new NavigationBar('gestures');
         this.oskKeyPopups = new OSKKeyPopups();
         this.notificationGestures = new NotificationGestures();
         this.virtualTouchpad = new VirtualTouchpad();
-
-        if (GnomeTouchExtension.isDebugMode) {
-            this.developmentRestartButton = new DevelopmentRestartButton();
-        }
 
         // Add virtual touchpad open button to panel:
         this.virtualTouchpadOpenButton = new VirtualTouchpadQuickSettingsItem(() => this.virtualTouchpad?.toggle());
@@ -45,6 +44,10 @@ export default class GnomeTouchExtension {
             this.virtualTouchpadOpenButton,
             2,  // add after battery indicator and spacer
         );
+
+        if (GnomeTouchExtension.isDebugMode) {
+            this.developmentTools = new DevelopmentTools();
+        }
 
         // Add style classes for settings:
         PatchManager.patch(() => {
@@ -100,7 +103,7 @@ export default class GnomeTouchExtension {
         this.notificationGestures?.destroy();
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
-        this.developmentRestartButton?.destroy();
+        this.developmentTools?.disable();
     }
 
     private enableIntegrations() {

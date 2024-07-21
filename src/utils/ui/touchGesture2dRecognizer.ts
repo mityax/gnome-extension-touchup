@@ -1,7 +1,7 @@
-import {debugLog} from "../utils";
 import Clutter from "@girs/clutter-14";
 import St from "@girs/st-14";
 import Stage = Clutter.Stage;
+import {debugLog} from "$src/utils/logging";
 
 
 export type SwipePattern = {
@@ -181,7 +181,7 @@ export class TouchGesture2dRecognizer {
             return 'right';
         } else if (135 <= angle && angle <= 225) {
             return 'down'
-        } else if (225 <= angle && angle <= 315) {
+        } else {
             return 'left';
         }
     }

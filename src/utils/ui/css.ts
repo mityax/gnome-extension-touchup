@@ -1,5 +1,5 @@
 import Clutter from "@girs/clutter-14";
-import {log} from '../utils';
+
 
 export function css(v: any): string | null {
     let res: string | null = null;

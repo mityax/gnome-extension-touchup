@@ -2,11 +2,12 @@ import * as Main from '@girs/gnome-shell/ui/main';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {findActorBy, log, UnknownClass} from '$src/utils/utils';
+import {findActorBy, UnknownClass} from '$src/utils/utils';
 import {PatchManager} from "$src/utils/patchManager";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
 import St from "@girs/st-14";
 import GLib from "@girs/glib-2.0";
+import {debugLog, log} from "$src/utils/logging";
 
 
 export class OSKKeyPopups {

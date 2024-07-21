@@ -8,10 +8,10 @@
   "private": true,
   "scripts": {
     "clear": "rm -rf dist",
-    "build:app": "node esbuild.js",
-    "build": "npm run clear && npm run build:app",
+    "build": "node esbuild.js",
+    "install": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
     "validate": "tsc --noEmit",
-    "dev": "dbus-run-session -- $(pwd)/run.sh --build  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
+    "dev": "npm run build && dbus-run-session -- $(pwd)/run.sh  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
     "dev-tty": "dbus-run-session $(pwd)/run.sh --tty --build",
     "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh",
     "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE"
