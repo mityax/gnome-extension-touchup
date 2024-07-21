@@ -13,7 +13,8 @@
     "validate": "tsc --noEmit",
     "dev": "dbus-run-session -- $(pwd)/run.sh --build  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
     "dev-tty": "dbus-run-session $(pwd)/run.sh --tty --build",
-    "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh"
+    "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh",
+    "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE"
   },
   "devDependencies": {
     "@girs/clutter-14": "^14.0.0-3.3.0",

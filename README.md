@@ -26,13 +26,13 @@ this command:
 npm run dev-tty
 ```
 
- - To **rebuild** the extension and **restart** the shell, just click the reload icon in the top bar
+ - To **rebuild and restart**, just click the reload icon in the top bar
  - To **exit** the shell, press `Alt + F2` and type `debugexit`.
+ - To **view logs** in your IDE, use `npm run logs`
 
 Therefore, a typical development workflow would be to switch between
-the default TTY (the one where your IDE is) and the one you just
-opened the dev shell on. Whenever you make changes in your IDE, just 
-save them and switch back to the second TTY and hit the restart button.
+the first TTY (the one where your IDE is) and the second – whenever you make changes in your IDE, just 
+save them, switch back to the second TTY, and hit the restart button.
 
 ### Running in a nested shell
 You can also run the extension in a nested instance of Gnome Shell. While
