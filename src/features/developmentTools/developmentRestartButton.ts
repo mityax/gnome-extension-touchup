@@ -39,10 +39,9 @@ export class DevelopmentRestartButton extends St.Bin {
         this.connect('touch-event', this._onButtonPressed.bind(this));
 
         this.icon = new St.Icon({
-            iconName: 'view-refresh',
-            styleClass: 'system-status-icon',
+            iconName: 'view-refresh-symbolic',
             opacity: this.projectDir ? 255 : 128,
-            iconSize: 18,
+            iconSize: 16,
             pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
         });
         this.set_child(this.icon);
@@ -53,15 +52,20 @@ export class DevelopmentRestartButton extends St.Bin {
         this.icon.destroy();
     }
 
-    private async _onButtonPressed() {
-        let res = true;
+    private async _onButtonPressed(_: Clutter.Actor, e: Clutter.Event) {
+        if (e.type() == Clutter.EventType.BUTTON_PRESS ||
+            e.type() == Clutter.EventType.TOUCH_END) {
 
-        if (this.projectDir) {
-            res = await this._withAnimatedIcon(() => this._rebuild());
-        }
+            let res = true;
+            this.icon.opacity = 128;
+            if (this.projectDir) {
+                res = await this._withAnimatedIcon(() => this._rebuild());
+            }
+            this.icon.opacity = 255;
 
-        if (res) {
-            this._restart();
+            if (res) {
+                this._restart();
+            }
         }
     }
 

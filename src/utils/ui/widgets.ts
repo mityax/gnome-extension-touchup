@@ -74,6 +74,9 @@ export namespace Widgets {
         constructor(config: St.Bin.ConstructorProperties & UiProps<Bin>) {
             super(filterConfig(config));
             initWidget(this, config);
+            if (config.child) {
+                this.set_child(config.child);
+            }
         }
     }
 

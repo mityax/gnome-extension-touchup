@@ -4,25 +4,39 @@ import {Widgets} from "../../utils/ui/widgets";
 import Clutter from "@girs/clutter-14";
 import '@girs/gnome-shell/extensions/global';
 import {clamp} from "../../utils/utils";
-import Gio from "@girs/gio-2.0";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
+import GLib from "@girs/glib-2.0";
+import GObject from "@girs/gobject-2.0";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
-import BindConstraint = Clutter.BindConstraint;
-import BindCoordinate = Clutter.BindCoordinate;
-import GLib from "@girs/glib-2.0";
 
 
-const MAX_HISTORY_LENGTH = 10_000;  // in bytes
+export class DevelopmentLogDisplayButton extends Widgets.Bin {
+    static {
+        GObject.registerClass(this);
+    }
 
-
-export class DevelopmentLogDisplay {
     private readonly logDisplays: St.Widget[] = [];
     private readonly logAddedCallbacks: ((text: string) => void)[] = [];
-    private logCallbackId: number;
+    private readonly logCallbackId: number;
 
     constructor() {
+        super({
+            styleClass: 'panel-button',
+            reactive: true,
+            canFocus: true,
+            xExpand: true,
+            yExpand: false,
+            trackHover: true,
+            child: new St.Icon({
+                iconName: 'format-justify-left-symbolic',
+                iconSize: 16,
+            }),
+        });
+        this.connect('button-press-event', this._onButtonPressed.bind(this));
+        this.connect('touch-event', this._onButtonPressed.bind(this));
+
         //@ts-ignore
         Main.layoutManager._bgManagers.forEach(this._addLogDisplay.bind(this));
 
@@ -51,9 +65,9 @@ export class DevelopmentLogDisplay {
                 padding: '15px',
                 borderRadius: '10px',
             }),
-            constraints: new BindConstraint({
+            constraints: new Clutter.BindConstraint({
                 source: bgManager._container,
-                coordinate: BindCoordinate.POSITION,
+                coordinate: Clutter.BindCoordinate.POSITION,
                 offset: Main.panel.height + 25
             }),
         });
@@ -70,6 +84,16 @@ export class DevelopmentLogDisplay {
                 });
             }
         });
+        this.logDisplays.push(display);
+    }
+
+    private _onButtonPressed(_: Clutter.Actor, e: Clutter.Event) {
+        if (e.type() == Clutter.EventType.BUTTON_PRESS ||
+            e.type() == Clutter.EventType.TOUCH_END) {
+            for (let d of this.logDisplays) {
+                d.visible = !d.visible;
+            }
+        }
     }
 
     destroy() {
