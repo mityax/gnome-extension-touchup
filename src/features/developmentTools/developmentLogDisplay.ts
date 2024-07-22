@@ -1,18 +1,21 @@
 import St from "@girs/st-14";
 import * as Main from '@girs/gnome-shell/ui/main';
-import {Widgets} from "../../utils/ui/widgets";
+import {Widgets} from "$src/utils/ui/widgets";
 import Clutter from "@girs/clutter-14";
 import '@girs/gnome-shell/extensions/global';
-import {clamp} from "../../utils/utils";
+import {clamp} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
 import GLib from "@girs/glib-2.0";
 import GObject from "@girs/gobject-2.0";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
+import Pango from "@girs/pango-1.0";
 
 
 export class DevelopmentLogDisplayButton extends Widgets.Bin {
+    static readonly MAX_LENGTH = 25_000;
+
     static {
         GObject.registerClass(this);
     }
@@ -53,6 +56,7 @@ export class DevelopmentLogDisplayButton extends Widgets.Bin {
             text: '',
             style: 'font-family: monospace;',
         });
+        //label.clutterText.ellipsize = Pango.EllipsizeMode.NONE;  // leads to bugs with St.ScrollView :/
         const display = new Widgets.ScrollView({
             child: label,
             width: clamp(global.screenWidth * 0.5, 250 * scaleFactor, 900 * scaleFactor),
@@ -75,10 +79,10 @@ export class DevelopmentLogDisplayButton extends Widgets.Bin {
         this.logAddedCallbacks.push((t) => {
             const a = display.get_vadjustment();
             const isAtBottom = a.value + a.pageSize >= a.upper - 25 * scaleFactor;
-            label.text += t + '\n';
+            label.text = (label.text + '\n' + t).slice(-DevelopmentLogDisplayButton.MAX_LENGTH).trimStart();
 
             if (isAtBottom) {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5, () => {
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
                     a.set_value(a.upper);
                     return GLib.SOURCE_REMOVE;
                 });

@@ -6,6 +6,7 @@ import Clutter from "@girs/clutter-14";
 import {Pattern, TouchGesture2dRecognizer} from "$src/utils/ui/touchGesture2dRecognizer";
 import GLib from "@girs/glib-2.0";
 import {debugLog, repr} from "$src/utils/logging";
+import {NotificationMessage} from "@girs/gnome-shell/ui/calendar";
 
 
 export class NotificationGestures {
@@ -16,7 +17,7 @@ export class NotificationGestures {
     constructor() {
         const self = this;
         PatchManager.patchMethod(MessageListSection.prototype, 'addMessageAtIndex',
-            function(this: MessageListSection, orig, message: St.Widget, idx: number, animate: boolean) {
+            function(this: MessageListSection, orig, message: NotificationMessage, idx: number, animate: boolean) {
                 debugLog("New message!");
                 //const msg = new Message();
                 self.messageListSection = this;
@@ -24,90 +25,98 @@ export class NotificationGestures {
                 self._onNewNotification(message);
             },
             { scope: NotificationGestures.PATCH_SCOPE },
-        )
+        );
     }
 
-    private _onNewNotification(message: Clutter.Actor) {
+    private _onNewNotification(message: NotificationMessage) {
         const recognizer = new TouchGesture2dRecognizer();
-
-        //debugLog("Setting up gesture for actor: ", message, GObject.signal_handler_find(message, {signalId: 'touch-event'}));
-        //debugLog("Setting up gesture for button: ", message.get_child_at_index(0), GObject.signal_handler_find(message.get_child_at_index(0), {signalId: 'touch-event'}));
-        //GObject.signal_handler_block(message, GObject.signal_handler_find(message, {signalId: 'touch-event'}))
-        //GObject.signal_handler_block(message.get_child_at_index(0), GObject.signal_handler_find(message.get_child_at_index(0), {signalId: 'touch-event'}))
 
         message.get_parent()!.reactive = true;
 
-        message.reactive = false;  // TODO: find a less hacky way to prevent click actions on touch
+        // Make button unreactive to prevent immediate notification activation on any event:
+        message.reactive = false;
+        // Manually reset style pseudo-class to prevent the insensitive styling from being applied:
+        message.pseudoClass = 'normal';
         
 
         let initialPos: number[] | null = null;
+        let isTouched = false;
 
-        message.get_parent()!.connect('touch-event', (_, e: Clutter.Event) => {
-            debugLog(`touch-event (type: ${e.type()}): `, e);  // only thing that works so far (!)
-            recognizer.addEvent(e);
+        const onEvent = (_: Clutter.Actor, e: Clutter.Event) => {
+            debugLog("event: ", e.type(), e.get_coords(), Clutter.EventType);
 
             if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
                 e.type() == Clutter.EventType.BUTTON_PRESS) {
+                isTouched = true;
                 initialPos = e.get_coords();
             }
+
             let dx = e.get_coords()[0] - initialPos![0],
                 dy = e.get_coords()[1] - initialPos![1];
-            message.translationX = dx;
+
+            if (isTouched) {
+                message.translationX = dx;
+                recognizer.addEvent(e);
+            }
 
             if (e.type() == Clutter.EventType.TOUCH_END ||
                 e.type() == Clutter.EventType.TOUCH_CANCEL ||
-                e.type() == Clutter.EventType.BUTTON_RELEASE) {
+                e.type() == Clutter.EventType.BUTTON_RELEASE ||
+                e.type() == Clutter.EventType.PAD_BUTTON_RELEASE) {
 
-                this._onGestureFinished(message, dx, dy, recognizer.getPatterns().at(-1));
+                this._onGestureFinished(message, dx, dy, recognizer, [Clutter.EventType.BUTTON_RELEASE, Clutter.EventType.PAD_BUTTON_RELEASE].indexOf(e.type()) == -1);
+                isTouched = false;
             }
-        });
+        }
+
+        message.get_parent()!.connect('touch-event', onEvent);
+        message.get_parent()!.connect('button-press-event', onEvent);
+        message.get_parent()!.connect('button-release-event', onEvent);
+
+        message.get_parent()!.connect('enter-event', () => message.pseudoClass = 'hover');
+        message.get_parent()!.connect('leave-event', () => message.pseudoClass = 'normal');
     }
 
     destroy() {
         PatchManager.clear(NotificationGestures.PATCH_SCOPE);
     }
 
-    private _onGestureFinished(actor: Clutter.Actor, dx: number, dy: number, lastPattern: Pattern | undefined) {
-        debugLog(`Gesture done, dx=${dx}, dy=${dy}, lastPattern=${repr(lastPattern)}`);
-        if (lastPattern == null) return;
-
-        // TODO: Prevent message from activating click action somehow
-
-        if (dx > 0 && lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'left'
-            || dx < 0 && lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'right') {
-            actor.ease({
-                translationX: 0,
-                duration: 300,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            })
-        } else if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'down') {
-            (actor as Message).expand(true);
-            debugLog("Expanding message");
-        } else if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'up') {
-            (actor as Message).unexpand(true);
-            debugLog("Collapsing message");
-        }
-
-        if (lastPattern.type === 'swipe' && (
-            (dx > 0 && lastPattern.swipeDirection == 'right') ||
-            (dx < 0 && lastPattern.swipeDirection == 'left')
-        )) {
-            debugLog("Dismissing message");
-            actor.ease({
-                translationX: lastPattern.swipeDirection == 'right' ? actor.width : -actor.width,
-                duration: 250,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            })
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-                this.messageListSection!.removeMessage(actor as Message, true);
-                return GLib.SOURCE_REMOVE;
-            })
+    private _onGestureFinished(message: NotificationMessage, dx: number, dy: number, recognizer: TouchGesture2dRecognizer, isTouch: boolean = true) {
+        if (recognizer.isTap() || !isTouch) {
+            debugLog("Activating message");
+            message.notification.activate();
         } else {
-            actor.ease({
-                translationX: 0,
-                duration: 300,
-                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            })
+            const lastPattern = recognizer.getPatterns().at(-1)!;
+
+            if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'down') {
+                (message as Message).expand(true);
+                debugLog("Expanding message");
+            } else if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'up') {
+                (message as Message).unexpand(true);
+                debugLog("Collapsing message");
+            }
+
+            if (lastPattern.type === 'swipe' && (
+                (dx > 0 && lastPattern.swipeDirection == 'right') ||
+                (dx < 0 && lastPattern.swipeDirection == 'left')
+            )) {
+                debugLog("Dismissing message");
+                message.ease({
+                    translationX: lastPattern.swipeDirection == 'right' ? message.width : -message.width,
+                    duration: 250,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                })
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                    this.messageListSection!.removeMessage(message as Message, true);
+                    return GLib.SOURCE_REMOVE;
+                })
+            } else {
+                message.ease({
+                    translationX: 0,
+                    duration: 300,
+                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                })
+            }
         }
     }
 }

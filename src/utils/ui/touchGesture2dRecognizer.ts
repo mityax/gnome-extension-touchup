@@ -44,7 +44,8 @@ export class TouchGesture2dRecognizer {
     addEvent(event: Clutter.Event) {
         // Reset if event is the beginning of a sequence:
         if (event.type() == Clutter.EventType.TOUCH_BEGIN ||
-            event.type() == Clutter.EventType.BUTTON_PRESS) {
+            event.type() == Clutter.EventType.BUTTON_PRESS ||
+            event.type() == Clutter.EventType.PAD_BUTTON_PRESS) {
             this.recordedPatterns = [];
             this.lastEvent = null;
             this.initialAngle = -1;
@@ -64,6 +65,10 @@ export class TouchGesture2dRecognizer {
         return [...this.recordedPatterns];
     }
 
+    isTap() {
+        return this.recordedPatterns.length == 0;
+    }
+
     private processEvent(event: Clutter.Event) {
         // Calculate initial angle (between first and second event of a sequence):
         if (this.initialAngle === -1 && this.lastEvent !== null) {
@@ -81,8 +86,8 @@ export class TouchGesture2dRecognizer {
                   dt = event.get_time() - this.lastEvent.get_time();
             const d = Math.sqrt(dx ** 2 + dy ** 2);
 
-            debugLog(`event: \tdx=${dx.toFixed(1)}\tdy=${dy.toFixed(1)}\tdt=${dt} ms\t|\t` +
-                `speed=${(d / dt).toFixed(4)} px/ms\tangle=${this.angleBetween(dx, dy).toFixed(1)} deg`)
+            //debugLog(`event: \tdx=${dx.toFixed(1)}\tdy=${dy.toFixed(1)}\tdt=${dt} ms\t|\t` +
+            //    `speed=${(d / dt).toFixed(4)} px/ms\tangle=${this.angleBetween(dx, dy).toFixed(1)} deg`)
 
             // If there is absolutely no movement and no time since last event, skip event (e.g. touch-release event):
             if (dt === 0 && dx === 0 && dy === 0) return;
@@ -124,7 +129,7 @@ export class TouchGesture2dRecognizer {
 
         if (Math.abs(angleDiff) > TouchGesture2dRecognizer.SIGNIFICANT_ANGLE_CHANGE) {
             // Significant angle change detected
-            debugLog(`  - angle change! (${angleDiff} deg, dx=${dx}, dy=${dy})`)
+            //debugLog(`  - angle change! (${angleDiff} deg, dx=${dx}, dy=${dy})`)
             this.totalDx = dx;
             this.totalDy = dy;
             this.totalDt = dt;
@@ -147,7 +152,7 @@ export class TouchGesture2dRecognizer {
 
         if (this.pauseTime >= TouchGesture2dRecognizer.SIGNIFICANT_PAUSE) {
             this.totalDx = this.totalDy = this.totalDt = 0; // Significant pause detected
-            debugLog(`  - significant pause! (${this.pauseTime} ms > ${TouchGesture2dRecognizer.SIGNIFICANT_PAUSE} ms; d=${Math.sqrt(this.pauseDx ** 2 + this.pauseDy ** 2)})`)
+            //debugLog(`  - significant pause! (${this.pauseTime} ms > ${TouchGesture2dRecognizer.SIGNIFICANT_PAUSE} ms; d=${Math.sqrt(this.pauseDx ** 2 + this.pauseDy ** 2)})`)
             this.pushPattern({
                 type: 'hold',
                 x: x,

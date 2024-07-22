@@ -149,7 +149,7 @@ export namespace Widgets {
                 if ('vadjustment' in config.child) {
                     this.set_child(config.child as unknown as St.Scrollable);
                 } else {
-                    const s = new St.Viewport();
+                    const s = new St.BoxLayout();
                     s.add_child(config.child);
                     this.set_child(s)
                 }
