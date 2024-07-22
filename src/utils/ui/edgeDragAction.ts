@@ -4,8 +4,8 @@ import * as Main from '@girs/gnome-shell/ui/main';
 
 import Clutter from "@girs/clutter-14";
 import GObject from '@girs/gobject-2.0';
-import Mtk from '@girs/mtk-13';
-import St from '@girs/st-13';
+import Mtk from '@girs/mtk-14';
+import St from '@girs/st-14';
 import Shell from "@girs/shell-14";
 
 

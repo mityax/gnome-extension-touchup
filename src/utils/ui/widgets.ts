@@ -146,7 +146,7 @@ export namespace Widgets {
             });
             initWidget(this, config);
             if (config.child) {
-                if (typeof config.child.hadjustment !== 'undefined') {
+                if ('vadjustment' in config.child) {
                     this.set_child(config.child as unknown as St.Scrollable);
                 } else {
                     const s = new St.Viewport();
