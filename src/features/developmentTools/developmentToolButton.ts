@@ -1,0 +1,111 @@
+import St from "@girs/st-14";
+import GObject from "@girs/gobject-2.0";
+import Clutter from "@girs/clutter-14";
+import {css} from "$src/utils/ui/css";
+import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
+import * as Main from "@girs/gnome-shell/ui/main";
+import Side = St.Side;
+
+
+type DevToolButtonConstructorProps = {
+    icon: string | St.Widget,
+    label: string | St.Widget,
+    onPressed: () => void,
+};
+
+
+export class DevToolButton extends St.Bin {
+    static {
+        GObject.registerClass(this);
+    }
+
+    public readonly icon: St.Widget;
+    public readonly label: St.Widget;
+    public readonly tooltip: BoxPointer.BoxPointer;
+
+    constructor(props: DevToolButtonConstructorProps) {
+        super({
+            styleClass: 'panel-button',
+            reactive: true,
+            canFocus: true,
+            xExpand: true,
+            yExpand: false,
+            trackHover: true,
+        });
+
+        this.icon = typeof props.icon === 'string'
+            ? new St.Icon({
+                iconName: props.icon,
+                iconSize: 16,
+            })
+            : props.icon;
+        this.set_child(this.icon);
+
+        this.connect('button-release-event', props.onPressed);
+        this.connect('touch-event', (_: any, e: Clutter.Event) => {
+            if (e.type() === Clutter.EventType.TOUCH_END) {
+                props.onPressed();
+            }
+        });
+
+        this.label = typeof props.label !== 'string' ? props.label : new St.Label({
+            text: props.label,
+        });
+        this.tooltip = new BoxPointer.BoxPointer(Side.TOP, {
+            child: this.label,
+            style: css({
+                backgroundColor: '#1f1f1f',
+                padding: '5px',
+                borderRadius: '5px'
+            }),
+        });
+        this.tooltip.setPosition(this, 0.5);
+        this.tooltip.setSourceAlignment(0.5);
+        this.tooltip.bin.translationY = 15;
+        this.tooltip.hide();
+        this.connect('notify::hover', () => {
+            if (this.hover) {
+                this.tooltip.open(false, () => {});
+            } else {
+                this.tooltip.close(false, () => {});
+            }
+        });
+        Main.layoutManager.addTopChrome(this.tooltip);
+    }
+
+    destroy() {
+        super.destroy();
+        this.tooltip.destroy();
+    }
+}
+
+
+export class DevToolToggleButton extends DevToolButton {
+    static {
+        GObject.registerClass(this);
+    }
+
+    private _value: boolean = false;
+
+    constructor(props: Omit<DevToolButtonConstructorProps, 'onPressed'> & {onPressed: (value: boolean) => void}) {
+        super({
+            icon: props.icon,
+            label: props.label,
+            onPressed: () => {
+                this.value = !this.value;
+                props.onPressed(this.value);
+            }
+        });
+    }
+
+    get value(): boolean {
+        return this._value;
+    }
+
+    set value(value: boolean) {
+        this._value = value;
+        this.backgroundColor = value
+            ? Clutter.Color.from_string('rgba(203,203,203,0.3)')[1]
+            : Clutter.Color.from_string('rgba(0,0,0,0)')[1];
+    }
+}

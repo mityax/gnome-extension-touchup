@@ -8,12 +8,12 @@ import {css} from "$src/utils/ui/css";
 import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
 import GLib from "@girs/glib-2.0";
 import GObject from "@girs/gobject-2.0";
+import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
-import Pango from "@girs/pango-1.0";
 
 
-export class DevelopmentLogDisplayButton extends Widgets.Bin {
+export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     static readonly MAX_LENGTH = 25_000;
 
     static {
@@ -26,19 +26,11 @@ export class DevelopmentLogDisplayButton extends Widgets.Bin {
 
     constructor() {
         super({
-            styleClass: 'panel-button',
-            reactive: true,
-            canFocus: true,
-            xExpand: true,
-            yExpand: false,
-            trackHover: true,
-            child: new St.Icon({
-                iconName: 'format-justify-left-symbolic',
-                iconSize: 16,
-            }),
+            label: 'Show log display',
+            icon: 'format-justify-left-symbolic',
+            onPressed: (value) => this._onPressed(value),
         });
-        this.connect('button-press-event', this._onButtonPressed.bind(this));
-        this.connect('touch-event', this._onButtonPressed.bind(this));
+        this.value = true;
 
         //@ts-ignore
         Main.layoutManager._bgManagers.forEach(this._addLogDisplay.bind(this));
@@ -91,12 +83,9 @@ export class DevelopmentLogDisplayButton extends Widgets.Bin {
         this.logDisplays.push(display);
     }
 
-    private _onButtonPressed(_: Clutter.Actor, e: Clutter.Event) {
-        if (e.type() == Clutter.EventType.BUTTON_PRESS ||
-            e.type() == Clutter.EventType.TOUCH_END) {
-            for (let d of this.logDisplays) {
-                d.visible = !d.visible;
-            }
+    private _onPressed(value: boolean) {
+        for (let d of this.logDisplays) {
+            d.visible = value;
         }
     }
 

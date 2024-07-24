@@ -29,26 +29,27 @@ export class NotificationGestures {
     }
 
     private _onNewNotification(message: NotificationMessage) {
+        // Make message unreactive to prevent immediate notification activation on any event:
+        message.reactive = false;  // (this is necessary as message inherits from St.Button which conflicts with complex reactivity as we want it)
+        // Prevent the insensitive styling from being applied:
+        message.remove_style_pseudo_class('insensitive');
+
+        // Each message is wrapped by a single bin, which we use for reactivity:
+        const container = message.get_parent() as St.Bin;
+        container.reactive = true;
+        container.trackHover = true;
+
+        // Track and recognize touch and mouse events:
         const recognizer = new TouchGesture2dRecognizer();
-
-        message.get_parent()!.reactive = true;
-
-        // Make button unreactive to prevent immediate notification activation on any event:
-        message.reactive = false;
-        // Manually reset style pseudo-class to prevent the insensitive styling from being applied:
-        message.pseudoClass = 'normal';
-        
-
         let initialPos: number[] | null = null;
         let isTouched = false;
 
         const onEvent = (_: Clutter.Actor, e: Clutter.Event) => {
-            debugLog("event: ", e.type(), e.get_coords(), Clutter.EventType);
-
             if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
                 e.type() == Clutter.EventType.BUTTON_PRESS) {
-                isTouched = true;
                 initialPos = e.get_coords();
+                isTouched = true;
+                updateHover();
             }
 
             let dx = e.get_coords()[0] - initialPos![0],
@@ -66,15 +67,23 @@ export class NotificationGestures {
 
                 this._onGestureFinished(message, dx, dy, recognizer, [Clutter.EventType.BUTTON_RELEASE, Clutter.EventType.PAD_BUTTON_RELEASE].indexOf(e.type()) == -1);
                 isTouched = false;
+                updateHover();
             }
         }
 
-        message.get_parent()!.connect('touch-event', onEvent);
-        message.get_parent()!.connect('button-press-event', onEvent);
-        message.get_parent()!.connect('button-release-event', onEvent);
+        const updateHover = () => {
+            if (container.hover || isTouched) {
+                message.add_style_pseudo_class('hover');
+            } else {
+                message.remove_style_pseudo_class('hover');
+            }
+        }
 
-        message.get_parent()!.connect('enter-event', () => message.pseudoClass = 'hover');
-        message.get_parent()!.connect('leave-event', () => message.pseudoClass = 'normal');
+        // Setup event handlers:
+        container.connect('touch-event', onEvent);
+        container.connect('button-press-event', onEvent);
+        container.connect('button-release-event', onEvent);
+        container.connect('notify::hover', updateHover);
     }
 
     destroy() {
@@ -84,23 +93,24 @@ export class NotificationGestures {
     private _onGestureFinished(message: NotificationMessage, dx: number, dy: number, recognizer: TouchGesture2dRecognizer, isTouch: boolean = true) {
         if (recognizer.isTap() || !isTouch) {
             debugLog("Activating message");
+            //@ts-ignore
             message.notification.activate();
         } else {
             const lastPattern = recognizer.getPatterns().at(-1)!;
 
+            // Check for expand/unexpand gesture (vertical):
             if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'down') {
-                (message as Message).expand(true);
-                debugLog("Expanding message");
+                if (!message.expanded) message.expand(true);
             } else if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'up') {
-                (message as Message).unexpand(true);
-                debugLog("Collapsing message");
+                if (message.expanded) message.unexpand(true);
             }
 
+            // Check for dismiss gesture (horizontal):
             if (lastPattern.type === 'swipe' && (
                 (dx > 0 && lastPattern.swipeDirection == 'right') ||
                 (dx < 0 && lastPattern.swipeDirection == 'left')
             )) {
-                debugLog("Dismissing message");
+                //@ts-ignore
                 message.ease({
                     translationX: lastPattern.swipeDirection == 'right' ? message.width : -message.width,
                     duration: 250,
@@ -110,7 +120,8 @@ export class NotificationGestures {
                     this.messageListSection!.removeMessage(message as Message, true);
                     return GLib.SOURCE_REMOVE;
                 })
-            } else {
+            } else {  // if not dismissed, ease back to translationX = 0
+                //@ts-ignore
                 message.ease({
                     translationX: 0,
                     duration: 300,

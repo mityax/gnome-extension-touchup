@@ -1,7 +1,7 @@
 import Clutter from "@girs/clutter-14";
 
 
-export function css(v: any): string | null {
+export function css(v: any): string | undefined {
     let res: string | null = null;
 
     if (['string', 'number'].indexOf(typeof v) !== -1) {
@@ -25,5 +25,5 @@ export function css(v: any): string | null {
         res = v.toString();
     }
 
-    return !!res ? res.trim() : null;
+    return !!res ? res.trim() : undefined;
 }

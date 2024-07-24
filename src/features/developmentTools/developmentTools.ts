@@ -7,12 +7,41 @@ import {debugLog} from "$src/utils/logging";
 import Clutter from "@girs/clutter-14";
 import {css} from "$src/utils/ui/css";
 import Graphene from "@girs/graphene-1.0";
+import {DevToolButton, DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
+import GnomeTouchExtension from "$src/extension";
+
 
 export class DevelopmentTools {
     static readonly PATCH_SCOPE = Symbol('development-tools');
 
-    constructor() {
+    private _enforceTouchMode = false;
+    private extension: GnomeTouchExtension;
+
+    constructor(extension: GnomeTouchExtension) {
+        this.extension = extension;
         this.enable();
+    }
+
+    private buildToolbar() {
+        return [
+            new Widgets.Label({
+                text: 'Gnome Touch DevTools',
+                yAlign: Clutter.ActorAlign.CENTER,
+            }),
+            new Widgets.Bin({width: 25}),
+            new DevelopmentLogDisplayButton(),
+            new Widgets.Bin({width: 10}),
+            new DevToolToggleButton({
+                label: 'Enforce Touch-Mode',
+                icon: 'phone-symbolic',
+                onPressed: (v) => {
+                    this._enforceTouchMode = v;
+                    this.extension.syncUI();
+                }
+            }),
+            new Widgets.Bin({width: 15}),
+            new DevelopmentRestartButton(),
+        ];
     }
 
     enable() {
@@ -28,15 +57,7 @@ export class DevelopmentTools {
                 scaleX: 0.8,
                 scaleY: 0.8,
                 pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-                children: [
-                    new Widgets.Label({
-                        text: 'Gnome Touch DevTools',
-                        yAlign: Clutter.ActorAlign.CENTER,
-                    }),
-                    new Widgets.Bin({ width: 25 }),
-                    new DevelopmentLogDisplayButton(),
-                    new DevelopmentRestartButton(),
-                ]
+                children: this.buildToolbar(),
             });
 
             debugLog("Inserting devtools");
@@ -53,4 +74,9 @@ export class DevelopmentTools {
     disable() {
         PatchManager.disable(DevelopmentTools.PATCH_SCOPE);
     }
+
+    get enforceTouchMode(): boolean {
+        return this._enforceTouchMode;
+    }
 }
+

@@ -5,6 +5,11 @@ import GnomeTouchExtension from "../extension";
 export const logFile = GLib.getenv('GNOMETOUCH_LOGFILE') ?? '/tmp/gnometouch.log';  // TODO: remove default value
 
 
+/**
+ * Log the given arguments to the console and the logfile (if given), together with a timestamp.
+ *
+ * Note: This function is **not** optimized for speed (!)
+ */
 export function log(...text: any[]) {
     console.log("GJS:gnometouch:", ...text.map(item => {
         if (item && item instanceof Error) {
@@ -33,6 +38,11 @@ export function log(...text: any[]) {
 }
 
 
+/**
+ * Log the given arguments, together with a timestamp, to the logfile (if given), and (if in debug mode) also to the console.
+ *
+ * Note: This function is **not** optimized for speed (!)
+ */
 export function debugLog(...text: any[]) {
     if (GnomeTouchExtension.isDebugMode || logFile) {
         log(...text);

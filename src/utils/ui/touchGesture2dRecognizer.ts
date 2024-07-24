@@ -1,7 +1,6 @@
 import Clutter from "@girs/clutter-14";
 import St from "@girs/st-14";
 import Stage = Clutter.Stage;
-import {debugLog} from "$src/utils/logging";
 
 
 export type SwipePattern = {
@@ -32,7 +31,7 @@ export class TouchGesture2dRecognizer {
 
     private recordedPatterns: Pattern[] = [];
     private lastEvent: Clutter.Event | null = null;
-    private initialAngle = -1;
+    private lastAngle = -1;
     private totalDx = 0;
     private totalDy = 0;
     private totalDt = 0;
@@ -48,7 +47,7 @@ export class TouchGesture2dRecognizer {
             event.type() == Clutter.EventType.PAD_BUTTON_PRESS) {
             this.recordedPatterns = [];
             this.lastEvent = null;
-            this.initialAngle = -1;
+            this.lastAngle = -1;
             this.totalDx = 0;
             this.totalDy = 0;
             this.totalDt = 0;
@@ -70,15 +69,6 @@ export class TouchGesture2dRecognizer {
     }
 
     private processEvent(event: Clutter.Event) {
-        // Calculate initial angle (between first and second event of a sequence):
-        if (this.initialAngle === -1 && this.lastEvent !== null) {
-            // @ts-ignore
-            this.initialAngle = this.angleBetween(
-                event.get_coords()[0] - this.lastEvent.get_coords()[0],
-                event.get_coords()[1] - this.lastEvent.get_coords()[1],
-            );
-        }
-
         if (this.lastEvent !== null) {
             // Compute deltas:
             const dx = event.get_coords()[0] - this.lastEvent.get_coords()[0],
@@ -90,7 +80,7 @@ export class TouchGesture2dRecognizer {
             //    `speed=${(d / dt).toFixed(4)} px/ms\tangle=${this.angleBetween(dx, dy).toFixed(1)} deg`)
 
             // If there is absolutely no movement and no time since last event, skip event (e.g. touch-release event):
-            if (dt === 0 && dx === 0 && dy === 0) return;
+            if (d === 0 && dt === 0) return;
 
             // Check for a significant pause ("hold"):
             // @ts-ignore
@@ -122,18 +112,22 @@ export class TouchGesture2dRecognizer {
     }
 
     private checkForSignificantAngleChange(dx: number, dy: number, dt: number) {
+        const lastAngle = this.lastAngle;
         const currentAngle = this.angleBetween(dx, dy);
-        const angleDiff = currentAngle - this.initialAngle;
+        this.lastAngle = currentAngle;
 
-        this.initialAngle = currentAngle;
+        // If there has already been computed a previous angle, compute difference to current angle:
+        if (lastAngle !== -1) {
+            const angleDiff = currentAngle - lastAngle;
 
-        if (Math.abs(angleDiff) > TouchGesture2dRecognizer.SIGNIFICANT_ANGLE_CHANGE) {
-            // Significant angle change detected
-            //debugLog(`  - angle change! (${angleDiff} deg, dx=${dx}, dy=${dy})`)
-            this.totalDx = dx;
-            this.totalDy = dy;
-            this.totalDt = dt;
-            return true;
+            if (Math.abs(angleDiff) > TouchGesture2dRecognizer.SIGNIFICANT_ANGLE_CHANGE) {
+                // Significant angle change detected
+                //debugLog(`  - angle change! (${angleDiff} deg, dx=${dx}, dy=${dy})`)
+                this.totalDx = dx;
+                this.totalDy = dy;
+                this.totalDt = dt;
+                return true;
+            }
         }
 
         return false;

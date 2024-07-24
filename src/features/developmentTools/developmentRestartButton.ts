@@ -10,41 +10,33 @@ import GLib from "@girs/glib-2.0";
 import Clutter from "@girs/clutter-14";
 import Graphene from "@girs/graphene-1.0";
 import {Widgets} from "$src/utils/ui/widgets";
-import PolicyType = St.PolicyType;
 import GObject from "@girs/gobject-2.0";
 import {debugLog} from "$src/utils/logging";
+import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
+import PolicyType = St.PolicyType;
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
 
-export class DevelopmentRestartButton extends St.Bin {
+export class DevelopmentRestartButton extends DevToolButton {
     static {
         GObject.registerClass(this);
     }
 
-    private readonly icon: St.Icon;
-    private readonly projectDir  = GLib.getenv('GNOMETOUCH_PROJECT_DIR');
+    private static readonly projectDir  = GLib.getenv('GNOMETOUCH_PROJECT_DIR');
 
     constructor() {
         super({
-            styleClass: 'panel-button',
-            reactive: true,
-            canFocus: true,
-            xExpand: true,
-            yExpand: false,
-            trackHover: true,
+            label: DevelopmentRestartButton.projectDir !== null ? 'Rebuild and restart' : 'Restart',
+            icon: new St.Icon({
+                iconName: 'view-refresh-symbolic',
+                iconSize: 16,
+                opacity: DevelopmentRestartButton.projectDir !== null ? 255 : 128,
+                pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
+            }),
+            onPressed: () => this._onPressed(),
         });
-        this.connect('button-press-event', this._onButtonPressed.bind(this));
-        this.connect('touch-event', this._onButtonPressed.bind(this));
-
-        this.icon = new St.Icon({
-            iconName: 'view-refresh-symbolic',
-            opacity: this.projectDir ? 255 : 128,
-            iconSize: 16,
-            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-        });
-        this.set_child(this.icon);
     }
 
     destroy() {
@@ -52,20 +44,16 @@ export class DevelopmentRestartButton extends St.Bin {
         this.icon.destroy();
     }
 
-    private async _onButtonPressed(_: Clutter.Actor, e: Clutter.Event) {
-        if (e.type() == Clutter.EventType.BUTTON_PRESS ||
-            e.type() == Clutter.EventType.TOUCH_END) {
+    private async _onPressed() {
+        let res = true;
+        this.icon.opacity = 128;
+        if (DevelopmentRestartButton.projectDir) {
+            res = await this._withAnimatedIcon(() => this._rebuild());
+        }
+        this.icon.opacity = 255;
 
-            let res = true;
-            this.icon.opacity = 128;
-            if (this.projectDir) {
-                res = await this._withAnimatedIcon(() => this._rebuild());
-            }
-            this.icon.opacity = 255;
-
-            if (res) {
-                this._restart();
-            }
+        if (res) {
+            this._restart();
         }
     }
 
@@ -80,8 +68,8 @@ export class DevelopmentRestartButton extends St.Bin {
                     Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE,
             });
-            debugLog("CWD: ", this.projectDir);
-            launcher.set_cwd(this.projectDir!);
+            debugLog("CWD: ", DevelopmentRestartButton.projectDir);
+            launcher.set_cwd(DevelopmentRestartButton.projectDir!);
             const proc = launcher.spawnv(['npm', 'run', 'install']);
             const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 

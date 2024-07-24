@@ -38,7 +38,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: St.Button.ConstructorProperties & UiProps<Button>) {
+        constructor(config: Partial<St.Button.ConstructorProps> & UiProps<Button>) {
             super(filterConfig(config));
             initWidget(this, config)
         }
@@ -49,7 +49,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: St.Icon.ConstructorProperties & UiProps<Icon>) {
+        constructor(config: Partial<St.Icon.ConstructorProps> & UiProps<Icon>) {
             super(filterConfig(config));
             initWidget(this, config);
         }
@@ -60,7 +60,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: St.Label.ConstructorProperties & UiProps<Label>) {
+        constructor(config: Partial<St.Label.ConstructorProps> & UiProps<Label>) {
             super(filterConfig(config));
             initWidget(this, config);
         }
@@ -71,7 +71,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: St.Bin.ConstructorProperties & UiProps<Bin>) {
+        constructor(config: Partial<St.Bin.ConstructorProps> & UiProps<Bin>) {
             super(filterConfig(config));
             initWidget(this, config);
             if (config.child) {
@@ -85,7 +85,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: St.BoxLayout.ConstructorProperties & UiProps<Box> & { children?: St.Widget[] }) {
+        constructor(config: Partial<St.BoxLayout.ConstructorProps> & UiProps<Box> & { children?: St.Widget[] }) {
             super(filterConfig(config));
             initWidget(this, config);
             if (config.children) {
@@ -99,7 +99,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Omit<St.BoxLayout.ConstructorProperties, 'vertical'> & UiProps<Row> & {
+        constructor(config: Partial<Omit<St.BoxLayout.ConstructorProps, 'vertical'>> & UiProps<Row> & {
             children?: St.Widget[]
         }) {
             super({
@@ -119,7 +119,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Omit<St.BoxLayout.ConstructorProperties, 'vertical'> & UiProps<Column> & {
+        constructor(config: Partial<Omit<St.BoxLayout.ConstructorProps, 'vertical'>> & UiProps<Column> & {
             children?: St.Widget[]
         }) {
             super({
@@ -138,7 +138,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Omit<St.ScrollView.ConstructorProperties, 'child'> & UiProps<St.ScrollView> & {
+        constructor(config: Partial<Omit<St.ScrollView.ConstructorProps, 'child'>> & UiProps<St.ScrollView> & {
             child?: St.Widget
         }) {
             super({

@@ -46,7 +46,7 @@ export default class GnomeTouchExtension {
         );
 
         if (GnomeTouchExtension.isDebugMode) {
-            this.developmentTools = new DevelopmentTools();
+            this.developmentTools = new DevelopmentTools(this);
         }
 
         // Add style classes for settings:
@@ -59,24 +59,24 @@ export default class GnomeTouchExtension {
         PatchManager.patch(() => {
             const seat = Clutter.get_default_backend().get_default_seat();
             const id = seat.connect('notify::touch-mode', () => {
-                this._syncUI();
+                this.syncUI();
             });
             return () => seat.disconnect(id);
         })
         // ... and to monitor changes:
         PatchManager.patch(() => {
             const monitorManager = global.backend.get_monitor_manager();
-            const id = monitorManager.connect_after('monitors-changed', () => this._syncUI());
+            const id = monitorManager.connect_after('monitors-changed', () => this.syncUI());
             return () => monitorManager.disconnect(id);
         })
 
-        this._syncUI();
+        this.syncUI();
 
         this.enableIntegrations();
     }
 
-    private _syncUI() {
-        const touchMode = Clutter.get_default_backend().get_default_seat().touchMode;
+    syncUI() {
+        const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (GnomeTouchExtension.isDebugMode && this.developmentTools?.enforceTouchMode == true);
 
         if (touchMode) {
             Main.layoutManager.addChrome(this.bar!, {
