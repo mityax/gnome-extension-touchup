@@ -7,7 +7,7 @@ import {debugLog} from "$src/utils/logging";
 import Clutter from "@girs/clutter-14";
 import {css} from "$src/utils/ui/css";
 import Graphene from "@girs/graphene-1.0";
-import {DevToolButton, DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
+import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import GnomeTouchExtension from "$src/extension";
 
 
