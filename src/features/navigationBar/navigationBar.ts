@@ -16,10 +16,11 @@ import Cairo from "cairo";
 import GdkPixbuf from "@girs/gdkpixbuf-2.0";
 import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
 import {IntervalRunner} from "$src/utils/intervalRunner";
+import {debugLog} from "$src/utils/logging";
+import {IdleRunner} from "$src/utils/idleRunner";
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
 import ActorAlign = Clutter.ActorAlign;
-import {debugLog} from "$src/utils/logging";
 
 const LEFT_EDGE_OFFSET = 100;
 const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
@@ -150,22 +151,47 @@ export default class NavigationBar extends St.Widget {
         const wsController: UnknownClass = Main.wm._workspaceAnimation;
 
         const gesture = new NavigationBarGestureTracker();
-        this.add_action_full('workspace-switch-gesture', Clutter.EventPhase.CAPTURE, gesture as Action);
+        this.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Action);
         gesture.orientation = null; // Clutter.Orientation.HORIZONTAL;
 
         let baseDistX = 900;
         let baseDistY = global.screenHeight;
+
         let initialWorkspaceProgress = 0;
+        let targetWorkspaceProgress = 0;
         let currentWorkspaceProgress = 0;
+
         let initialOverviewProgress = 0;
+        let targetOverviewProgress = 0;
         let currentOverviewProgress = 0;
+
+        let overviewMaxSpeed = 0.005;
+        let workspaceMaxSpeed = 0.0016;
+
+        // This idle runner is responsible for making the actual overview/workspace progress smoothly
+        // follow the according target progress:
+        const idleRunner = new IdleRunner((_, dt) => {
+            dt ??= 0;
+
+            if (Math.abs(targetOverviewProgress - currentWorkspaceProgress) > 5 * overviewMaxSpeed) {
+                let d = targetOverviewProgress - currentOverviewProgress;
+                currentOverviewProgress += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * overviewMaxSpeed);
+                Main.overview._gestureUpdate(gesture, currentOverviewProgress);
+            }
+
+            if (Math.abs(targetWorkspaceProgress - currentWorkspaceProgress) > 5 * workspaceMaxSpeed) {
+                let d = targetWorkspaceProgress - currentWorkspaceProgress;
+                currentWorkspaceProgress += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * workspaceMaxSpeed);
+                wsController._switchWorkspaceUpdate({}, currentWorkspaceProgress);
+            }
+        });
 
         gesture.connect('begin', (_: any, time: number, xPress: number, yPress: number) => {
             // Workspace switching:
             wsController._switchWorkspaceBegin({
                 confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
                     baseDistX = baseDistance;
-                    initialWorkspaceProgress = currentWorkspaceProgress = progress;
+                    initialWorkspaceProgress = currentWorkspaceProgress = targetWorkspaceProgress = progress;
                 }
             }, this.monitor.index);
 
@@ -174,32 +200,36 @@ export default class NavigationBar extends St.Widget {
                 confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
                     baseDistY = baseDistance;
 
-                    // the following tenary expression is needed to fix a bug (presumably in Gnome Shell's
+                    // The following tenary expression is needed to fix a bug (presumably in Gnome Shell's
                     // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
                     // gesture begin, even though the overview is not visible:
-                    initialOverviewProgress = currentOverviewProgress = Main.overview._visible ? progress : 0;           }
+                    initialOverviewProgress = currentOverviewProgress = targetOverviewProgress = Main.overview._visible ? progress : 0;
+                }
             });
+
+            idleRunner.start();
         });
 
         gesture.connect('update', (_: any, time: number, distX, distY) => {
             // Workspace switching:
-            currentWorkspaceProgress = initialWorkspaceProgress + distX / baseDistX;
-            wsController._switchWorkspaceUpdate({}, currentWorkspaceProgress);
+            targetWorkspaceProgress = initialWorkspaceProgress + distX / baseDistX * 1.6;   // TODO: potential extension setting
 
             // Overview toggling:
             if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
                 Main.keyboard._keyboard.gestureProgress(distY / baseDistY);
             } else {
-                currentOverviewProgress = initialOverviewProgress + distY / (baseDistY * 0.3);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus we only take a fraction of it
-                Main.overview._gestureUpdate(gesture, currentOverviewProgress);
+                // TODO: potential extension setting:
+                targetOverviewProgress = initialOverviewProgress + distY / (baseDistY * 0.2);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus we only take a fraction of it
             }
         });
 
         gesture.connect('end', (_: any, direction: string, speed: number) => {
+            idleRunner.stop();
+
             // Workspace switching:
             if (direction === 'left' || direction === 'right') {
-                debugLog(`currenWorkspaceProgress=${currentWorkspaceProgress}, change: ${(direction == 'left' ? 0.5 : -0.5)}`)
-                wsController._switchWorkspaceEnd({}, 500, currentWorkspaceProgress + (direction == 'left' ? 0.5 : -0.5));
+                debugLog(`currenWorkspaceProgress=${targetWorkspaceProgress}, change: ${(direction == 'left' ? 0.5 : -0.5)}`)
+                wsController._switchWorkspaceEnd({}, 500, targetWorkspaceProgress + (direction == 'left' ? 0.5 : -0.5));
             } else {
                 wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
             }
@@ -212,7 +242,7 @@ export default class NavigationBar extends St.Widget {
             } else {
                 // Overview toggling:
                 if (direction === 'up' || direction === null) {  // `null` means user holds still at the end
-                    Main.overview._gestureEnd({}, 300, clamp(Math.round(currentOverviewProgress), 1, 2));
+                    Main.overview._gestureEnd({}, 300, clamp(Math.round(targetOverviewProgress), 1, 2));
                 } else {
                     Main.overview._gestureEnd({}, 300, initialOverviewProgress);
                 }
@@ -220,6 +250,8 @@ export default class NavigationBar extends St.Widget {
         });
 
         gesture.connect('gesture-cancel', (_gesture) => {
+            idleRunner.stop();
+
             wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
             if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
                 Main.keyboard._keyboard.gestureCancel();
@@ -230,8 +262,6 @@ export default class NavigationBar extends St.Widget {
     }
 
     private async updatePillBrightness() {
-        return;
-        
         const shooter = new Shell.Screenshot();
         // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
         const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
@@ -245,13 +275,14 @@ export default class NavigationBar extends St.Widget {
         };
 
         const stream = Gio.MemoryOutputStream.new_resizable();
+
         // @ts-ignore (ts doesn't understand Gio._promisify())
+        // noinspection JSVoidFunctionReturnValueUsed
         const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
             wholeScreenTexture, area.x, area.y, area.w, area.h,
             this.scaleFactor, null, 0, 0, 1, stream
         );
         stream.close(null);
-        stream.run_dispose();  // seems to fix a memory leak (?)
 
         const verticalPadding = (area.h - this.pill.height) / 2;
 

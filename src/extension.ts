@@ -16,7 +16,7 @@ import {debugLog} from "$src/utils/logging";
 
 export default class GnomeTouchExtension {
     private metadata: Record<string, any>;
-    private bar?: NavigationBar;
+    private navigationBar?: NavigationBar;
     private oskKeyPopups?: OSKKeyPopups;
     private virtualTouchpad?: VirtualTouchpad;
     private virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
@@ -33,7 +33,7 @@ export default class GnomeTouchExtension {
         debugLog("*************************************************")
         debugLog()
 
-        this.bar = new NavigationBar('gestures');
+        this.navigationBar = new NavigationBar('gestures');
         this.oskKeyPopups = new OSKKeyPopups();
         this.notificationGestures = new NotificationGestures();
         this.virtualTouchpad = new VirtualTouchpad();
@@ -79,13 +79,13 @@ export default class GnomeTouchExtension {
         const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (GnomeTouchExtension.isDebugMode && this.developmentTools?.enforceTouchMode == true);
 
         if (touchMode) {
-            Main.layoutManager.addChrome(this.bar!, {
+            Main.layoutManager.addChrome(this.navigationBar!, {
                 affectsStruts: false,
                 trackFullscreen: true,
             });
             Main.uiGroup.add_style_class_name('gnometouch-navbar-visible');
         } else {
-            Main.layoutManager.removeChrome(this.bar!);
+            Main.layoutManager.removeChrome(this.navigationBar!);
             Main.uiGroup.remove_style_class_name('gnometouch-navbar-visible');
         }
 
@@ -98,7 +98,7 @@ export default class GnomeTouchExtension {
 
     disable() {
         PatchManager.clear();
-        this.bar?.destroy();
+        this.navigationBar?.destroy();
         this.oskKeyPopups?.destroy();
         this.notificationGestures?.destroy();
         this.virtualTouchpad?.destroy();

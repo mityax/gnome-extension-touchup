@@ -31,7 +31,7 @@ import GLib from "@girs/glib-2.0";
  * @param {number} [priority=GLib.PRIORITY_DEFAULT] - The priority of the interval, default is GLib.PRIORITY_DEFAULT.
  */
 export class IntervalRunner {
-    private callback: (stop: () => void) => any;
+    private readonly callback: (stop: () => void) => any;
     private timeoutId: number | null = null;
     private _interval: number;
     private _priority: number;
