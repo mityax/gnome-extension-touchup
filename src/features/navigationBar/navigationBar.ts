@@ -1,3 +1,6 @@
+import '@girs/gnome-shell/extensions/global';
+import '@girs/gjs';
+
 import St from "@girs/st-14";
 import GObject from "@girs/gobject-2.0";
 import Clutter from "@girs/clutter-14";
@@ -11,13 +14,13 @@ import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
 import Meta from "@girs/meta-14";
 import {NavigationBarGestureTracker} from "$src/features/navigationBar/navigationBarGestureTracker";
 import Shell from "@girs/shell-14";
-import Gio from "@girs/gio-2.0";
-import Cairo from "cairo";
-import GdkPixbuf from "@girs/gdkpixbuf-2.0";
+import Cairo from "@girs/cairo-1.0";
 import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
 import {IntervalRunner} from "$src/utils/intervalRunner";
 import {debugLog} from "$src/utils/logging";
 import {IdleRunner} from "$src/utils/idleRunner";
+import Cogl from "@girs/cogl-14";
+import Gio from "@girs/gio-2.0";
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;
 import ActorAlign = Clutter.ActorAlign;
@@ -27,7 +30,8 @@ const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
 
 
 //Gio._promisify(Shell.Screenshot.prototype, 'screenshot_stage_to_content');
-//Gio._promisify(Shell.Screenshot, 'composite_to_stream');
+Gio._promisify(Shell.Screenshot.prototype, 'pick_color');
+
 
 if (typeof Cairo.format_stride_for_width === 'undefined') {
     // Polyfill since the GJS bindings of Cairo are missing `format_stride_width`
@@ -273,18 +277,69 @@ export default class NavigationBar extends St.Widget {
             w: this.pill.width + 40 * this.scaleFactor,
             h: this.height,
         };
-
-        const stream = Gio.MemoryOutputStream.new_resizable();
-
-        // @ts-ignore (ts doesn't understand Gio._promisify())
-        // noinspection JSVoidFunctionReturnValueUsed
-        const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
-            wholeScreenTexture, area.x, area.y, area.w, area.h,
-            this.scaleFactor, null, 0, 0, 1, stream
-        );
-        stream.close(null);
-
         const verticalPadding = (area.h - this.pill.height) / 2;
+
+        // const stream = Gio.MemoryOutputStream.new_resizable();
+
+        // High-level attempt (has memory leak):
+        // // @ts-ignore (ts doesn't understand Gio._promisify())
+        // // noinspection JSVoidFunctionReturnValueUsed
+        // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
+        //     wholeScreenTexture, area.x, area.y, area.w, area.h,
+        //     this.scaleFactor, null, 0, 0, 1, stream
+        // );
+        // stream.close(null);
+
+        // Low-level api attempt:
+        /*try {
+            const ctx = Clutter.get_default_backend().get_cogl_context();
+            const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+            //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
+
+            if (subtex) {
+                //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
+                //const buf = new Uint8Array(size);
+                let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
+
+                debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+            } else {
+                debugLog("Subtex is null");
+            }
+        } catch (e) {
+            debugLog("Error in updatePillBrightness: ", e);
+        }*/
+
+        // Mid-level attempt:
+        const ctx = Clutter.get_default_backend().get_cogl_context();
+        const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+        debugLog("subtex: ", subtex);
+
+        if (subtex) {
+            // const buf = new Uint8Array();
+
+            /*(global.stage as Clutter.Stage).paint_to_buffer(
+                new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+                1,
+                buf,
+                0,
+                PixelFormat.ARGB_8888,
+                PaintFlag.NO_CURSORS,
+            );*/
+            /*const fb = new Cogl.Offscreen();
+            (global.stage as Clutter.Stage).paint_to_framebuffer(
+                fb,
+                new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+                1,
+                PaintFlag.NO_CURSORS,
+            );*/
+
+            debugLog("area: ", area);
+            let buf = (global.stage as Clutter.Stage).read_pixels(area.x, area.y, area.w, area.h);
+            debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+        }
+
+
+        return;
 
         const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
             {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill

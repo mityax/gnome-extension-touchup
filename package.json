@@ -17,7 +17,7 @@
     "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE"
   },
   "devDependencies": {
-    "@girs/cairo-1.0": "^1.0.0-3.3.0",
+    "@girs/cairo-1.0": "^1.0.0-4.0.0-beta.14",
     "@girs/clutter-14": "^14.0.0-3.3.0",
     "@girs/cogl-14": "^14.0.0-3.3.0",
     "@girs/gdkpixbuf-2.0": "^2.0.0-3.3.0",
