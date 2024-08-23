@@ -2,7 +2,6 @@ import '@girs/gnome-shell/extensions/global';
 import St from "@girs/st-14";
 import Clutter from "@girs/clutter-14";
 import GObject from "@girs/gobject-2.0";
-import Gio from "@girs/gio-2.0";
 
 
 /**
@@ -34,9 +33,7 @@ export function getStyle(widgetType: GObject.AnyClass = St.Widget, elementId: st
  * If no such child is found, returns `null`
  */
 export function findActorBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor) => boolean): Clutter.Actor | null {
-    let children = topActor.get_children();
-
-    for (let child of children) {
+    for (let child of topActor.get_children()) {
         if (test(child)) {
             return child;
         } else if (child.get_n_children()) {
@@ -48,6 +45,23 @@ export function findActorBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor
     }
 
     return null;
+}
+
+/**
+ * Recursively walks the topActor's nested children, collecting all children that satisfy `test`.
+ */
+export function findAllActorsBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor) => boolean): Clutter.Actor[] {
+    const res: Clutter.Actor[] = [];
+
+    for (let child of topActor.get_children()) {
+        if (test(child)) {
+            res.push(child);
+        } else if (child.get_n_children()) {
+            res.push(...findAllActorsBy(child, test));
+        }
+    }
+
+    return res;
 }
 
 /**

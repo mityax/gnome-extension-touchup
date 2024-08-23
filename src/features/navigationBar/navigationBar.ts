@@ -291,53 +291,49 @@ export default class NavigationBar extends St.Widget {
         // stream.close(null);
 
         // Low-level api attempt:
-        /*try {
-            const ctx = Clutter.get_default_backend().get_cogl_context();
-            const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-            //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
-
-            if (subtex) {
-                //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
-                //const buf = new Uint8Array(size);
-                let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
-
-                debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
-            } else {
-                debugLog("Subtex is null");
-            }
-        } catch (e) {
-            debugLog("Error in updatePillBrightness: ", e);
-        }*/
+        // try {
+        //     const ctx = Clutter.get_default_backend().get_cogl_context();
+        //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+        //     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
+        //
+        //     if (subtex) {
+        //         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
+        //         //const buf = new Uint8Array(size);
+        //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
+        //
+        //         debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+        //     } else {
+        //         debugLog("Subtex is null");
+        //     }
+        // } catch (e) {
+        //     debugLog("Error in updatePillBrightness: ", e);
+        // }
 
         // Mid-level attempt:
-        const ctx = Clutter.get_default_backend().get_cogl_context();
-        const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-        debugLog("subtex: ", subtex);
-
-        if (subtex) {
-            // const buf = new Uint8Array();
-
-            /*(global.stage as Clutter.Stage).paint_to_buffer(
-                new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-                1,
-                buf,
-                0,
-                PixelFormat.ARGB_8888,
-                PaintFlag.NO_CURSORS,
-            );*/
-            /*const fb = new Cogl.Offscreen();
-            (global.stage as Clutter.Stage).paint_to_framebuffer(
-                fb,
-                new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-                1,
-                PaintFlag.NO_CURSORS,
-            );*/
-
-            debugLog("area: ", area);
-            let buf = (global.stage as Clutter.Stage).read_pixels(area.x, area.y, area.w, area.h);
-            debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
-        }
-
+        //const ctx = Clutter.get_default_backend().get_cogl_context();
+        //const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+        //debugLog("subtex: ", subtex);
+        // if (subtex) {
+        //     /*(global.stage as Clutter.Stage).paint_to_buffer(
+        //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+        //         1,
+        //         buf,
+        //         0,
+        //         PixelFormat.ARGB_8888,
+        //         PaintFlag.NO_CURSORS,
+        //     );*/
+        //     /*
+        //     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
+        //     const fb = Cogl.Offscreen.new_with_texture(tex);
+        //     global.stage.paint_to_framebuffer(
+        //         fb,
+        //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+        //         1,
+        //         PaintFlag.NO_CURSORS,
+        //     );
+        //     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
+        //     */
+        // }
 
         return;
 
@@ -359,7 +355,7 @@ export default class NavigationBar extends St.Widget {
 
     destroy() {
         this.brightnessUpdateTimeout.stop();
-        super.destroy();
         this.windowPositionTracker.destroy();
+        super.destroy();
     }
 }

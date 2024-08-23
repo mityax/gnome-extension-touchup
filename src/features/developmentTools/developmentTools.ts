@@ -65,9 +65,7 @@ export class DevelopmentTools {
             //@ts-ignore
             Main.panel._rightBox.insert_child_at_index(box, 0);
 
-            return () => {
-                box.destroy();
-            };
+            return () => box.destroy();
         }, {scope: DevelopmentTools.PATCH_SCOPE});
     }
 

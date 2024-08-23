@@ -3,7 +3,7 @@ import Clutter from "@girs/clutter-14";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import Shell from "@girs/shell-14";
-import {TouchGesture2dRecognizer} from "$src/utils/ui/touchGesture2dRecognizer";
+import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {debugLog} from "$src/utils/logging";
 
 
@@ -32,7 +32,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
     private _orientation: Clutter.Orientation | null = null;
     declare private _allowedModes: Shell.ActionMode;
 
-    declare private recognizer: TouchGesture2dRecognizer;
+    declare private recognizer: GestureRecognizer2D;
 
     //@ts-ignore
     _init(allowedModes: Shell.ActionMode = Shell.ActionMode.ALL, nTouchPoints: number = 1, thresholdTriggerEdge: Clutter.GestureTriggerEdge = Clutter.GestureTriggerEdge.AFTER) {
@@ -41,7 +41,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         this.set_threshold_trigger_edge(thresholdTriggerEdge);
 
         this._allowedModes = allowedModes;
-        this.recognizer = new TouchGesture2dRecognizer();
+        this.recognizer = new GestureRecognizer2D();
     }
 
     get orientation(): Clutter.Orientation | null {
@@ -73,7 +73,8 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         }
 
         this.emit('begin', time, xPress, yPress);
-        this.recognizer.addEvent(this.get_last_event(0));
+        this.recognizer.resetAndStartGesture();
+        this.recognizer.pushEvent(this.get_last_event(0));
         return true;
     }
 
@@ -84,16 +85,17 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         let time = this.get_last_event(0).get_time();
 
         this.emit('update', time, initialX - x, initialY - y);
-        this.recognizer.addEvent(this.get_last_event(0));
+        this.recognizer.pushEvent(this.get_last_event(0));
 
         return true;
     }
 
     vfunc_gesture_end(_actor: Clutter.Actor) {
-        this.recognizer.addEvent(this.get_last_event(0));
+        this.recognizer.pushEvent(this.get_last_event(0));
 
         let lastPattern = this.recognizer.getPatterns().at(-1) || null;
 
+        debugLog("Full gesture: ", this.recognizer.toString());
         debugLog("Last Pattern: ", lastPattern);
 
         if (lastPattern && lastPattern.type === 'swipe') {
@@ -107,6 +109,6 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         let time = Clutter.get_current_event_time();
 
         this.emit('cancel', time);
-        this.recognizer.addEvent(this.get_last_event(0));
+        this.recognizer.pushEvent(this.get_last_event(0));
     }
 }

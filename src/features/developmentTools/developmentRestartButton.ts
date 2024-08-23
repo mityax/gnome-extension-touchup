@@ -39,11 +39,6 @@ export class DevelopmentRestartButton extends DevToolButton {
         });
     }
 
-    destroy() {
-        super.destroy();
-        this.icon.destroy();
-    }
-
     private async _onPressed() {
         let res = true;
         this.icon.opacity = 128;

@@ -1,132 +1,203 @@
 import '@girs/gnome-shell/extensions/global';
-import {PatchManager} from "$src/utils/patchManager";
-import {Message, MessageListSection} from "@girs/gnome-shell/ui/messageList";
+
 import St from "@girs/st-14";
 import Clutter from "@girs/clutter-14";
-import {Pattern, TouchGesture2dRecognizer} from "$src/utils/ui/touchGesture2dRecognizer";
-import GLib from "@girs/glib-2.0";
-import {debugLog, repr} from "$src/utils/logging";
-import {NotificationMessage} from "@girs/gnome-shell/ui/calendar";
+
+import * as Main from '@girs/gnome-shell/ui/main';
+import {MessageListSection} from "@girs/gnome-shell/ui/messageList";
+import {NotificationMessage, NotificationSection} from "@girs/gnome-shell/ui/calendar";
+import {MessageTray} from "@girs/gnome-shell/ui/messageTray";
+
+import {Patch, PatchManager} from "$src/utils/patchManager";
+import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
+import {debugLog} from "$src/utils/logging";
+import {findActorBy} from "$src/utils/utils";
 
 
 export class NotificationGestures {
     static readonly PATCH_SCOPE: unique symbol = Symbol('notification-gestures');
 
-    private messageListSection?: MessageListSection;
+    private unpatchOnTrayClose: Patch[] = [];
 
     constructor() {
         const self = this;
-        PatchManager.patchMethod(MessageListSection.prototype, 'addMessageAtIndex',
-            function(this: MessageListSection, orig, message: NotificationMessage, idx: number, animate: boolean) {
-                debugLog("New message!");
-                //const msg = new Message();
-                self.messageListSection = this;
-                orig(message, idx, animate);
-                self._onNewNotification(message);
+
+        // Setup listeners for existing notifications in the panel:
+        const messageListSection = findActorBy(global.stage, a => a.constructor.name == 'NotificationSection') as (NotificationSection & {_list: St.BoxLayout}) | null;
+        messageListSection?._list.get_children().forEach(container => {
+            if (container.get_child_at_index(0)) {
+                self.patchNotification(container.get_child_at_index(0) as NotificationMessage, false);
+            }
+        });
+
+        // New message added to message list section in popup:
+        PatchManager.appendToMethod(MessageListSection.prototype, 'addMessageAtIndex',
+            function(this: MessageListSection, message: NotificationMessage, idx: number, animate: boolean) {
+                debugLog("New message in MessageListSection");
+                self.patchNotification(message, false);
+            },
+            { scope: NotificationGestures.PATCH_SCOPE },
+        );
+
+        // New message added to message tray:
+        PatchManager.appendToMethod(MessageTray.prototype, '_showNotification',
+            function(this: MessageTray & {_banner: NotificationMessage}) {
+                debugLog("New message in MessageTray");
+                self.unpatchOnTrayClose.push(self.patchNotification(this._banner, true));
+            },
+            { scope: NotificationGestures.PATCH_SCOPE ,
+        });
+
+        // When the notification tray banner is closed, un-patch the message and container
+        // to avoid double callback invocations:
+        PatchManager.appendToMethod(MessageTray.prototype, '_hideNotification', function () {
+            self.unpatchOnTrayClose.forEach(p => p.undo())
+            self.unpatchOnTrayClose = [];
+        })
+
+        // Path the message tray `_updateState` function such that it does not expand the banner on hover:
+        PatchManager.patchMethod(MessageTray.prototype, '_updateState',
+            function(this: MessageTray & {_banner: NotificationMessage}, orig) {
+                if (this._banner) {
+                    // we achieve this by making it seem to the function that the banner is already expanded:
+                    const originalValue = this._banner?.expanded;
+                    this._banner.expanded = true;
+                    orig();
+                    this._banner.expanded = originalValue;
+                } else {
+                    orig();
+                }
             },
             { scope: NotificationGestures.PATCH_SCOPE },
         );
     }
 
-    private _onNewNotification(message: NotificationMessage) {
-        // Make message unreactive to prevent immediate notification activation on any event:
-        message.reactive = false;  // (this is necessary as message inherits from St.Button which conflicts with complex reactivity as we want it)
-        // Prevent the insensitive styling from being applied:
-        message.remove_style_pseudo_class('insensitive');
+    private patchNotification(message: NotificationMessage, isTray: boolean) {
+        return PatchManager.patch(() => {
+            // Make message unreactive to prevent immediate notification activation on any event:
+            message.reactive = false;  // (this is necessary as message inherits from St.Button which conflicts with complex reactivity as we want it)
+            // Prevent the insensitive styling from being applied:
+            message.remove_style_pseudo_class('insensitive');
 
-        // Each message is wrapped by a single bin, which we use for reactivity:
-        const container = message.get_parent() as St.Bin;
-        container.reactive = true;
-        container.trackHover = true;
+            // Each message is wrapped by a single bin, which we use for reactivity:
+            const container = message.get_parent() as St.Bin;
+            container.reactive = true;
+            container.trackHover = true;
 
-        // Track and recognize touch and mouse events:
-        const recognizer = new TouchGesture2dRecognizer();
-        let initialPos: number[] | null = null;
-        let isTouched = false;
+            // Track and recognize touch and mouse events:
+            const recognizer = new GestureRecognizer2D();
 
-        const onEvent = (_: Clutter.Actor, e: Clutter.Event) => {
-            if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
-                e.type() == Clutter.EventType.BUTTON_PRESS) {
-                initialPos = e.get_coords();
-                isTouched = true;
-                updateHover();
+            const onEvent = (_: Clutter.Actor, e: Clutter.Event) => {
+                recognizer.pushEvent(e);
+
+                if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
+                    e.type() == Clutter.EventType.BUTTON_PRESS) {
+                    updateHover();
+                }
+
+                if (recognizer.isDuringGesture) {
+                    if (recognizer.primaryMove?.swipeAxis == 'horizontal') {
+                        message.translationX = recognizer.totalMotionDelta.x;
+                    } else if (recognizer.primaryMove?.swipeAxis == 'vertical' && isTray) {
+                        message.translationY = Math.min(recognizer.totalMotionDelta.y, 0);
+                    }
+                }
+
+                if (recognizer.gestureHasJustFinished) {
+                    this._onGestureFinished(message, recognizer, isTray);
+                    updateHover();
+                }
             }
 
-            let dx = e.get_coords()[0] - initialPos![0],
-                dy = e.get_coords()[1] - initialPos![1];
-
-            if (isTouched) {
-                message.translationX = dx;
-                recognizer.addEvent(e);
+            const updateHover = () => {
+                if (container.hover || recognizer.isDuringGesture) {
+                    message.add_style_pseudo_class('hover');
+                } else {
+                    message.remove_style_pseudo_class('hover');
+                }
             }
 
-            if (e.type() == Clutter.EventType.TOUCH_END ||
-                e.type() == Clutter.EventType.TOUCH_CANCEL ||
-                e.type() == Clutter.EventType.BUTTON_RELEASE ||
-                e.type() == Clutter.EventType.PAD_BUTTON_RELEASE) {
+            // Setup event handlers:
+            let signalIds = [
+                container.connect('touch-event', onEvent),
+                container.connect('button-press-event', onEvent),
+                container.connect('button-release-event', onEvent),
+                container.connect('notify::hover', updateHover),
+            ]
 
-                this._onGestureFinished(message, dx, dy, recognizer, [Clutter.EventType.BUTTON_RELEASE, Clutter.EventType.PAD_BUTTON_RELEASE].indexOf(e.type()) == -1);
-                isTouched = false;
-                updateHover();
+            return () => {
+                // Undo all the changes:
+                signalIds.forEach(id => container.disconnect(id));
+                message.translationX = 0;
+                message.reactive = true;
+                container.reactive = false;
+                container.trackHover = false;
             }
-        }
-
-        const updateHover = () => {
-            if (container.hover || isTouched) {
-                message.add_style_pseudo_class('hover');
-            } else {
-                message.remove_style_pseudo_class('hover');
-            }
-        }
-
-        // Setup event handlers:
-        container.connect('touch-event', onEvent);
-        container.connect('button-press-event', onEvent);
-        container.connect('button-release-event', onEvent);
-        container.connect('notify::hover', updateHover);
+        }, {scope: NotificationGestures.PATCH_SCOPE});
     }
 
     destroy() {
         PatchManager.clear(NotificationGestures.PATCH_SCOPE);
     }
 
-    private _onGestureFinished(message: NotificationMessage, dx: number, dy: number, recognizer: TouchGesture2dRecognizer, isTouch: boolean = true) {
-        if (recognizer.isTap() || !isTouch) {
-            debugLog("Activating message");
+    private _onGestureFinished(message: NotificationMessage, recognizer: GestureRecognizer2D, isTray: boolean) {
+        debugLog("Gesture: ", recognizer.toString());
+
+        if (recognizer.isTap() || !recognizer.isTouchGesture) {
             //@ts-ignore
             message.notification.activate();
         } else {
-            const lastPattern = recognizer.getPatterns().at(-1)!;
+            const lastPattern = recognizer.secondaryMove;
 
-            // Check for expand/unexpand gesture (vertical):
-            if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'down') {
-                if (!message.expanded) message.expand(true);
-            } else if (lastPattern.type === 'swipe' && lastPattern.swipeDirection == 'up') {
-                if (message.expanded) message.unexpand(true);
-            }
+            let shouldEaseBack = true;
 
-            // Check for dismiss gesture (horizontal):
-            if (lastPattern.type === 'swipe' && (
-                (dx > 0 && lastPattern.swipeDirection == 'right') ||
-                (dx < 0 && lastPattern.swipeDirection == 'left')
-            )) {
-                //@ts-ignore
-                message.ease({
-                    translationX: lastPattern.swipeDirection == 'right' ? message.width : -message.width,
-                    duration: 250,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                })
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
-                    this.messageListSection!.removeMessage(message as Message, true);
-                    return GLib.SOURCE_REMOVE;
-                })
-            } else {  // if not dismissed, ease back to translationX = 0
-                //@ts-ignore
-                message.ease({
-                    translationX: 0,
-                    duration: 300,
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                })
+            if (lastPattern != null) {
+                switch (lastPattern.swipeDirection) {
+                    case 'up':
+                        if (isTray) {
+                            // @ts-ignore
+                            message.ease({
+                                y: -message.height,
+                                rotationZ: 90,
+                                duration: 100,
+                                mode: Clutter.AnimationMode.EASE_OUT,
+                                // @ts-ignore
+                                onComplete: () => Main.messageTray._hideNotification(false)
+                            });
+                            shouldEaseBack = false;
+                        } else if (message.expanded) {
+                            message.unexpand(true);
+                        }
+                        break;
+                    case 'down':
+                        if (!message.expanded) {
+                            message.expand(true);
+                        }
+                        break;
+                    default:
+                        if (lastPattern.swipeDirection == 'right' && recognizer.totalMotionDelta.x > 0 ||
+                            lastPattern.swipeDirection == 'left' && recognizer.totalMotionDelta.x < 0) {
+                            //@ts-ignore
+                            message.ease({
+                                translationX: lastPattern.swipeDirection == 'right' ? message.width : -message.width,
+                                opacity: 0,
+                                duration: 200,
+                                mode: Clutter.AnimationMode.EASE_OUT,
+                                onComplete: () => message.emit("close"),
+                            })
+                            shouldEaseBack = false;
+                        }
+                }
+
+                if (shouldEaseBack) {
+                    //@ts-ignore
+                    message.ease({
+                        translationX: 0,
+                        translationY: 0,
+                        duration: 200,
+                        mode: Clutter.AnimationMode.EASE_OUT_BACK,
+                    })
+                }
             }
         }
     }

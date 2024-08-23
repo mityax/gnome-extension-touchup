@@ -89,8 +89,9 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         }
     }
 
-    destroy() {
+    vfunc_destroy() {
         this.logDisplays.forEach((d) => d.destroy());
         removeLogCallback(this.logCallbackId);
+        super.destroy();
     }
 }

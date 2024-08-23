@@ -73,7 +73,7 @@ export class DevToolButton extends St.Bin {
         Main.layoutManager.addTopChrome(this.tooltip);
     }
 
-    destroy() {
+    vfunc_destroy() {
         super.destroy();
         this.tooltip.destroy();
     }

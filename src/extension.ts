@@ -104,6 +104,13 @@ export default class GnomeTouchExtension {
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
         this.developmentTools?.disable();
+
+        this.navigationBar = undefined;
+        this.oskKeyPopups = undefined;
+        this.notificationGestures = undefined;
+        this.virtualTouchpad = undefined;
+        this.virtualTouchpadOpenButton = undefined;
+        this.developmentTools = undefined;
     }
 
     private enableIntegrations() {
