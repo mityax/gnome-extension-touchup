@@ -2,6 +2,7 @@ import '@girs/gnome-shell/extensions/global';
 import St from "@girs/st-15";
 import Clutter from "@girs/clutter-15";
 import GObject from "@girs/gobject-2.0";
+import {log} from "$src/utils/logging";
 
 
 /**
@@ -114,4 +115,9 @@ export function mapObject<T extends object>(
 }
 
 
+export async function measureTime(label: string, fn: () => Promise<any> | any) {
+    let start = Date.now();
+    await fn();
+    log(`Operation \`${label}\`: ${(Date.now() - start).toFixed(1)}ms`)
+}
 

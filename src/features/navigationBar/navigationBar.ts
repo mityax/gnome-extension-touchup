@@ -7,7 +7,7 @@ import Clutter from "@girs/clutter-15";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {clamp, getStyle, UnknownClass} from "$src/utils/utils";
+import {clamp, getStyle, measureTime, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
 import {css} from "$src/utils/ui/css";
 import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
@@ -15,7 +15,6 @@ import Meta from "@girs/meta-15";
 import {NavigationBarGestureTracker} from "$src/features/navigationBar/navigationBarGestureTracker";
 import Shell from "@girs/shell-15";
 import Cairo from "@girs/cairo-1.0";
-import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
 import {IntervalRunner} from "$src/utils/intervalRunner";
 import {debugLog} from "$src/utils/logging";
 import {IdleRunner} from "$src/utils/idleRunner";
@@ -110,7 +109,9 @@ export default class NavigationBar extends St.Widget {
             return () => global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, action);
         });
 
-        this.brightnessUpdateTimeout = new IntervalRunner(500, this.updatePillBrightness.bind(this));
+        this.brightnessUpdateTimeout = new IntervalRunner(500, async () => measureTime('updatePillBrightness', async () => {
+            await this.updatePillBrightness();
+        }));
 
         this.windowPositionTracker = new WindowPositionTracker(windows => {
             // Check if at least one window is near enough to the navigation bar:
@@ -278,9 +279,8 @@ export default class NavigationBar extends St.Widget {
         };
         const verticalPadding = (area.h - this.pill.height) / 2;
 
+        // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
         // const stream = Gio.MemoryOutputStream.new_resizable();
-
-        // High-level attempt (has memory leak):
         // // @ts-ignore (ts doesn't understand Gio._promisify())
         // // noinspection JSVoidFunctionReturnValueUsed
         // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
@@ -288,8 +288,16 @@ export default class NavigationBar extends St.Widget {
         //     this.scaleFactor, null, 0, 0, 1, stream
         // );
         // stream.close(null);
+        // //  -- memory leak is above this line --
+        // const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
+        //    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
+        //     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
+        // ]);
+        // const luminance = calculateLuminance(...avgColor);
+        // // Save pxibuf as png image to tempdir to inspect:
+        // // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
 
-        // Low-level api attempt:
+        // Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
         // try {
         //     const ctx = Clutter.get_default_backend().get_cogl_context();
         //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
@@ -308,10 +316,10 @@ export default class NavigationBar extends St.Widget {
         //     debugLog("Error in updatePillBrightness: ", e);
         // }
 
-        // Mid-level attempt:
-        //const ctx = Clutter.get_default_backend().get_cogl_context();
-        //const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-        //debugLog("subtex: ", subtex);
+        // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
+        // const ctx = Clutter.get_default_backend().get_cogl_context();
+        // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+        // debugLog("subtex: ", subtex);
         // if (subtex) {
         //     /*(global.stage as Clutter.Stage).paint_to_buffer(
         //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
@@ -334,16 +342,21 @@ export default class NavigationBar extends St.Widget {
         //     */
         // }
 
+        // Individual pixel attempt (causes screen lags, visible e.g. when moving a window):
+        // let rect = this.pill.get_transformed_extents();
+        // // @ts-ignore
+        // let colors: Cogl.Color[] = (await Promise.all([
+        //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.6, rect.get_y() - 3),
+        //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+        // ])).map(c => c[0]);
+        // let avgRGB = [
+        //     colors.reduce((a, b) => a + b.red, 0) / colors.length,
+        //     colors.reduce((a, b) => a + b.green, 0) / colors.length,
+        //     colors.reduce((a, b) => a + b.blue, 0) / colors.length
+        // ];
+        // let luminance = calculateLuminance(...avgRGB);
+
         return;
-
-        const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
-            {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
-            {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
-        ]);
-        const luminance = calculateLuminance(...avgColor);
-
-        // Save pxibuf as png image to tempdir to inspect:
-        // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
 
         if (luminance > 0.5) {
             this.pill.add_style_class_name('gnometouch-navbar__pill--dark')

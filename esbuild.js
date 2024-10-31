@@ -1,20 +1,21 @@
 import * as esbuild from "esbuild";
 import GjsPlugin from "esbuild-gjs";
 import copy from "esbuild-plugin-copy";
-import { dirname, resolve, join } from 'path';
-import { fileURLToPath } from 'url';
+import {dirname, join, resolve} from 'path';
+import {fileURLToPath} from 'url';
 import AdmZip from "adm-zip";
-import metadata from "./src/metadata.json" assert { type: 'json' };
+import metadata from "./src/metadata.json" assert {type: "json"};
 import {sassPlugin} from 'esbuild-sass-plugin'
 import * as fs from "fs";
 import mv from "mv";
+import gsettingsSchemaPlugin from "./build_scripts/generate_settings_schema.js";
 
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 
 await esbuild.build({
-    entryPoints: ["src/extension.ts", "src/sass/stylesheet-light.sass", "src/sass/stylesheet-dark.sass"],
+    entryPoints: ["src/extension.ts", "src/prefs.ts", "src/sass/stylesheet-light.sass", "src/sass/stylesheet-dark.sass"],
     target: "firefox115", // Spider Monkey 115  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
@@ -22,13 +23,19 @@ await esbuild.build({
         GjsPlugin({}),
         copy({
             assets: {
-                from: ['./src/metadata.json'],
+                from: ['src/metadata.json'],
                 to: ['metadata.json'],
             }
         }),
         sassPlugin({
             filter: /.*\.sass/,
         }),
+        gsettingsSchemaPlugin({
+            inputFile: 'src/features/preferences/settings.ts',
+            outputFile: 'dist/schemas/org.gnome.shell.extensions.gnometouch.gschema.xml',
+            schemaId: 'org.gnome.shell.extensions.gnometouch',
+            schemaPath: '/org/gnome/shell/extensions/gnometouch/'
+        })
     ],
     outdir: 'dist',
     treeShaking: true,

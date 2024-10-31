@@ -12,20 +12,16 @@ import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
+import {Extension} from "@girs/gnome-shell/extensions/extension";
 
 
-export default class GnomeTouchExtension {
-    private metadata: Record<string, any>;
+export default class GnomeTouchExtension extends Extension {
     private navigationBar?: NavigationBar;
     private oskKeyPopups?: OSKKeyPopups;
     private virtualTouchpad?: VirtualTouchpad;
     private virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
     private notificationGestures?: NotificationGestures;
     private developmentTools?: DevelopmentTools;
-
-    constructor(metadata: Record<string, any>) {
-        this.metadata = metadata;
-    }
 
     enable() {
         debugLog("*************************************************")
