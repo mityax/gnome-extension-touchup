@@ -1,13 +1,14 @@
-import St from "@girs/st-14";
-import {Monitor, MonitorConstraint} from "@girs/gnome-shell/ui/layout";
+import St from "@girs/st-15";
+import {MonitorConstraint} from "@girs/gnome-shell/ui/layout";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "@girs/gnome-shell/ui/main";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import {Widgets} from "$src/utils/ui/widgets";
 import {randomChoice} from "$src/utils/utils";
+import {debugLog} from "$src/utils/logging";
+import Cogl from "@girs/cogl-15";
 import ActorAlign = Clutter.ActorAlign;
 import EventPhase = Clutter.EventPhase;
-import {debugLog} from "$src/utils/logging";
 
 
 export class VirtualTouchpad {
@@ -22,7 +23,7 @@ export class VirtualTouchpad {
             reactive: true,
             trackHover: true,
             canFocus: true,
-            backgroundColor: Clutter.Color.from_string('black')[1],
+            backgroundColor: Cogl.Color.from_string('black')[1],
             constraints: new Clutter.BindConstraint({
                 source: Main.uiGroup,
                 coordinate: Clutter.BindCoordinate.ALL,
@@ -61,7 +62,7 @@ export class VirtualTouchpad {
         this.actor.add_action_full('test', EventPhase.CAPTURE, ac);
         ac.connect('tap', () => {
             debugLog('Tap action activated');
-            this.actor.backgroundColor = Clutter.Color.from_string(randomChoice([
+            this.actor.backgroundColor = Cogl.Color.from_string(randomChoice([
                 "red", 'blue', 'green', 'purple', 'yellow', 'orange', 'black', 'white'
             ]))[1];
         })

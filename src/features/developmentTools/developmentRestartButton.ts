@@ -1,13 +1,13 @@
 import '@girs/gnome-shell/extensions/global';
 
-import Meta from "@girs/meta-14";
-import St from "@girs/st-14";
+import Meta from "@girs/meta-15";
+import St from "@girs/st-15";
 
 import Gio from "@girs/gio-2.0";
 import {ModalDialog} from "@girs/gnome-shell/ui/modalDialog";
 import {MessageDialogContent} from "@girs/gnome-shell/ui/dialog";
 import GLib from "@girs/glib-2.0";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import Graphene from "@girs/graphene-1.0";
 import {Widgets} from "$src/utils/ui/widgets";
 import GObject from "@girs/gobject-2.0";

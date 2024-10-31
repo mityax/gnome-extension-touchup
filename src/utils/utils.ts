@@ -1,6 +1,6 @@
 import '@girs/gnome-shell/extensions/global';
-import St from "@girs/st-14";
-import Clutter from "@girs/clutter-14";
+import St from "@girs/st-15";
+import Clutter from "@girs/clutter-15";
 import GObject from "@girs/gobject-2.0";
 
 

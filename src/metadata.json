@@ -4,6 +4,6 @@
     "url": "https://github.com/mityax/gnome-touch",
     "version": "1.0.0",
     "uuid": "gnometouch@mityax.github.com",
-    "shell-version": ["46"],
+    "shell-version": ["47"],
     "gettext-domain": "gnometouch"
 }

@@ -1,7 +1,7 @@
-import St from "@girs/st-14";
+import St from "@girs/st-15";
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Widgets} from "$src/utils/ui/widgets";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import '@girs/gnome-shell/extensions/global';
 import {clamp} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";

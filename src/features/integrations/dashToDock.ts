@@ -2,8 +2,7 @@ import * as Main from '@girs/gnome-shell/ui/main';
 
 import {findActorByName} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
-import Meta from "@girs/meta-14";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 
 export class DashToDockIntegration {
     static readonly PATCH_SCOPE: unique symbol = Symbol('integration-dashtodock');

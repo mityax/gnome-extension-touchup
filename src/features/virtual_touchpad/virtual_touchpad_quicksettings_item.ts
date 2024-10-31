@@ -3,7 +3,7 @@ import GObject from "@girs/gobject-2.0";
 import {QuickSettingsItem} from "@girs/gnome-shell/ui/quickSettings";
 
 import * as Main from '@girs/gnome-shell/ui/main';
-import Meta from "@girs/meta-14";
+import Meta from "@girs/meta-15";
 import GLib from "@girs/glib-2.0";
 
 export class VirtualTouchpadQuickSettingsItem extends QuickSettingsItem {

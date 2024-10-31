@@ -1,4 +1,4 @@
-import Clutter from "@girs/clutter-14";
+import Cogl from "@girs/cogl-15";
 
 
 export function css(v: any): string | undefined {
@@ -6,7 +6,7 @@ export function css(v: any): string | undefined {
 
     if (['string', 'number'].indexOf(typeof v) !== -1) {
         res = v.toString();
-    } else if (v instanceof Clutter.Color) {
+    } else if (v instanceof Cogl.Color) {
         res = `rgba(${v.red}, ${v.green}, ${v.blue}, ${v.alpha / 255.0})`;
     } else if (Array.isArray(v)) {
         res = v.map(x => css(x)).join(" ");

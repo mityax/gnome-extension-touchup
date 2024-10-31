@@ -1,9 +1,9 @@
 import '@girs/gnome-shell/extensions/global';
 import '@girs/gjs';
 
-import St from "@girs/st-14";
+import St from "@girs/st-15";
 import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {Monitor} from "@girs/gnome-shell/ui/layout";
@@ -11,15 +11,14 @@ import {clamp, getStyle, UnknownClass} from "$src/utils/utils";
 import {PatchManager} from "$src/utils/patchManager";
 import {css} from "$src/utils/ui/css";
 import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
-import Meta from "@girs/meta-14";
+import Meta from "@girs/meta-15";
 import {NavigationBarGestureTracker} from "$src/features/navigationBar/navigationBarGestureTracker";
-import Shell from "@girs/shell-14";
+import Shell from "@girs/shell-15";
 import Cairo from "@girs/cairo-1.0";
 import {calculateAverageColor, calculateLuminance} from "$src/utils/colors";
 import {IntervalRunner} from "$src/utils/intervalRunner";
 import {debugLog} from "$src/utils/logging";
 import {IdleRunner} from "$src/utils/idleRunner";
-import Cogl from "@girs/cogl-14";
 import Gio from "@girs/gio-2.0";
 import Action = Clutter.Action;
 import Stage = Clutter.Stage;

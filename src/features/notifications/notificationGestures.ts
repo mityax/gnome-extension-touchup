@@ -1,7 +1,7 @@
 import '@girs/gnome-shell/extensions/global';
 
-import St from "@girs/st-14";
-import Clutter from "@girs/clutter-14";
+import St from "@girs/st-15";
+import Clutter from "@girs/clutter-15";
 
 import * as Main from '@girs/gnome-shell/ui/main';
 import {MessageListSection} from "@girs/gnome-shell/ui/messageList";

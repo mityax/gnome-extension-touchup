@@ -1,5 +1,5 @@
-import Clutter from "@girs/clutter-14";
-import St from "@girs/st-14";
+import Clutter from "@girs/clutter-15";
+import St from "@girs/st-15";
 import Stage = Clutter.Stage;
 
 export type Direction = 'up' | 'down' | 'left' | 'right';

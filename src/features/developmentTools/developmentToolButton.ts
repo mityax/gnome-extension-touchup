@@ -1,9 +1,10 @@
-import St from "@girs/st-14";
+import St from "@girs/st-15";
 import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import {css} from "$src/utils/ui/css";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
 import * as Main from "@girs/gnome-shell/ui/main";
+import Cogl from "@girs/cogl-15";
 import Side = St.Side;
 
 
@@ -105,7 +106,7 @@ export class DevToolToggleButton extends DevToolButton {
     set value(value: boolean) {
         this._value = value;
         this.backgroundColor = value
-            ? Clutter.Color.from_string('rgba(203,203,203,0.3)')[1]
-            : Clutter.Color.from_string('rgba(0,0,0,0)')[1];
+            ? Cogl.Color.from_string('rgba(203,203,203,0.3)')[1]
+            : Cogl.Color.from_string('rgba(0,0,0,0)')[1];
     }
 }

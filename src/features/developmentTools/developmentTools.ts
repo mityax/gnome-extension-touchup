@@ -4,7 +4,7 @@ import * as Main from "@girs/gnome-shell/ui/main";
 import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/developmentLogDisplay";
 import {Widgets} from "$src/utils/ui/widgets";
 import {debugLog} from "$src/utils/logging";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import {css} from "$src/utils/ui/css";
 import Graphene from "@girs/graphene-1.0";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";

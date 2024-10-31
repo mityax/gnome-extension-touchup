@@ -6,7 +6,7 @@ import {PatchManager} from "$src/utils/patchManager";
 import {OSKKeyPopups} from "$src/features/osk/oskKeyPopups";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
 import GLib from "@girs/glib-2.0";
-import Clutter from "@girs/clutter-14";
+import Clutter from "@girs/clutter-15";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
 import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
