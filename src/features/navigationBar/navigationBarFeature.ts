@@ -5,6 +5,7 @@ import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "../preferences/settings";
 import Clutter from "@girs/clutter-15";
 import Signal from "$src/utils/signal";
+import {log} from "$src/utils/logging";
 
 export type NavbarMode = 'gestures' | 'buttons';
 
@@ -26,7 +27,10 @@ export default class NavigationBarFeature extends ExtensionFeature {
         });
 
         // Connect to settings:
-        this.connectTo(settings.navigationBar.mode, 'changed', this.setMode.bind(this));
+        this.connectTo(settings.navigationBar.mode, 'changed', (mode) => {
+            log(`Mode changed: ${mode}`);
+            this.setMode(mode);
+        });
         this.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
             if (this.mode === 'gestures') {
                 this.currentNavBar.setReserveSpace(value);
@@ -43,6 +47,7 @@ export default class NavigationBarFeature extends ExtensionFeature {
         }
 
         this.mode = mode;
+        const visible = this.isVisible;
         this.currentNavBar?.destroy();
 
         switch (mode) {
@@ -52,9 +57,14 @@ export default class NavigationBarFeature extends ExtensionFeature {
             case 'buttons':
                 this.currentNavBar = new ButtonsNavigationBar();
                 break;
+            default:
+                log(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
+                this.currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
         }
 
-        this.currentNavBar.reallocate();
+        if (visible) {
+            this.currentNavBar.show();
+        }
         this.setOSKActionEnabled(this.mode !== 'gestures');
     }
 
@@ -69,7 +79,7 @@ export default class NavigationBarFeature extends ExtensionFeature {
     }
 
     get isVisible(): boolean {
-        return this.currentNavBar.isVisible;
+        return this.currentNavBar?.isVisible ?? false;
     }
 
     private setOSKActionEnabled(enabled: boolean) {

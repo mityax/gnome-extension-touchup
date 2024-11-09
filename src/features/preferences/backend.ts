@@ -20,13 +20,13 @@ export abstract class Setting<T> {
     abstract get(): T;
     abstract set(value: T): void;
 
-    bind(instance: GObject.Object | Gtk.Widget, property: string, mode: Gio.SettingsBindFlags = Gio.SettingsBindFlags.DEFAULT) {
-        gioSettings!.bind(this.key, instance as GObject.Object, property, mode);
+    bind(instance: GObject.Object | Gtk.Widget, property: string, flags: Gio.SettingsBindFlags = Gio.SettingsBindFlags.DEFAULT) {
+        gioSettings!.bind(this.key, instance as GObject.Object, property, flags);
     }
 
-    connect(signal: 'changed' | string, h: (newValue: T) => any): number {
-        console.assert(signal === 'changed', "The only supported signal for now is `changed`")
-        return gioSettings!.connect(`${signal}::${this.key}`, h);
+    connect(signal: 'changed' | string, handler: (newValue: T) => any): number {
+        console.assert(signal === 'changed', "The only supported signal for now is `changed`");
+        return gioSettings!.connect(`${signal}::${this.key}`, () => handler(this.get()));
     }
 
     disconnect(signalId: number) {
