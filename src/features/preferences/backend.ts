@@ -1,4 +1,6 @@
 import Gio from "@girs/gio-2.0";
+import GObject from "@girs/gobject-2.0";
+import Gtk from "@girs/gtk-4.0";
 
 let gioSettings: Gio.Settings | null = null;
 
@@ -17,6 +19,19 @@ export abstract class Setting<T> {
 
     abstract get(): T;
     abstract set(value: T): void;
+
+    bind(instance: GObject.Object | Gtk.Widget, property: string, mode: Gio.SettingsBindFlags = Gio.SettingsBindFlags.DEFAULT) {
+        gioSettings!.bind(this.key, instance as GObject.Object, property, mode);
+    }
+
+    connect(signal: 'changed' | string, h: (newValue: T) => any): number {
+        console.assert(signal === 'changed', "The only supported signal for now is `changed`")
+        return gioSettings!.connect(`${signal}::${this.key}`, h);
+    }
+
+    disconnect(signalId: number) {
+        gioSettings!.disconnect(signalId);
+    }
 }
 
 

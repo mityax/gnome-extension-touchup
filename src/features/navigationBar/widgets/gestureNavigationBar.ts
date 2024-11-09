@@ -1,84 +1,41 @@
-import '@girs/gnome-shell/extensions/global';
-import '@girs/gjs';
-
+import BaseNavigationBar from "./baseNavigationBar";
 import St from "@girs/st-15";
-import GObject from "@girs/gobject-2.0";
 import Clutter from "@girs/clutter-15";
-
-import * as Main from '@girs/gnome-shell/ui/main';
-import {Monitor} from "@girs/gnome-shell/ui/layout";
-import {clamp, getStyle, measureTime, UnknownClass} from "$src/utils/utils";
-import {PatchManager} from "$src/utils/patchManager";
 import {css} from "$src/utils/ui/css";
-import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
-import Meta from "@girs/meta-15";
-import {NavigationBarGestureTracker} from "$src/features/navigationBar/navigationBarGestureTracker";
-import Shell from "@girs/shell-15";
-import Cairo from "@girs/cairo-1.0";
 import {IntervalRunner} from "$src/utils/intervalRunner";
-import {debugLog} from "$src/utils/logging";
+import {clamp, UnknownClass} from "$src/utils/utils";
+import Shell from "@girs/shell-15";
+import * as Main from "@girs/gnome-shell/ui/main";
+import {NavigationBarGestureTracker} from "../navigationBarGestureTracker";
 import {IdleRunner} from "$src/utils/idleRunner";
-import Gio from "@girs/gio-2.0";
-import Action = Clutter.Action;
-import Stage = Clutter.Stage;
+import {debugLog} from "$src/utils/logging";
+import {calculateLuminance} from "$src/utils/colors";
 import ActorAlign = Clutter.ActorAlign;
+import Stage = Clutter.Stage;
 
+
+// Area reserved on the left side of the navbar in which a swipe up opens the OSK
+// Note: This is in logical pixels, not physical pixels
 const LEFT_EDGE_OFFSET = 100;
-const WORKSPACE_SWITCH_MIN_SWIPE_LENGTH = 12;
 
 
-//Gio._promisify(Shell.Screenshot.prototype, 'screenshot_stage_to_content');
-Gio._promisify(Shell.Screenshot.prototype, 'pick_color');
-
-
-if (typeof Cairo.format_stride_for_width === 'undefined') {
-    // Polyfill since the GJS bindings of Cairo are missing `format_stride_width`
-    Cairo.format_stride_for_width = (w: number, bpp: number = 32) => {  // bpp for Cairo.Format.ARGB32 (see https://github.com/ImageMagick/cairo/blob/main/src/cairo-image-surface.c#L741)
-        // Translated from original C-Code (https://github.com/ImageMagick/cairo/blob/main/src/cairoint.h#L1570):
-        //
-        // #define CAIRO_STRIDE_ALIGNMENT (sizeof (uint32_t))
-        // #define CAIRO_STRIDE_FOR_WIDTH_BPP(w,bpp) \
-        //    ((((bpp)*(w)+7)/8 + CAIRO_STRIDE_ALIGNMENT-1) & -CAIRO_STRIDE_ALIGNMENT)
-
-        const CAIRO_STRIDE_ALIGNMENT = Uint32Array.BYTES_PER_ELEMENT || 4  // sizeof(uint32_t) is 4 bytes in most systems
-        return (((bpp * w + 7) / 8 + CAIRO_STRIDE_ALIGNMENT - 1) & -CAIRO_STRIDE_ALIGNMENT);
-    }
-}
-
-
-export default class NavigationBar extends St.Widget {
-    static readonly PATCH_SCOPE: unique symbol = Symbol('navigation-bar');
-
-    private monitor: Monitor;
-    private mode: "gestures" | "buttons";
-    private readonly scaleFactor: number;
-
-    private windowPositionTracker: WindowPositionTracker;
+export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
     private readonly pill: St.Bin;
-    private readonly brightnessUpdateTimeout: IntervalRunner;
+    private styleClassUpdateInterval: IntervalRunner;
+    private _isWindowNear: boolean = false;
 
-    static {
-        GObject.registerClass(this);
-    }
-
-
-    constructor(mode: 'gestures' | 'buttons') {
-        const panelStyle = getStyle(St.Widget, 'panel');
+    constructor({reserveSpace} : {reserveSpace: boolean}) {
         super({
-            name: 'gnometouch-navbar',
-            styleClass: 'gnometouch-navbar gnometouch-navbar--transparent bottom-panel solid',
-            reactive: true,
-            trackHover: true,
-            canFocus: true,
-            layoutManager: new Clutter.BinLayout(),
-            visible: Clutter.get_default_backend().get_default_seat().touchMode,
+            actor: new St.Bin({
+                name: 'gnometouch-navbar',
+                styleClass: 'gnometouch-navbar gnometouch-navbar--transparent bottom-panel',
+                reactive: true,
+                trackHover: true,
+                canFocus: true,
+                layoutManager: new Clutter.BinLayout(),
+            }),
+            reserveSpace: reserveSpace,
         });
-
-        // TODO: find touch-enabled monitors, keyword: ClutterInputDevice
-        this.monitor = Main.layoutManager.primaryMonitor!;
-        this.mode = mode;
-
-        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
         // Create and add the pill:
         this.pill = new St.Bin({
@@ -90,72 +47,50 @@ export default class NavigationBar extends St.Widget {
                 borderRadius: '20px',
             })
         });
-        this.add_child(this.pill);
+        this.actor.set_child(this.pill);
 
-        this._reallocate();
+        this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
 
-        PatchManager.patch(() => {
-            const monitorManager = global.backend.get_monitor_manager();
-            const id = monitorManager.connect('monitors-changed', this._reallocate.bind(this));
-            return () => monitorManager.disconnect(id);
-        }, {scope: NavigationBar.PATCH_SCOPE})
+        this.onVisibilityChanged.connect('changed', (value) => this.styleClassUpdateInterval.setActive(value));
+        this.onReserveSpaceChanged.connect('changed', (reserveSpace) => {
+            this.styleClassUpdateInterval.setActive(!reserveSpace);
+            void this.updateStyleClasses();
+        })
+
+        this.actor.connect('realize', () => this.styleClassUpdateInterval.scheduleOnce());
 
         this._setupGestureTracker();
-
-        // Disable default bottom drag action:
-        PatchManager.patch(() => {
-            const action = global.stage.get_action('osk')!;
-            global.stage.remove_action(action);
-            return () => global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, action);
-        });
-
-        this.brightnessUpdateTimeout = new IntervalRunner(500, async () => measureTime('updatePillBrightness', async () => {
-            await this.updatePillBrightness();
-        }));
-
-        this.windowPositionTracker = new WindowPositionTracker(windows => {
-            // Check if at least one window is near enough to the navigation bar:
-            const top = this.get_transformed_position()[1];
-            const windowTouchesPanel = windows.some((metaWindow: Meta.Window) => {
-                const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
-                return windowBottom >= top;
-            });
-            const isInOverview = Main.panel.has_style_pseudo_class('overview');
-
-            let newInterval = isInOverview || !windowTouchesPanel ? 3000 : 500;
-            if (newInterval != this.brightnessUpdateTimeout.interval) {
-                // if a window is moved onto/away from the panel or overview is toggled, schedule update soon:
-                this.brightnessUpdateTimeout.scheduleOnce(30);
-            }
-            this.brightnessUpdateTimeout.setInterval(newInterval);
-        });
     }
 
-    private _reallocate() {
-        // TODO: find touch-enabled monitor, keyword: ClutterInputDevice
-        this.monitor = Main.layoutManager.primaryMonitor!;
+    protected onIsWindowNearChanged(isWindowNear: boolean): void {
+        this._isWindowNear = isWindowNear;
+        if (!this.reserveSpace) {
+            let newInterval = Main.overview.visible || !isWindowNear ? 3000 : 500;
+            if (newInterval != this.styleClassUpdateInterval.interval) {
+                // if a window is moved onto/away from the panel or overview is toggled, schedule update soonish:
+                this.styleClassUpdateInterval.scheduleOnce(100);
+            }
+            this.styleClassUpdateInterval.setInterval(newInterval);
+        }
+    }
 
-        const height = (this.mode == 'gestures' ? 22 : 40) * this.scaleFactor;
+    protected onBeforeReallocate() {
+        const sf = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+        const height = 22 * sf;
+        this.actor.set_height(height);
 
-        this.set_position(this.monitor.x, this.monitor.y + this.monitor.height - height);
-        this.set_size(this.monitor.width, height);
-
-        this.pill.set_size(
-            // Width:
-            clamp(this.monitor.width * 0.25, 70 * this.scaleFactor, 330 * this.scaleFactor),
-
-            // Height:
-            Math.floor(Math.min(this.height * 0.8, 4.5 * this.scaleFactor, this.height - 2))
-        )
-        debugLog('Pill size: ', this.pill.width, 'x', this.pill.height)
+        this.pill.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
+        this.pill.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
     }
 
     private _setupGestureTracker() {
+        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+
         //@ts-ignore
         const wsController: UnknownClass = Main.wm._workspaceAnimation;
 
         const gesture = new NavigationBarGestureTracker();
-        this.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Action);
+        this.actor.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Clutter.Action);
         gesture.orientation = null; // Clutter.Orientation.HORIZONTAL;
 
         let baseDistX = 900;
@@ -219,7 +154,7 @@ export default class NavigationBar extends St.Widget {
             targetWorkspaceProgress = initialWorkspaceProgress + distX / baseDistX * 1.6;   // TODO: potential extension setting
 
             // Overview toggling:
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
                 Main.keyboard._keyboard.gestureProgress(distY / baseDistY);
             } else {
                 // TODO: potential extension setting:
@@ -238,7 +173,7 @@ export default class NavigationBar extends St.Widget {
                 wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
             }
 
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
                 if (direction == 'up') {
                     //@ts-ignore
                     Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
@@ -257,7 +192,7 @@ export default class NavigationBar extends St.Widget {
             idleRunner.stop();
 
             wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
                 Main.keyboard._keyboard.gestureCancel();
             } else {
                 Main.overview._gestureEnd({}, 300, 0);
@@ -265,19 +200,44 @@ export default class NavigationBar extends St.Widget {
         })
     }
 
-    private async updatePillBrightness() {
+    private async updateStyleClasses() {
+        if (this.reserveSpace && this._isWindowNear) {
+            // Make navbar opaque (black or white, based on shell theme brightness):
+            this.actor.remove_style_class_name('gnometouch-navbar--transparent');
+            this.pill.remove_style_class_name('gnometouch-navbar__pill--dark');
+        } else {
+            // Make navbar transparent:
+            this.actor.add_style_class_name('gnometouch-navbar--transparent');
+
+            // Adjust pill brightness:
+            let brightness = await this.findBestPillBrightness();
+            if (brightness == 'dark') {
+                this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
+            } else {
+                this.pill.remove_style_class_name('gnometouch-navbar__pill--dark')
+            }
+        }
+    }
+
+    /**
+     * Find the best pill brightness by analyzing what's on the screen behind the pill
+     */
+    private async findBestPillBrightness(): Promise<'dark' | 'light'> {
+        // FIXME: This does not work as of now, see below for several attempts that all have problems...
+
         const shooter = new Shell.Screenshot();
         // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
-        const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
-        const wholeScreenTexture = content.get_texture();
+        // const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
+        // const wholeScreenTexture = content.get_texture();
 
-        const area = {
-            x: this.pill.x - 20 * this.scaleFactor,
-            y: this.y,
-            w: this.pill.width + 40 * this.scaleFactor,
-            h: this.height,
-        };
-        const verticalPadding = (area.h - this.pill.height) / 2;
+        // An area surrounding the pill to use for brightness analysis:
+        // const area = {
+        //     x: this.pill.x - 20 * this.scaleFactor,
+        //     y: this.y,
+        //     w: this.pill.width + 40 * this.scaleFactor,
+        //     h: this.height,
+        // };
+        // const verticalPadding = (area.h - this.pill.height) / 2;
 
         // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
         // const stream = Gio.MemoryOutputStream.new_resizable();
@@ -343,31 +303,50 @@ export default class NavigationBar extends St.Widget {
         // }
 
         // Individual pixel attempt (causes screen lags, visible e.g. when moving a window):
-        // let rect = this.pill.get_transformed_extents();
-        // // @ts-ignore
-        // let colors: Cogl.Color[] = (await Promise.all([
-        //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.6, rect.get_y() - 3),
-        //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
-        // ])).map(c => c[0]);
-        // let avgRGB = [
-        //     colors.reduce((a, b) => a + b.red, 0) / colors.length,
-        //     colors.reduce((a, b) => a + b.green, 0) / colors.length,
-        //     colors.reduce((a, b) => a + b.blue, 0) / colors.length
-        // ];
-        // let luminance = calculateLuminance(...avgRGB);
+        let rect = this.pill.get_transformed_extents();
+        // @ts-ignore
+        let colors: Cogl.Color[] = (await Promise.all([
+            // For now we only use one pixel as this appears to have very bad performance:
+            shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
+            // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+            // @ts-ignore
+        ])).map(c => c[0]);
+        // Calculate the luminance of the average RGB values:
+        let luminance = calculateLuminance(
+            colors.reduce((a, b) => a + b.red, 0) / colors.length,
+            colors.reduce((a, b) => a + b.green, 0) / colors.length,
+            colors.reduce((a, b) => a + b.blue, 0) / colors.length
+        );
 
-        return;
-
-        if (luminance > 0.5) {
-            this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
-        } else {
-            this.pill.remove_style_class_name('gnometouch-navbar__pill--dark')
-        }
+        return luminance > 0.5 ? 'dark' : 'light';
     }
 
     destroy() {
-        this.brightnessUpdateTimeout.stop();
-        this.windowPositionTracker.destroy();
+        this.styleClassUpdateInterval.stop();
         super.destroy();
     }
 }
+
+
+// Note: these are potentially needed for some of the approaches in `updatePillBrightness`, should
+// they work one day:
+//
+//Gio._promisify(Shell.Screenshot.prototype, 'screenshot_stage_to_content');
+//Gio._promisify(Shell.Screenshot.prototype, 'pick_color');
+//
+// if (typeof Cairo.format_stride_for_width === 'undefined') {
+//     // Polyfill since the GJS bindings of Cairo are missing `format_stride_width`
+//     Cairo.format_stride_for_width = (w: number, bpp: number = 32) => {  // bpp for Cairo.Format.ARGB32 (see https://github.com/ImageMagick/cairo/blob/main/src/cairo-image-surface.c#L741)
+//         // Translated from original C-Code (https://github.com/ImageMagick/cairo/blob/main/src/cairoint.h#L1570):
+//         //
+//         // #define CAIRO_STRIDE_ALIGNMENT (sizeof (uint32_t))
+//         // #define CAIRO_STRIDE_FOR_WIDTH_BPP(w,bpp) \
+//         //    ((((bpp)*(w)+7)/8 + CAIRO_STRIDE_ALIGNMENT-1) & -CAIRO_STRIDE_ALIGNMENT)
+//
+//         const CAIRO_STRIDE_ALIGNMENT = Uint32Array.BYTES_PER_ELEMENT || 4  // sizeof(uint32_t) is 4 bytes in most systems
+//         return (((bpp * w + 7) / 8 + CAIRO_STRIDE_ALIGNMENT - 1) & -CAIRO_STRIDE_ALIGNMENT);
+//     }
+// }
+//
+
+

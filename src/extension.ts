@@ -1,9 +1,9 @@
 import '@girs/gnome-shell/extensions/global';
 
 import * as Main from '@girs/gnome-shell/ui/main';
-import NavigationBar from "$src/features/navigationBar/navigationBar";
 import {PatchManager} from "$src/utils/patchManager";
-import {OSKKeyPopups} from "$src/features/osk/oskKeyPopups";
+import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
+import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
 import GLib from "@girs/glib-2.0";
 import Clutter from "@girs/clutter-15";
@@ -13,15 +13,20 @@ import {NotificationGestures} from "$src/features/notifications/notificationGest
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "@girs/gnome-shell/extensions/extension";
+import {initSettings} from "$src/features/preferences/backend";
+import ExtensionFeature from "$src/utils/extensionFeature";
 
 
 export default class GnomeTouchExtension extends Extension {
-    private navigationBar?: NavigationBar;
-    private oskKeyPopups?: OSKKeyPopups;
-    private virtualTouchpad?: VirtualTouchpad;
-    private virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
-    private notificationGestures?: NotificationGestures;
-    private developmentTools?: DevelopmentTools;
+    navigationBar?: NavigationBarFeature;
+    oskKeyPopups?: OskKeyPopupsFeature;
+    virtualTouchpad?: VirtualTouchpad;
+    virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
+    notificationGestures?: NotificationGestures;
+    developmentTools?: DevelopmentTools;
+    integrations: ExtensionFeature[] = [];
+
+    static instance?: GnomeTouchExtension;
 
     enable() {
         debugLog("*************************************************")
@@ -29,8 +34,13 @@ export default class GnomeTouchExtension extends Extension {
         debugLog("*************************************************")
         debugLog()
 
-        this.navigationBar = new NavigationBar('gestures');
-        this.oskKeyPopups = new OSKKeyPopups();
+        GnomeTouchExtension.instance = this;
+
+        // @ts-ignore
+        initSettings(this.getSettings());
+
+        this.navigationBar = new NavigationBarFeature();
+        this.oskKeyPopups = new OskKeyPopupsFeature();
         this.notificationGestures = new NotificationGestures();
         this.virtualTouchpad = new VirtualTouchpad();
 
@@ -45,12 +55,6 @@ export default class GnomeTouchExtension extends Extension {
             this.developmentTools = new DevelopmentTools(this);
         }
 
-        // Add style classes for settings:
-        PatchManager.patch(() => {
-            Main.uiGroup.add_style_class_name("gnometouch-setting-navbar-gestures");  // or 'gnometouch-setting-navbar-buttons'
-            return () => Main.uiGroup.style_class = Main.uiGroup.style_class.replaceAll(/ gnometouch-\S+/g, '');
-        })
-
         // React to touch-mode changes:
         PatchManager.patch(() => {
             const seat = Clutter.get_default_backend().get_default_seat();
@@ -58,12 +62,6 @@ export default class GnomeTouchExtension extends Extension {
                 this.syncUI();
             });
             return () => seat.disconnect(id);
-        })
-        // ... and to monitor changes:
-        PatchManager.patch(() => {
-            const monitorManager = global.backend.get_monitor_manager();
-            const id = monitorManager.connect_after('monitors-changed', () => this.syncUI());
-            return () => monitorManager.disconnect(id);
         })
 
         this.syncUI();
@@ -75,17 +73,12 @@ export default class GnomeTouchExtension extends Extension {
         const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (GnomeTouchExtension.isDebugMode && this.developmentTools?.enforceTouchMode == true);
 
         if (touchMode) {
-            Main.layoutManager.addChrome(this.navigationBar!, {
-                affectsStruts: false,
-                trackFullscreen: true,
-            });
-            Main.uiGroup.add_style_class_name('gnometouch-navbar-visible');
+            this.navigationBar?.show();
         } else {
-            Main.layoutManager.removeChrome(this.navigationBar!);
-            Main.uiGroup.remove_style_class_name('gnometouch-navbar-visible');
+            this.navigationBar?.hide();
         }
 
-        if (touchMode/* && Main.layoutManager.monitors.length > 1*/) {  // TODO: uncomment when development is done
+        if (touchMode) {
             this.virtualTouchpadOpenButton?.show();
         } else {
             this.virtualTouchpadOpenButton?.hide();
@@ -101,17 +94,20 @@ export default class GnomeTouchExtension extends Extension {
         this.virtualTouchpadOpenButton?.destroy();
         this.developmentTools?.disable();
 
+        this.integrations.forEach(i => i.destroy());
+
         this.navigationBar = undefined;
         this.oskKeyPopups = undefined;
         this.notificationGestures = undefined;
         this.virtualTouchpad = undefined;
         this.virtualTouchpadOpenButton = undefined;
         this.developmentTools = undefined;
+
+        GnomeTouchExtension.instance = undefined;
     }
 
     private enableIntegrations() {
-        const d = new DashToDockIntegration();
-        d.enable();
+        this.integrations.push(new DashToDockIntegration());
     }
 
     static get isDebugMode() {

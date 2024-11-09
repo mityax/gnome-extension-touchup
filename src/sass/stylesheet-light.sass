@@ -2,11 +2,14 @@
 
 
 .gnometouch-navbar
-  $bar: &
+    $bar: &
+    $pill: #{$bar}__pill
+    $buttons: #{$bar}__button
 
-  &:not(#{$bar}--transparent)
-    background-color: desaturate(#f6f5f4, 100%) // color fetched from repo: https://github.com/search?q=repo%3AGNOME/gnome-shell%20%24light_2&type=code
+    background-color: $light-theme-color
 
-    #{$bar}__pill
-      background-color: black
+    #{$pill}
+        background-color: $dark-theme-color
 
+    #{$buttons}
+        color: $dark-theme-color

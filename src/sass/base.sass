@@ -1,22 +1,58 @@
+@use 'sass:color'
 
-.gnometouch-setting-navbar-gestures.gnometouch-navbar-visible #dashtodockContainer.bottom #dash
+
+#dashtodockContainer.bottom.gnometouch-margin-bottom-gestures #dash
     padding-bottom: 20px !important
 
-.gnometouch-setting-navbar-buttons.gnometouch-navbar-visible #dashtodockContainer.bottom #dash
+#dashtodockContainer.bottom.gnometouch-margin-bottom-buttons #dash
     padding-bottom: 41px !important
+
+// The dark color of the gnome shell theme
+$dark-theme-color: desaturate(#191919, 100%)
+// The light color of the gnome shell theme
+$light-theme-color: desaturate(#f6f5f4, 100%)
 
 
 .gnometouch-navbar
     $bar: &
-    transition-duration: 250ms
+    $pill: #{$bar}__pill
+    $buttons: #{$bar}__button
 
+    transition: background-color
+    transition-duration: 0.5s
+
+
+    // By default, the navbar has a solid, opaque background color (which adjusts to the gnome
+    // shell theme brightness):
+    background-color: $dark-theme-color
+
+    #{$pill}
+        transition: background-color
+        transition-duration: 0.5s
+        background-color: $light-theme-color
+
+    #{$buttons}
+        color: $light-theme-color
+        border-radius: 10px
+        width: 26px
+        height: 26px
+        padding: 6px
+        margin: 4px 15px 4px 4px
+        transition: background-color
+        transition-duration: 250ms
+
+        &:hover
+            background-color: color.change($light-theme-color, $alpha: 0.2)
+
+    // Navbar with a transparent background. The pill color by default adjusts to the
+    // shell theme brightness, but can be explicitly set using the 'gnometouch-navbar__pill--dark'
+    // or 'gnometouch-navbar__pill--light' classes:
     &--transparent
         background-color: rgba(0,0,0,0)
 
-        #{$bar}__pill
-            transition: background-color
-            transition-duration: 0.5s
-            background-color: desaturate(#f6f5f4, 100%)
+        #{$pill}
+            background-color: $light-theme-color
 
             &--dark
-                background-color: desaturate(#191919, 100%)
+                background-color: $dark-theme-color !important
+

@@ -3,42 +3,42 @@ import * as Main from '@girs/gnome-shell/ui/main';
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
 import {findActorBy, UnknownClass} from '$src/utils/utils';
-import {PatchManager} from "$src/utils/patchManager";
 import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
 import St from "@girs/st-15";
 import GLib from "@girs/glib-2.0";
 import {log} from "$src/utils/logging";
+import ExtensionFeature from "$src/utils/extensionFeature";
 
 
-export class OSKKeyPopups {
+export default class OskKeyPopupsFeature extends ExtensionFeature {
     public static readonly PATCH_SCOPE: unique symbol = Symbol('osk-key-popups');
     private keyPrototype: any;
 
     constructor() {
+        super();
+
         const self = this;
 
-        const setupPatch = PatchManager.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
-            self.keyPrototype ??= self._extractKeyPrototype(this);
-
+        this.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
+            // Only do this once (this patch is only responsible for retrieving the `Key` prototype,
+            // which is key (pun intended) to create the OSK popups):
             if (!self.keyPrototype) {
-                log("Could not extract Key prototype, thus not patching OSK key popups.");
-                return;
+                self.keyPrototype = self._extractKeyPrototype(this);
+
+                if (!self.keyPrototype) {
+                    log("Could not extract Key prototype, thus not patching OSK key popups.");
+                } else {
+                    self._patchKeyMethods(self.keyPrototype);
+                }
             }
-
-            self._patchKeyMethods(self.keyPrototype);
-
-            // Undo the outer patch, so it is only called once (it's only responsible for
-            // retrieving the `Key` prototype, which is key (pun intended) to create
-            // the OSK popups):
-            setupPatch?.undo();
-        }, {scope: OSKKeyPopups.PATCH_SCOPE});
+        });
     }
 
     private _patchKeyMethods(keyProto: any) {
         const self = this;
 
         // Show the key popup on key press:
-        PatchManager.appendToMethod(keyProto, '_press', function (this: UnknownClass, button, commitString) {
+        this.appendToMethod(keyProto, '_press', function (this: UnknownClass, button, commitString) {
             if (!this._gnometouch_boxPointer && commitString && commitString.trim().length > 0) {
                 this._gnometouch_boxPointer = self._buildBoxPointer(this, commitString);
             }
@@ -48,26 +48,26 @@ export class OSKKeyPopups {
                 this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
                 return GLib.SOURCE_REMOVE;
             })
-        }, {scope: OSKKeyPopups.PATCH_SCOPE});
+        });
 
         // Hide the key popup a few ms after a key has been released:
-        PatchManager.appendToMethod(keyProto, '_release', function (this: UnknownClass, button, commitString) {
+        this.appendToMethod(keyProto, '_release', function (this: UnknownClass, button, commitString) {
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15, () => {
                 this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
                 return GLib.SOURCE_REMOVE;
             })
-        }, {scope: OSKKeyPopups.PATCH_SCOPE});
+        });
 
         // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown:
-        PatchManager.appendToMethod(keyProto, '_showSubkeys', function (this: UnknownClass) {
+        this.appendToMethod(keyProto, '_showSubkeys', function (this: UnknownClass) {
             this._gnometouch_boxPointer?.close();
-        }, {scope: OSKKeyPopups.PATCH_SCOPE});
+        });
 
         // Destroy the key popup/boxpointer when the key is destroyed:
-        PatchManager.appendToMethod(keyProto, '_onDestroy', function (this: UnknownClass) {
+        this.appendToMethod(keyProto, '_onDestroy', function (this: UnknownClass) {
             this._gnometouch_boxPointer?.destroy();
             this._gnometouch_boxPointer = null;
-        }, {scope: OSKKeyPopups.PATCH_SCOPE});
+        });
     }
 
     private _buildBoxPointer(key: any, commitString: string) {
@@ -105,9 +105,5 @@ export class OSKKeyPopups {
         return r !== null
             ? Object.getPrototypeOf(r)
             : null;
-    }
-
-    destroy() {
-
     }
 }

@@ -2,7 +2,19 @@ import * as ts from 'typescript';
 import fs from 'fs';
 import path from 'path';
 
-
+/**
+ * A (primitive) esbuild plugin that automatically generates a gsettings schema from a
+ * settings typescript file, of the structure specific to this project.
+ *
+ * The purposes of this plugin are:
+ *  - having a single source of truth for the settings schema,
+ *  - avoiding the extra work of keeping the schema in sync with the JS/TS side, and therefore
+ *  - having a lower hurdle to implement new settings.
+ *
+ * This plugin uses the typescript compiler API to parse the given settings file - thus there
+ * is no extra dependency to incorporate an additional typescript parser, and we achieve more
+ * flexibility and correctness than even more primitive approaches such as regular expressions.
+ */
 export default function gsettingsSchemaPlugin({ inputFile, outputFile, schemaId, schemaPath }) {
     return {
         name: 'gsettings-schema-plugin',

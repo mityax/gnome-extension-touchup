@@ -65,6 +65,20 @@ export class IntervalRunner {
     }
 
     /**
+     * Declarative way of starting/stopping the interval runner.
+     *
+     * Calling this with `active=true` while the timeout is running or with `active=false`
+     * while it is not running is a no-op.
+     */
+    setActive(active: boolean) {
+        if (!active && this.timeoutId !== null) {
+            this.stop()
+        } else if (active && this.timeoutId === null) {
+            this.start();
+        }
+    }
+
+    /**
      * Run the callback once after the given delay (unless `stop()` is called before that)
      */
     scheduleOnce(delayMs: number = 0) {
