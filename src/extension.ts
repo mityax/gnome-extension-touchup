@@ -5,16 +5,17 @@ import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
-import GLib from "@girs/glib-2.0";
 import Clutter from "@girs/clutter-15";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
-import {DashToDockIntegration} from "$src/features/integrations/dashToDock";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "@girs/gnome-shell/extensions/extension";
 import {initSettings} from "$src/features/preferences/backend";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import GLib from "@girs/glib-2.0";
+
+
+const isDebugMode = /^(true|1|yes)$/.test(GLib.getenv('GNOMETOUCH_DEBUG_MODE') || 'false');
 
 
 export default class GnomeTouchExtension extends Extension {
@@ -24,7 +25,6 @@ export default class GnomeTouchExtension extends Extension {
     virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
     notificationGestures?: NotificationGestures;
     developmentTools?: DevelopmentTools;
-    integrations: ExtensionFeature[] = [];
 
     static instance?: GnomeTouchExtension;
 
@@ -65,8 +65,6 @@ export default class GnomeTouchExtension extends Extension {
         })
 
         this.syncUI();
-
-        this.enableIntegrations();
     }
 
     syncUI() {
@@ -94,8 +92,6 @@ export default class GnomeTouchExtension extends Extension {
         this.virtualTouchpadOpenButton?.destroy();
         this.developmentTools?.disable();
 
-        this.integrations.forEach(i => i.destroy());
-
         this.navigationBar = undefined;
         this.oskKeyPopups = undefined;
         this.notificationGestures = undefined;
@@ -106,11 +102,5 @@ export default class GnomeTouchExtension extends Extension {
         GnomeTouchExtension.instance = undefined;
     }
 
-    private enableIntegrations() {
-        this.integrations.push(new DashToDockIntegration());
-    }
-
-    static get isDebugMode() {
-        return /^(true|1|yes)$/.test(GLib.getenv('GNOMETOUCH_DEBUG_MODE') || 'false');
-    }
+    static readonly isDebugMode = isDebugMode;
 }

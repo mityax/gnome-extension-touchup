@@ -1,4 +1,4 @@
-import {BoolSetting, EnumSetting} from "./backend";
+import {BoolSetting, EnumSetting, IntSetting} from "./backend";
 
 
 // NOTE: the doc comments in the following structure will be automatically included in the GSettings schema
@@ -29,6 +29,10 @@ export const settings = {
          * Whether to enable the OSK key popup feature or not.
          */
         enabled: new BoolSetting('osk-key-popups-enabled', true),
+        /**
+         * How long to show the OSK key popups for (in milliseconds).
+         */
+        duration: new IntSetting('osk-key-popups-duration', 35, 15, 250),
     }
 }
 

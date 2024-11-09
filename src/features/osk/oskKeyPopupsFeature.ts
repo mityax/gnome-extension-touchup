@@ -8,10 +8,10 @@ import St from "@girs/st-15";
 import GLib from "@girs/glib-2.0";
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
+import {settings} from "$src/features/preferences/settings";
 
 
 export default class OskKeyPopupsFeature extends ExtensionFeature {
-    public static readonly PATCH_SCOPE: unique symbol = Symbol('osk-key-popups');
     private keyPrototype: any;
 
     constructor() {
@@ -52,7 +52,7 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
 
         // Hide the key popup a few ms after a key has been released:
         this.appendToMethod(keyProto, '_release', function (this: UnknownClass, button, commitString) {
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 15, () => {
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, settings.oskKeyPopups.duration.get(), () => {
                 this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
                 return GLib.SOURCE_REMOVE;
             })

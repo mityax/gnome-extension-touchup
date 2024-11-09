@@ -1,11 +1,15 @@
 @use 'sass:color'
 
 
-#dashtodockContainer.bottom.gnometouch-margin-bottom-gestures #dash
-    padding-bottom: 20px !important
+.gnometouch-navbar-visible
+    &--gestures
+        #dashtodockContainer #dash
+            padding-bottom: 20px !important
 
-#dashtodockContainer.bottom.gnometouch-margin-bottom-buttons #dash
-    padding-bottom: 41px !important
+    &--buttons
+        #dashtodockContainer #dash
+            padding-bottom: 41px !important
+
 
 // The dark color of the gnome shell theme
 $dark-theme-color: desaturate(#191919, 100%)
@@ -34,10 +38,10 @@ $light-theme-color: desaturate(#f6f5f4, 100%)
     #{$buttons}
         color: $light-theme-color
         border-radius: 10px
-        width: 26px
-        height: 26px
-        padding: 6px
-        margin: 4px 15px 4px 4px
+        width: 20px
+        height: 20px
+        padding: 10px
+        margin: 4px 15px 4px 15px
         transition: background-color
         transition-duration: 250ms
 

@@ -1,6 +1,8 @@
 import Gio from "@girs/gio-2.0";
 import GObject from "@girs/gobject-2.0";
 import Gtk from "@girs/gtk-4.0";
+import {clamp} from "$src/utils/utils";
+import {assert} from "$src/utils/logging";
 
 let gioSettings: Gio.Settings | null = null;
 
@@ -54,11 +56,24 @@ export class BoolSetting extends Setting<boolean> {
 }
 
 export class IntSetting extends Setting<number> {
+    private readonly min: number;
+    private readonly max: number;
+
+    constructor(key: string, defaultValue: number, min: number, max: number) {
+        assert(min <= max);
+        super(key, defaultValue);
+        this.min = min;
+        this.max = max;
+    }
+
     get() {
         return gioSettings!.get_int(this.key)!;
     }
+
     set(value: number) {
-        console.assert(value % 1 == 0);
-        gioSettings!.set_int(this.key, value);
+        assert(value % 1 == 0);
+        assert(value >= this.min);
+        assert(value <= this.max);
+        gioSettings!.set_int(this.key, clamp(value, this.min, this.max));
     }
 }

@@ -6,13 +6,14 @@ import {settings} from "../preferences/settings";
 import Clutter from "@girs/clutter-15";
 import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";
+import * as Main from "@girs/gnome-shell/ui/main";
 
 export type NavbarMode = 'gestures' | 'buttons';
 
 export default class NavigationBarFeature extends ExtensionFeature {
     declare private currentNavBar: BaseNavigationBar<any>;
     private oskAction: Clutter.Action | null = null;
-    declare private mode: NavbarMode;
+    private declare _mode: NavbarMode;
 
     readonly onVisibilityChanged = new Signal<boolean>();
 
@@ -32,21 +33,22 @@ export default class NavigationBarFeature extends ExtensionFeature {
             this.setMode(mode);
         });
         this.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
-            if (this.mode === 'gestures') {
+            if (this._mode === 'gestures') {
                 this.currentNavBar.setReserveSpace(value);
             }
         });
 
         this.onCleanup(() => this.currentNavBar.destroy());
         this.onCleanup(() => this.setOSKActionEnabled(true));
+        this.onCleanup(() => this.setGlobalStyleClassesEnabled(false))
     }
 
     setMode(mode: NavbarMode) {
-        if (mode === this.mode) {
+        if (mode === this._mode) {
             return;
         }
 
-        this.mode = mode;
+        this._mode = mode;
         const visible = this.isVisible;
         this.currentNavBar?.destroy();
 
@@ -65,21 +67,41 @@ export default class NavigationBarFeature extends ExtensionFeature {
         if (visible) {
             this.currentNavBar.show();
         }
-        this.setOSKActionEnabled(this.mode !== 'gestures');
+        this.setOSKActionEnabled(this._mode !== 'gestures');
+    }
+
+    get mode(): NavbarMode {
+        return this._mode;
     }
 
     show() {
         this.currentNavBar.show();
         this.onVisibilityChanged.emit(true);
+        this.setGlobalStyleClassesEnabled(true);
     }
 
     hide() {
         this.currentNavBar.hide();
         this.onVisibilityChanged.emit(false);
+        this.setGlobalStyleClassesEnabled(false);
     }
 
     get isVisible(): boolean {
         return this.currentNavBar?.isVisible ?? false;
+    }
+
+    /**
+     * Adds/removes style classes to allow the CSS-side of this extension to style different elements
+     * across the desktop in accordance with the current navigation bar mode and visibility.
+     * @param enabled Whether to set or unset the global style classes
+     */
+    private setGlobalStyleClassesEnabled(enabled: boolean) {
+        if (enabled) {
+            Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible--${this.mode}`);
+            Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible`);
+        } else {
+            Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar-visible(-\w+)?/g, '');
+        }
     }
 
     private setOSKActionEnabled(enabled: boolean) {

@@ -60,7 +60,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         if (this.isVisible) return;
 
         this._addActor();
-        Main.uiGroup.add_style_class_name('gnometouch-navbar-visible');
         this._visible = true;
         this.onVisibilityChanged.emit(true);
         this.reallocate();
@@ -70,7 +69,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         if (!this.isVisible) return;
 
         this._removeActor();
-        Main.uiGroup.remove_style_class_name('gnometouch-navbar-visible');
         this._visible = false;
         this.onVisibilityChanged.emit(false);
     }

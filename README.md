@@ -5,12 +5,18 @@ An extension for Gnome Shell that provides a better user
 experience for devices with a touchscreen.
 
 ### Features &amp; Implementation Status
- - [x] Navigation bar, similar to mobile devices
+ - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
-   - [ ] Buttons mode
+   - [x] Buttons mode
  - [x] Touch gestures for Gnome Shell notifications
+   - [x] Touchscreen swipe gesture
+   - [ ] Touchpad two-finger gestures
  - [x] Key popups for the onscreen keyboard
- - [ ] Virtual Touchpad (use device as touchpad when connected to a second monitor)
+ - [ ] Virtual Touchpad (use device as touchpad when connected to a 
+       second monitor)
+ - [ ] Floating temporary screen rotation button when auto-rotation
+       is disabled but device is rotated (as in modern android versions)
+
 
 
 ## Development

@@ -96,3 +96,8 @@ export function removeLogCallback(id: number) {
     logCallbacks.delete(id);
 }
 
+export function assert(condition: boolean, message?: string) {
+    if (!condition && GnomeTouchExtension.isDebugMode) {
+        throw message ?? "Assertion error";
+    }
+}
