@@ -121,6 +121,13 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         } else {
             // Ideas: invoke "Alt + Left" keystroke (see: https://askubuntu.com/a/422448)
             //  or potentially "Esc", depending on context/active window/window type
+
+            // TODO:
+            //  - extract as a reusable function for other components
+            //  - unfullscreen window if there's a fullscreen window focused
+            //  - consider closing modal dialogs, if present  (maybe invoke escape key?)
+            //  - consider closing current window on double or long tap
+
             this._virtualKeyboardDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
                 Clutter.KEY_Back, Clutter.KeyState.PRESSED);
             this._virtualKeyboardDevice.notify_keyval(Clutter.get_current_event_time() * 1000,

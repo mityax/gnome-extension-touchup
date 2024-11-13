@@ -8,7 +8,8 @@ import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";
 import * as Main from "@girs/gnome-shell/ui/main";
 
-export type NavbarMode = 'gestures' | 'buttons';
+
+export  type NavbarMode = 'gestures' | 'buttons';
 
 export default class NavigationBarFeature extends ExtensionFeature {
     declare private currentNavBar: BaseNavigationBar<any>;

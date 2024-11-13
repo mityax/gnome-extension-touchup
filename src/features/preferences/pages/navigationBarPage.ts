@@ -2,7 +2,7 @@ import Adw from "@girs/adw-1";
 import GObject from "@girs/gobject-2.0";
 import Gtk from "@girs/gtk-4.0";
 import {settings} from "../settings";
-import {NavbarMode} from "../../navigationBar/navigationBarFeature";
+
 
 export class NavigationBarPage extends Adw.PreferencesPage {
     static {
@@ -40,7 +40,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             }),
         });
         navModeRow.set_selected(items.findIndex(i => i[1] === settings.navigationBar.mode.get()))
-        navModeRow.connect('notify::selected-item', () => settings.navigationBar.mode.set(items[navModeRow.selected][1] as NavbarMode))
+        navModeRow.connect('notify::selected-item', () => settings.navigationBar.mode.set(items[navModeRow.selected][1] as any))
         navGroup.add(navModeRow);
 
         // Reserve Space for Navigation Bar - Toggle Switch

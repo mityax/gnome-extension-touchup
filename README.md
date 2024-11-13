@@ -8,6 +8,8 @@ experience for devices with a touchscreen.
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
    - [x] Buttons mode
+ - [ ] Edge swipe actions (left/right edge: back, top/bottom edge:
+       show panel and navigation bar)
  - [x] Touch gestures for Gnome Shell notifications
    - [x] Touchscreen swipe gesture
    - [ ] Touchpad two-finger gestures
@@ -16,6 +18,8 @@ experience for devices with a touchscreen.
        second monitor)
  - [ ] Floating temporary screen rotation button when auto-rotation
        is disabled but device is rotated (as in modern android versions)
+ - [ ] Voice input button in onscreen keyboard
+ - [ ] Swipe up windows in overview to close them
 
 
 

@@ -1,8 +1,6 @@
 import GLib from "@girs/glib-2.0";
 import Gio from "@girs/gio-2.0";
-import GnomeTouchExtension from "../extension";
-
-export const logFile = GLib.getenv('GNOMETOUCH_LOGFILE') ?? '/tmp/gnometouch.log';  // TODO: remove default value
+import {kDebugMode, logFile} from "$src/config";
 
 
 /**
@@ -44,7 +42,7 @@ export function log(...text: any[]) {
  * Note: This function is **not** optimized for speed (!)
  */
 export function debugLog(...text: any[]) {
-    if (GnomeTouchExtension.isDebugMode || logFile) {
+    if (kDebugMode || logFile) {
         log(...text);
     }
 }
@@ -97,7 +95,7 @@ export function removeLogCallback(id: number) {
 }
 
 export function assert(condition: boolean, message?: string) {
-    if (!condition && GnomeTouchExtension.isDebugMode) {
+    if (!condition && kDebugMode) {
         throw message ?? "Assertion error";
     }
 }

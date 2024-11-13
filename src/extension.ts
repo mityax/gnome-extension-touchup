@@ -12,10 +12,7 @@ import {DevelopmentTools} from "$src/features/developmentTools/developmentTools"
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "@girs/gnome-shell/extensions/extension";
 import {initSettings} from "$src/features/preferences/backend";
-import GLib from "@girs/glib-2.0";
-
-
-const isDebugMode = /^(true|1|yes)$/.test(GLib.getenv('GNOMETOUCH_DEBUG_MODE') || 'false');
+import {kDebugMode} from "$src/config";
 
 
 export default class GnomeTouchExtension extends Extension {
@@ -51,7 +48,7 @@ export default class GnomeTouchExtension extends Extension {
             2,  // add after battery indicator and spacer
         );
 
-        if (GnomeTouchExtension.isDebugMode) {
+        if (kDebugMode) {
             this.developmentTools = new DevelopmentTools(this);
         }
 
@@ -68,7 +65,7 @@ export default class GnomeTouchExtension extends Extension {
     }
 
     syncUI() {
-        const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (GnomeTouchExtension.isDebugMode && this.developmentTools?.enforceTouchMode == true);
+        const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (kDebugMode && this.developmentTools?.enforceTouchMode == true);
 
         if (touchMode) {
             this.navigationBar?.show();
@@ -101,6 +98,4 @@ export default class GnomeTouchExtension extends Extension {
 
         GnomeTouchExtension.instance = undefined;
     }
-
-    static readonly isDebugMode = isDebugMode;
 }
