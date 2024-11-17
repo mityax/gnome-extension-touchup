@@ -1,4 +1,3 @@
-import '@girs/gnome-shell/extensions/global';
 import GObject from "gi://GObject";
 import {QuickSettingsItem} from "resource:///org/gnome/shell/ui/quickSettings.js";
 

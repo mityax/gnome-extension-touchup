@@ -1,9 +1,9 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import Clutter from "gi://Clutter";
-import GObject from '@girs/gobject-2.0';
-import Mtk from '@girs/mtk-15';
-import St from '@girs/st-15';
+import GObject from 'gi://GObject';
+import Mtk from 'gi://Mtk';
+import St from 'gi://St';
 import Shell from "gi://Shell";
 
 

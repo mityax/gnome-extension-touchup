@@ -1,8 +1,7 @@
-import Meta from '@girs/meta-15';
-import GLib from '@girs/glib-2.0';
+import Meta from 'gi://Meta';
+import GLib from 'gi://GLib';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import '@girs/gnome-shell/extensions/global';
 import Clutter from "gi://Clutter";
 
 

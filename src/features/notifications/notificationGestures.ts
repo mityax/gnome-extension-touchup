@@ -1,5 +1,3 @@
-import '@girs/gnome-shell/extensions/global';
-
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 

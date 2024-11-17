@@ -1,5 +1,3 @@
-import '@girs/gnome-shell/extensions/global';
-
 import Meta from "gi://Meta";
 import St from "gi://St";
 
