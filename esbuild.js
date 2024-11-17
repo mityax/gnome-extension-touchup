@@ -8,7 +8,7 @@ import {sassPlugin} from 'esbuild-sass-plugin'
 import * as fs from "fs";
 import mv from "mv";
 import gsettingsSchemaPlugin from "./build_scripts/generate_settings_schema.js";
-import disallowImports from "./build_scripts/disallow_imports.js";
+import disallowImportsPlugin from "./build_scripts/disallow_imports.js";
 
 
 /**
@@ -58,11 +58,11 @@ await esbuild.build({
 
         // Ensure that no disallowed modules are imported in either extension.js or prefs.js
         // as per the review guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
-        disallowImports({
+        disallowImportsPlugin({
             outputFileName: 'extension.js',
             blacklist: ['gi://Gdk', 'gi://Gtk', 'gi://Adw'],
         }),
-        disallowImports({
+        disallowImportsPlugin({
             outputFileName: 'prefs.js',
             blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
         }),
