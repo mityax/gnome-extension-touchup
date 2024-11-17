@@ -57,7 +57,7 @@ export default function gsettingsSchemaPlugin({ inputFile, outputFile, schemaId,
                 // Step 5: Write XML schema to output file
                 fs.mkdirSync(path.dirname(outputFile), { recursive: true });
                 fs.writeFileSync(outputFile, xmlSchema, 'utf-8');
-                console.log(`GSettings schema written to ${outputFile}`);
+                console.debug(`GSettings schema written to ${outputFile}`);
             });
         },
     };
