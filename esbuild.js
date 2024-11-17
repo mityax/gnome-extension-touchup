@@ -84,4 +84,13 @@ await esbuild.build({
     await zip.writeZipPromise(zipDist, {overwrite: true});
 
     console.log(`✅ Build completed successfully. Zip file: dist/${zipFilename}\n`);
-});
+}).catch(async error => {
+    if (error?.errors?.length > 0) {
+        for (let msg of await esbuild.formatMessages(error.errors, { kind: 'error' })) {
+            console.error("");
+            console.error(msg);
+        }
+    }
+
+    console.error("❌ Build failed.");
+})
