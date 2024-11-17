@@ -8,7 +8,7 @@ import path from 'path';
  *
  * The purposes of this plugin are:
  *  - having a single source of truth for the settings schema,
- *  - avoiding the extra work of keeping the schema in sync with the JS/TS side, and therefore
+ *  - avoiding the extra work of keeping the schema in sync with the.ts side, and therefore
  *  - having a lower hurdle to implement new settings.
  *
  * This plugin uses the typescript compiler API to parse the given settings file - thus there

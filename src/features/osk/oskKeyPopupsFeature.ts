@@ -1,11 +1,11 @@
-import * as Main from '@girs/gnome-shell/ui/main';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {findActorBy, UnknownClass} from '$src/utils/utils';
-import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
-import St from "@girs/st-15";
-import GLib from "@girs/glib-2.0";
+import {findActorBy, UnknownClass} from "$src/utils/utils";
+import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
+import St from "gi://St";
+import GLib from "gi://GLib";
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/features/preferences/settings";

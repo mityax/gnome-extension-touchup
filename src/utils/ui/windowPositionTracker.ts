@@ -1,9 +1,9 @@
 import Meta from '@girs/meta-15';
 import GLib from '@girs/glib-2.0';
 
-import * as Main from '@girs/gnome-shell/ui/main';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import '@girs/gnome-shell/extensions/global';
-import Clutter from "@girs/clutter-15";
+import Clutter from "gi://Clutter";
 
 
 export default class WindowPositionTracker {

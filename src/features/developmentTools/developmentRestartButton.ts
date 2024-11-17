@@ -1,16 +1,16 @@
 import '@girs/gnome-shell/extensions/global';
 
-import Meta from "@girs/meta-15";
-import St from "@girs/st-15";
+import Meta from "gi://Meta";
+import St from "gi://St";
 
-import Gio from "@girs/gio-2.0";
-import {ModalDialog} from "@girs/gnome-shell/ui/modalDialog";
-import {MessageDialogContent} from "@girs/gnome-shell/ui/dialog";
-import GLib from "@girs/glib-2.0";
-import Clutter from "@girs/clutter-15";
-import Graphene from "@girs/graphene-1.0";
+import Gio from "gi://Gio";
+import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
+import {MessageDialogContent} from "resource:///org/gnome/shell/ui/dialog.js";
+import GLib from "gi://GLib";
+import Clutter from "gi://Clutter";
+import Graphene from "gi://Graphene";
 import {Widgets} from "$src/utils/ui/widgets";
-import GObject from "@girs/gobject-2.0";
+import GObject from "gi://GObject";
 import {debugLog} from "$src/utils/logging";
 import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
 import PolicyType = St.PolicyType;

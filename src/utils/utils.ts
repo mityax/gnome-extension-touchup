@@ -1,5 +1,5 @@
 import '@girs/gnome-shell/extensions/global';
-import Clutter from "@girs/clutter-15";
+import Clutter from "gi://Clutter";
 import {log} from "$src/utils/logging";
 
 

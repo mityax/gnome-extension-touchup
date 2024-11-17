@@ -1,10 +1,10 @@
 import BaseNavigationBar from "./baseNavigationBar";
-import St from "@girs/st-15";
+import St from "gi://St";
 import {Widgets} from "$src/utils/ui/widgets";
-import * as Main from '@girs/gnome-shell/ui/main';
-import Graphene from "@girs/graphene-1.0";
-import Clutter from "@girs/clutter-15";
-import Meta from "@girs/meta-15";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Graphene from "gi://Graphene";
+import Clutter from "gi://Clutter";
+import Meta from "gi://Meta";
 import ActorAlign = Clutter.ActorAlign;
 import MotionDirection = Meta.MotionDirection;
 

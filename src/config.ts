@@ -1,4 +1,4 @@
-import GLib from "@girs/glib-2.0";
+import GLib from "gi://GLib";
 
 
 export const kDebugMode = /^(true|1|yes)$/.test(GLib.getenv('GNOMETOUCH_DEBUG_MODE') || 'false');

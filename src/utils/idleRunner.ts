@@ -1,4 +1,4 @@
-import GLib from "@girs/glib-2.0";
+import GLib from "gi://GLib";
 
 export class IdleRunner {
     private readonly callback: (stop: () => void, dt: number | null) => any;

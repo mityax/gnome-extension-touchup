@@ -1,4 +1,4 @@
-import Cogl from "@girs/cogl-15";
+import Cogl from "gi://Cogl";
 
 
 export function css(v: any): string | undefined {

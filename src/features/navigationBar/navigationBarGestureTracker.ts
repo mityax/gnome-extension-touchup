@@ -1,8 +1,8 @@
-import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-15";
+import GObject from "gi://GObject";
+import Clutter from "gi://Clutter";
 
-import * as Main from '@girs/gnome-shell/ui/main';
-import Shell from "@girs/shell-15";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Shell from "gi://Shell";
 import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {debugLog} from "$src/utils/logging";
 

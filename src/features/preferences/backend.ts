@@ -1,6 +1,6 @@
-import Gio from "@girs/gio-2.0";
-import GObject from "@girs/gobject-2.0";
-import Gtk from "@girs/gtk-4.0";
+import Gio from "gi://Gio";
+import GObject from "gi://GObject";
+import Gtk from "gi://Gtk";
 import {clamp} from "$src/utils/utils";
 import {assert} from "$src/utils/logging";
 

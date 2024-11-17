@@ -1,8 +1,8 @@
-import St from "@girs/st-15";
-import WindowPositionTracker from "../../../utils/ui/windowPositionTracker";
-import Meta from "@girs/meta-15";
-import * as Main from '@girs/gnome-shell/ui/main';
-import {Monitor} from "@girs/gnome-shell/ui/layout";
+import St from "gi://St";
+import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
+import Meta from "gi://Meta";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";
 

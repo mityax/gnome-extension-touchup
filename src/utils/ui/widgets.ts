@@ -1,5 +1,5 @@
-import St from "@girs/st-15";
-import GObject from "@girs/gobject-2.0";
+import St from "gi://St";
+import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
 
 

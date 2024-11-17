@@ -1,12 +1,10 @@
-import '@girs/gnome-shell/extensions/global';
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import * as Main from '@girs/gnome-shell/ui/main';
-
-import Clutter from "@girs/clutter-15";
+import Clutter from "gi://Clutter";
 import GObject from '@girs/gobject-2.0';
 import Mtk from '@girs/mtk-15';
 import St from '@girs/st-15';
-import Shell from "@girs/shell-15";
+import Shell from "gi://Shell";
 
 
 const EDGE_THRESHOLD = 20;

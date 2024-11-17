@@ -1,6 +1,7 @@
-import Adw from "@girs/adw-1";
-import GObject from "@girs/gobject-2.0";
+import Adw from "gi://Adw";
+import GObject from "gi://GObject";
 import {settings} from "../settings";
+
 
 export class OskKeyPopupPage extends Adw.PreferencesPage {
     static {

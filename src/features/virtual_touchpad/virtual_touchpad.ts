@@ -1,12 +1,12 @@
-import St from "@girs/st-15";
-import {MonitorConstraint} from "@girs/gnome-shell/ui/layout";
+import St from "gi://St";
+import {MonitorConstraint} from "resource:///org/gnome/shell/ui/layout.js";
 import {PatchManager} from "$src/utils/patchManager";
-import * as Main from "@girs/gnome-shell/ui/main";
-import Clutter from "@girs/clutter-15";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import Clutter from "gi://Clutter";
 import {Widgets} from "$src/utils/ui/widgets";
 import {randomChoice} from "$src/utils/utils";
 import {debugLog} from "$src/utils/logging";
-import Cogl from "@girs/cogl-15";
+import Cogl from "gi://Cogl";
 import ActorAlign = Clutter.ActorAlign;
 import EventPhase = Clutter.EventPhase;
 

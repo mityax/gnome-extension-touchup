@@ -2,22 +2,26 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
   "compileOnSave": true,
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "sourceMap": true,
-    "types": [
-      "@girs/gjs",
-      "@girs/gtk-4.0",
-      "@girs/gjs/dom"
-    ],
+    "strict": true,
+    "target": "ES2022",
     "paths" : {
       "$src/*": ["./src/*"]
     },
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "preserve",
+    "lib": [
+      "ES2022"
+    ],
+    "jsx": "preserve"
   },
-  "files": [
-    "src/extension.ts"
+  "include": [
+    "src/ambient.d.ts"
   ],
+  "files": [
+    "src/extension.ts",
+    "src/prefs.ts",
+  ]
 }
 

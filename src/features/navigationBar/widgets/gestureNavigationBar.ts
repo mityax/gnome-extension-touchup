@@ -1,17 +1,15 @@
-import BaseNavigationBar from "./baseNavigationBar";
-import St from "@girs/st-15";
-import Clutter from "@girs/clutter-15";
+import St from "gi://St";
+import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import {IntervalRunner} from "$src/utils/intervalRunner";
 import {clamp, UnknownClass} from "$src/utils/utils";
-import Shell from "@girs/shell-15";
-import * as Main from "@girs/gnome-shell/ui/main";
+import Shell from "gi://Shell";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {NavigationBarGestureTracker} from "../navigationBarGestureTracker";
 import {IdleRunner} from "$src/utils/idleRunner";
 import {debugLog} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
-import ActorAlign = Clutter.ActorAlign;
-import Stage = Clutter.Stage;
+import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar.ts";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -41,8 +39,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         this.pill = new St.Bin({
             name: 'gnometouch-navbar__pill',
             styleClass: 'gnometouch-navbar__pill',
-            yAlign: ActorAlign.CENTER,
-            xAlign: ActorAlign.CENTER,
+            yAlign: Clutter.ActorAlign.CENTER,
+            xAlign: Clutter.ActorAlign.CENTER,
             style: css({
                 borderRadius: '20px',
             })
@@ -75,7 +73,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
     }
 
     protected onBeforeReallocate() {
-        const sf = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         const height = 22 * sf;
         this.actor.set_height(height);
 
@@ -84,7 +82,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
     }
 
     private _setupGestureTracker() {
-        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
         //@ts-ignore
         const wsController: UnknownClass = Main.wm._workspaceAnimation;

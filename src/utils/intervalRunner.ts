@@ -1,4 +1,4 @@
-import GLib from "@girs/glib-2.0";
+import GLib from "gi://GLib";
 
 /**
  * IntervalRunner class manages a recurring callback execution at a specified interval with a specified priority.

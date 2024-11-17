@@ -1,16 +1,14 @@
-import '@girs/gnome-shell/extensions/global';
-
-import * as Main from '@girs/gnome-shell/ui/main';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
-import Clutter from "@girs/clutter-15";
+import Clutter from "gi://Clutter";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
-import {Extension} from "@girs/gnome-shell/extensions/extension";
+import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {initSettings} from "$src/features/preferences/backend";
 import {kDebugMode} from "$src/config";
 

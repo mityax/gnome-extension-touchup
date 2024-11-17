@@ -1,12 +1,12 @@
-import ExtensionFeature from "../../utils/extensionFeature";
+import ExtensionFeature from "$src/utils/extensionFeature";
 import BaseNavigationBar from "./widgets/baseNavigationBar";
 import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
-import {settings} from "../preferences/settings";
-import Clutter from "@girs/clutter-15";
+import {settings} from "$src/features/preferences/settings";
+import Clutter from "gi://Clutter";
 import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";
-import * as Main from "@girs/gnome-shell/ui/main";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 
 export  type NavbarMode = 'gestures' | 'buttons';

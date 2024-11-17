@@ -1,12 +1,12 @@
 import '@girs/gnome-shell/extensions/global';
 
-import St from "@girs/st-15";
-import Clutter from "@girs/clutter-15";
+import St from "gi://St";
+import Clutter from "gi://Clutter";
 
-import * as Main from '@girs/gnome-shell/ui/main';
-import {MessageListSection} from "@girs/gnome-shell/ui/messageList";
-import {NotificationMessage, NotificationSection} from "@girs/gnome-shell/ui/calendar";
-import {MessageTray} from "@girs/gnome-shell/ui/messageTray";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import {MessageListSection} from "resource:///org/gnome/shell/ui/messageList.js";
+import {NotificationMessage, NotificationSection} from "resource:///org/gnome/shell/ui/calendar.js";
+import {MessageTray} from "resource:///org/gnome/shell/ui/messageTray.js";
 
 import {Patch, PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";

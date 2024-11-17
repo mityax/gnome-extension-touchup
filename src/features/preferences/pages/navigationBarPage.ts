@@ -1,7 +1,7 @@
-import Adw from "@girs/adw-1";
-import GObject from "@girs/gobject-2.0";
-import Gtk from "@girs/gtk-4.0";
-import {settings} from "../settings";
+import Adw from "gi://Adw";
+import GObject from "gi://GObject";
+import Gtk from "gi://Gtk";
+import {settings} from "$src/features/preferences/settings";
 
 
 export class NavigationBarPage extends Adw.PreferencesPage {

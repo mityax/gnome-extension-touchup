@@ -1,10 +1,10 @@
-import St from "@girs/st-15";
-import GObject from "@girs/gobject-2.0";
-import Clutter from "@girs/clutter-15";
+import St from "gi://St";
+import GObject from "gi://GObject";
+import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
-import * as BoxPointer from "@girs/gnome-shell/ui/boxpointer";
-import * as Main from "@girs/gnome-shell/ui/main";
-import Cogl from "@girs/cogl-15";
+import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import Cogl from "gi://Cogl";
 import Side = St.Side;
 
 

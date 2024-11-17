@@ -1,6 +1,6 @@
-import GObject from "@girs/gobject-2.0";
+import GObject from "gi://GObject";
 //@ts-ignore
-import {InjectionManager} from '@girs/gnome-shell/extensions/extension';
+import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
 import {debugLog, repr} from "$src/utils/logging";
 

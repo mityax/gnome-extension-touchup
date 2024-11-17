@@ -1,13 +1,13 @@
-import St from "@girs/st-15";
-import * as Main from '@girs/gnome-shell/ui/main';
+import St from "gi://St";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Widgets} from "$src/utils/ui/widgets";
-import Clutter from "@girs/clutter-15";
+import Clutter from "gi://Clutter";
 import '@girs/gnome-shell/extensions/global';
 import {clamp} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
-import GLib from "@girs/glib-2.0";
-import GObject from "@girs/gobject-2.0";
+import GLib from "gi://GLib";
+import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;

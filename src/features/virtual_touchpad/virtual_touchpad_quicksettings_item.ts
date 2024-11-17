@@ -1,10 +1,10 @@
 import '@girs/gnome-shell/extensions/global';
-import GObject from "@girs/gobject-2.0";
-import {QuickSettingsItem} from "@girs/gnome-shell/ui/quickSettings";
+import GObject from "gi://GObject";
+import {QuickSettingsItem} from "resource:///org/gnome/shell/ui/quickSettings.js";
 
-import * as Main from '@girs/gnome-shell/ui/main';
-import Meta from "@girs/meta-15";
-import GLib from "@girs/glib-2.0";
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Meta from "gi://Meta";
+import GLib from "gi://GLib";
 
 export class VirtualTouchpadQuickSettingsItem extends QuickSettingsItem {
     static {

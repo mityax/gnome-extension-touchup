@@ -1,8 +1,8 @@
-import {ExtensionPreferences} from "@girs/gnome-shell/extensions/prefs";
-import Adw from "@girs/adw-1";
-import {initSettings} from "./features/preferences/backend";
-import {NavigationBarPage} from "./features/preferences/pages/navigationBarPage";
-import {OskKeyPopupPage} from "./features/preferences/pages/oskKeyPopupPage";
+import Adw from "gi://Adw";
+import {initSettings} from "$src/features/preferences/backend";
+import {NavigationBarPage} from "$src/features/preferences/pages/navigationBarPage";
+import {OskKeyPopupPage} from "$src/features/preferences/pages/oskKeyPopupPage";
+import {ExtensionPreferences} from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 
 export default class GnomeTouchPreferences extends ExtensionPreferences {
