@@ -18,8 +18,14 @@ experience for devices with a touchscreen.
        second monitor)
  - [ ] Floating temporary screen rotation button when auto-rotation
        is disabled but device is rotated (as in android)
- - [ ] Voice input button in onscreen keyboard
- - [ ] Swipe up windows in overview to close them
+ - [ ] Pattern unlock
+ - [ ] Improved swipe gestures in the overview
+   - [ ] Swipe up windows in overview to close them
+   - [ ] Single-finger swipe left/right to switch workspace
+   - [ ] Hold and move to drag and drop windows
+   - [ ] Single-finger swipe up/down outside a window to app list/close overview
+ - [ ] Touch-enabled volume controls
+ - [ ] Voice input in onscreen keyboard
 
 
 
