@@ -10,6 +10,8 @@ import {Widgets} from "$src/utils/ui/widgets.ts";
 import GLib from "gi://GLib";
 import {clamp} from "$src/utils/utils.ts";
 import {debugLog} from "$src/utils/logging.ts";
+import St from "gi://St";
+import Clutter from "gi://Clutter";
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
 
@@ -18,6 +20,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
     private touchscreenSettings = new Gio.Settings({
         schema_id: 'org.gnome.settings-daemon.peripherals.touchscreen',
     });
+    private currentFloatingButton?: St.Widget;
 
     constructor() {
         super();
@@ -48,12 +51,14 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
     }
 
     private onAccelerometerOrientationChanged(orientation: AccelerometerOrientation) {
-        if (!this.isOrientationLockEnabled) {
+        if (this.isOrientationLockEnabled) {
             this.showFloatingRotateButton(orientation);
         }
     }
 
     private async showFloatingRotateButton(orientation: AccelerometerOrientation): Promise<void> {
+        // TODO: don't show button if orientation == transform!
+
         const state = await getCurrentDisplayState();
         const monitorConnector = (state.builtinMonitor ?? state.monitors[0]).connector;
 
@@ -63,25 +68,34 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
         debugLog(`Showing floating rotate button on monitor ${monitorConnector}, alignment=(${aX}, ${aY})`);
 
-        const button = new Widgets.Button({
+        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+        if (this.currentFloatingButton) {
+            global.stage.remove_child(this.currentFloatingButton);
+        }
+        this.currentFloatingButton = new Widgets.Button({
             iconName: 'rotation-allowed-symbolic',
             styleClass: 'gnometouch-floating-screen-rotation-button',
-            x: monitorGeometry.x + monitorGeometry.width * clamp(aX, 0.1, 0.9),
-            y: monitorGeometry.y + monitorGeometry.height * clamp(aY, 0.1, 0.9),
+            width: 40 * sf,
+            height: 40 * sf,
+            x: monitorGeometry.x + clamp(monitorGeometry.width * aX, 25 * sf, monitorGeometry.width - 25 * sf - 40 * sf),
+            y: monitorGeometry.y + clamp(monitorGeometry.height * aY, 25 * sf, monitorGeometry.height - 25 * sf - 40 * sf),
             connect: {
-                'clicked': () => {
+                'clicked': (btn) => {
                     rotateTo({
                         'normal': 0,
-                        'right-up': 1,
+                        'right-up': 3,
                         'bottom-up': 2,
-                        'left-up': 3,
+                        'left-up': 1,
                     }[orientation] as LogicalMonitorOrientation);
+                    global.stage.remove_child(btn);
                 }
             }
         });
-        global.stage.add_child(button);
+        global.stage.add_child(this.currentFloatingButton);
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5 * 1000, () => {
-            global.stage.remove_child(button);
+            if (this.currentFloatingButton) {
+                global.stage.remove_child(this.currentFloatingButton);
+            }
             return GLib.SOURCE_REMOVE;
         })
     }
@@ -99,10 +113,10 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 function computeAlignment(transform: LogicalMonitorOrientation, orientation: AccelerometerOrientation) {
     // Base alignments for each orientation assuming no rotation (transform = 0)
     const orientationAlignment = {
-        normal: [1.0, 1.0], // Bottom-right
-        'right-up': [1.0, 0.0], // Top-right
-        'bottom-up': [0.0, 0.0], // Top-left
-        'left-up': [0.0, 1.0], // Bottom-left
+        normal: [1, 1], // Bottom-right
+        'right-up': [0, 1], // Top-right
+        'bottom-up': [0, 0], // Top-left
+        'left-up': [1, 0], // Bottom-left
     };
 
     // Get the base alignment for the current orientation
@@ -114,11 +128,11 @@ function computeAlignment(transform: LogicalMonitorOrientation, orientation: Acc
         case 0: // Normal
             return [baseX, baseY];
         case 1: // 90°
-            return [baseY, 1.0 - baseX];
+            return [1.0 - baseY, baseX];
         case 2: // 180°
             return [1.0 - baseX, 1.0 - baseY];
         case 3: // 270°
-            return [1.0 - baseY, baseX];
+            return [baseY, 1.0 - baseX];
         case 4: // Flipped
             return [1.0 - baseX, baseY];
         case 5: // 90° Flipped
