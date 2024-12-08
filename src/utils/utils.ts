@@ -54,11 +54,11 @@ export function findActorByName(topActor: Clutter.Actor, name: string): Clutter.
 }
 
 
-export function clamp(x: number, min: number, max: number) {
+export function clamp(value: number, min: number, max: number) {
     if (max < min) {
         [min, max] = [max, min];
     }
-    return Math.min(Math.max(x, min), max);
+    return Math.min(Math.max(value, min), max);
 }
 
 

@@ -2,20 +2,22 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
-import {VirtualTouchpad} from "$src/features/virtual_touchpad/virtual_touchpad";
+import {VirtualTouchpad} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
 import Clutter from "gi://Clutter";
-import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtual_touchpad/virtual_touchpad_quicksettings_item";
+import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
 import {NotificationGestures} from "$src/features/notifications/notificationGestures";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {initSettings} from "$src/features/preferences/backend";
 import {kDebugMode} from "$src/config";
+import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
 
 
 export default class GnomeTouchExtension extends Extension {
     navigationBar?: NavigationBarFeature;
     oskKeyPopups?: OskKeyPopupsFeature;
+    screenRotateUtils?: ScreenRotateUtilsFeature;
     virtualTouchpad?: VirtualTouchpad;
     virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
     notificationGestures?: NotificationGestures;
@@ -34,8 +36,13 @@ export default class GnomeTouchExtension extends Extension {
         // @ts-ignore
         initSettings(this.getSettings());
 
+        if (kDebugMode) {
+            this.developmentTools = new DevelopmentTools(this);
+        }
+
         this.navigationBar = new NavigationBarFeature();
         this.oskKeyPopups = new OskKeyPopupsFeature();
+        this.screenRotateUtils = new ScreenRotateUtilsFeature();
         this.notificationGestures = new NotificationGestures();
         this.virtualTouchpad = new VirtualTouchpad();
 
@@ -45,10 +52,6 @@ export default class GnomeTouchExtension extends Extension {
             this.virtualTouchpadOpenButton,
             2,  // add after battery indicator and spacer
         );
-
-        if (kDebugMode) {
-            this.developmentTools = new DevelopmentTools(this);
-        }
 
         // React to touch-mode changes:
         PatchManager.patch(() => {
@@ -82,6 +85,7 @@ export default class GnomeTouchExtension extends Extension {
         PatchManager.clear();
         this.navigationBar?.destroy();
         this.oskKeyPopups?.destroy();
+        this.screenRotateUtils?.destroy();
         this.notificationGestures?.destroy();
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
@@ -89,6 +93,7 @@ export default class GnomeTouchExtension extends Extension {
 
         this.navigationBar = undefined;
         this.oskKeyPopups = undefined;
+        this.screenRotateUtils = undefined;
         this.notificationGestures = undefined;
         this.virtualTouchpad = undefined;
         this.virtualTouchpadOpenButton = undefined;

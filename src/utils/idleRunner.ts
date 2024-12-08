@@ -26,7 +26,6 @@ export class IdleRunner {
                 this.callback(this.stop.bind(this), dt);
                 return this.idleId === iid ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
             },
-            () => this.idleId = null,
         );
         this.idleId = iid;
     }
