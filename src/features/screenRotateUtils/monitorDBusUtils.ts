@@ -41,37 +41,55 @@ export function callDbusMethod(
     }
 }
 
-export function getCurrentDisplayState(): Promise<DisplayConfigState> {
-    return new Promise((resolve, reject) => {
-        callDbusMethod('GetCurrentState', (conn, res) => {
-            try {
-                const reply = conn?.call_finish(res)!;
-                const configState = new DisplayConfigState(reply);
-                resolve(configState);
-            } catch (err) {
-                reject(err);
-            }
-        });
-    });
-}
-
-export function rotateTo(transform: LogicalMonitorOrientation): void {
-    getCurrentDisplayState()
+export function setMonitorTransform(transform: LogicalMonitorTransform, targetMonitor?: Monitor): void {
+    DisplayConfigState.getCurrent()
         .then((state) => {
-            let targetMonitor = state.builtinMonitor;
-            if (!targetMonitor) {
-                targetMonitor = state.monitors[0];
-            }
+            targetMonitor ??= state.builtinMonitor ?? state.monitors[0];
             const logicalMonitor = state.getLogicalMonitorFor(targetMonitor.connector);
             if (logicalMonitor) {
                 logicalMonitor.transform = transform as any;
-                const variant = state.packToApply(Methods.temporary);
-                callDbusMethod('ApplyMonitorsConfig', null, variant);
+                callDbusMethod('ApplyMonitorsConfig', null, state.packToApply(Methods.temporary));
             }
-        })
-        .catch((err) => {
-            console.error(err);
         });
+}
+
+
+/**
+ * Possible transform values:
+ *   - 0: normal
+ *   - 1: 90°
+ *   - 2: 180°
+ *   - 3: 270°
+ *   - 4: flipped
+ *   - 5: 90° flipped
+ *   - 6: 180° flipped
+ *   - 7: 270° flipped
+ */
+export type LogicalMonitorTransform = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export class LogicalMonitor {
+    x: number;
+    y: number;
+    scale: number;
+    transform: LogicalMonitorTransform;
+    primary: boolean;
+    monitors: [string, string, string, string][];
+    properties: Record<string, any>;
+
+    constructor(variant: GLib.Variant) {
+        const unpacked = variant.unpack() as any[];
+        this.x = unpacked[0].unpack();
+        this.y = unpacked[1].unpack();
+        this.scale = unpacked[2].unpack();
+        this.transform = unpacked[3].unpack();
+        this.primary = unpacked[4].unpack();
+        this.monitors = unpacked[5].deep_unpack();
+        this.properties = unpacked[6].unpack();
+
+        for (const key in this.properties) {
+            this.properties[key] = this.properties[key].unpack().unpack();
+        }
+    }
 }
 
 export class Monitor {
@@ -108,46 +126,6 @@ export class Monitor {
     }
 }
 
-
-/**
- * Possible transform values:
- *   - 0: normal
- *   - 1: 90°
- *   - 2: 180°
- *   - 3: 270°
- *   - 4: flipped
- *   - 5: 90° flipped
- *   - 6: 180° flipped
- *   - 7: 270° flipped
- */
-export type LogicalMonitorOrientation = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
-
-
-export class LogicalMonitor {
-    x: number;
-    y: number;
-    scale: number;
-    transform: LogicalMonitorOrientation;
-    primary: boolean;
-    monitors: [string, string, string, string][];
-    properties: Record<string, any>;
-
-    constructor(variant: GLib.Variant) {
-        const unpacked = variant.unpack() as any[];
-        this.x = unpacked[0].unpack();
-        this.y = unpacked[1].unpack();
-        this.scale = unpacked[2].unpack();
-        this.transform = unpacked[3].unpack();
-        this.primary = unpacked[4].unpack();
-        this.monitors = unpacked[5].deep_unpack();
-        this.properties = unpacked[6].unpack();
-
-        for (const key in this.properties) {
-            this.properties[key] = this.properties[key].unpack().unpack();
-        }
-    }
-}
-
 export class DisplayConfigState {
     serial: number;
     monitors: Monitor[] = [];
@@ -172,6 +150,20 @@ export class DisplayConfigState {
         for (const key in this.properties) {
             this.properties[key] = this.properties[key].unpack().unpack();
         }
+    }
+
+    static async getCurrent(): Promise<DisplayConfigState> {
+        return new Promise((resolve, reject) => {
+            callDbusMethod('GetCurrentState', (conn, res) => {
+                try {
+                    const reply = conn?.call_finish(res)!;
+                    const configState = new DisplayConfigState(reply);
+                    resolve(configState);
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        });
     }
 
     get builtinMonitor(): Monitor | null {

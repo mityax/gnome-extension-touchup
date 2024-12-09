@@ -2,10 +2,9 @@ import St from "gi://St";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Widgets} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
-import {clamp} from "$src/utils/utils";
+import {clamp, delay} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
-import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import Stage = Clutter.Stage;
@@ -73,10 +72,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             label.text = (label.text + '\n' + t).slice(-DevelopmentLogDisplayButton.MAX_LENGTH).trimStart();
 
             if (isAtBottom) {
-                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-                    a.set_value(a.upper);
-                    return GLib.SOURCE_REMOVE;
-                });
+                delay(10).then(() => a.set_value(a.upper));
             }
         });
         this.logDisplays.push(display);

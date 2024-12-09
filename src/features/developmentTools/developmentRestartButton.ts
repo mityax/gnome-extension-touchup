@@ -11,6 +11,7 @@ import {Widgets} from "$src/utils/ui/widgets";
 import GObject from "gi://GObject";
 import {debugLog} from "$src/utils/logging";
 import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
+import {IntervalRunner} from "$src/utils/intervalRunner.ts";
 import PolicyType = St.PolicyType;
 
 
@@ -64,6 +65,7 @@ export class DevelopmentRestartButton extends DevToolButton {
             debugLog("CWD: ", DevelopmentRestartButton.projectDir);
             launcher.set_cwd(DevelopmentRestartButton.projectDir!);
             const proc = launcher.spawnv(['npm', 'run', 'install']);
+            // @ts-ignore
             const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 
             debugLog(`Exit code (${proc.get_successful() ? 'successful' : 'unsuccessful'}): `, proc.get_exit_status());
@@ -130,22 +132,20 @@ export class DevelopmentRestartButton extends DevToolButton {
     }
 
     private _startIconAnimation() {
-        let running = true;
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 10, () => {
-            if (running) {
-                //@ts-ignore
-                this.icon.ease({
-                    rotationAngleZ: (this.icon.rotationAngleZ + 7) % 360,
-                    duration: 10,
-                    mode: Clutter.AnimationMode.LINEAR,
-                });
-            } else {
-                this.icon.rotationAngleZ = 0;
-            }
-            return running ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
-        })
+        const runner = new IntervalRunner(10, () => {
+            //@ts-ignore
+            this.icon.ease({
+                rotationAngleZ: (this.icon.rotationAngleZ + 7) % 360,
+                duration: 10,
+                mode: Clutter.AnimationMode.LINEAR,
+            });
+        });
+        runner.start();
 
-        return () => running = false;
+        return () => {
+            runner.stop();
+            this.icon.rotationAngleZ = 0;
+        };
     }
 
     private async _withAnimatedIcon<T>(whileRunning: () => Promise<T>) {

@@ -1,19 +1,29 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
+import Clutter from "gi://Clutter";
 
 
 export namespace Widgets {
-    export class Ref<T> {
-        value: T | null = null;
+    export class Ref<T extends Clutter.Actor> {
+        get value(): T | null {
+            return this._value;
+        }
+
+        set value(value: T | null) {
+            this._value = value;
+            value?.connect('destroy', () => this.value = null);
+        }
+
+        private _value: T | null = null;
     }
 
-    type UiProps<T> = {
+    type UiProps<T extends Clutter.Actor> = {
         ref?: Ref<T>,
         connect?: Record<string, (...args: any[]) => any>,
     };
 
-    function filterConfig<T>(config: UiProps<T>): any {
+    function filterConfig<T extends Clutter.Actor>(config: UiProps<T>): any {
         const filterOut = ['ref', 'connect', 'children', 'child'];
         return filterObject(
             config,

@@ -1,14 +1,14 @@
 import Meta from 'gi://Meta';
-import GLib from 'gi://GLib';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
+import {CancellablePromise, delay} from "$src/utils/utils.ts";
 
 
 export default class WindowPositionTracker {
     private _actorSignalIds: Map<any, any> = new Map();
     private _windowSignalIds: Map<any, any> = new Map();
-    private _delayedTimeoutId: any;
+    private _updateDelay?: CancellablePromise<boolean | void>;
     private readonly callback: (windows: Meta.Window[]) => void;
 
     constructor(callback: (windows: Meta.Window[]) => void) {
@@ -40,21 +40,6 @@ export default class WindowPositionTracker {
         ]);
 
         this._update();
-    }
-
-    destroy() {
-        for (const actorSignalIds of [this._actorSignalIds, this._windowSignalIds]) {
-            for (const [actor, signalIds] of actorSignalIds) {
-                for (const signalId of signalIds) {
-                    actor.disconnect(signalId);
-                }
-            }
-        }
-
-        if (this._delayedTimeoutId != null) {
-            GLib.Source.remove(this._delayedTimeoutId);
-        }
-        this._delayedTimeoutId = null;
     }
 
     _onWindowActorAdded(container: Clutter.Actor, metaWindowActor: Meta.WindowActor) {
@@ -92,10 +77,20 @@ export default class WindowPositionTracker {
     }
 
     _updateDelayed() {
-        this._delayedTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+        this._updateDelay = delay(100).then(() => {
             this._update();
-            this._delayedTimeoutId = null;
-            return GLib.SOURCE_REMOVE;
         });
+    }
+
+    destroy() {
+        for (const actorSignalIds of [this._actorSignalIds, this._windowSignalIds]) {
+            for (const [actor, signalIds] of actorSignalIds) {
+                for (const signalId of signalIds) {
+                    actor.disconnect(signalId);
+                }
+            }
+        }
+
+        this._updateDelay?.cancel();
     }
 };
