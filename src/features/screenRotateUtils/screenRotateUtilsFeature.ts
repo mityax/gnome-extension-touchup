@@ -63,8 +63,6 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
     }
 
     private async showFloatingRotateButton(orientation: AccelerometerOrientation): Promise<void> {
-        // TODO: don't show button if orientation == transform!
-
         const targetTransform = {
             'normal': 0,
             'left-up': 1,
@@ -75,6 +73,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         const state = await DisplayConfigState.getCurrent();
         const monitorConnector = (state.builtinMonitor ?? state.monitors[0]).connector;
         const monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitorConnector);
+
         const monitorGeometry = global.display.get_monitor_geometry(monitorIndex);
         const currentTransform = state.getLogicalMonitorFor(monitorConnector)!.transform;
 
@@ -97,8 +96,8 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                 'clicked': () => {
                     setMonitorTransform(targetTransform);
                     btn?.destroy();
-                    btn = null;
                 },
+                'destroy': () => btn = null,
             },
             opacity: 128,
             scaleX: 0.5,
@@ -139,10 +138,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                 opacity: 128,
                 duration: 250, // ms
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                onComplete: () => {
-                    btn?.destroy()
-                    btn = null;
-                },
+                onComplete: () => btn?.destroy(),
             });
         });
     }
@@ -151,20 +147,20 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
 /**
  * Computes the alignment tuple (x-alignment, y-alignment) to position an actor
- * on the bottom-right edge of the screen, considering the current transform and orientation.
+ * on the bottom-right edge of the screen, considering the current transform and targetOrientation.
  *
- * @param transform - The current display rotation (0-7).
- * @param orientation - The potential new screen orientation.
+ * @param currentTransform - The current display rotation/transformation (0-7).
+ * @param targetOrientation - The potential new screen targetOrientation.
  * @returns A tuple [x-alignment, y-alignment] in the range [0, 1].
  */
-function computeAlignment(transform: LogicalMonitorTransform, orientation: AccelerometerOrientation) {
-    // Base alignment for each orientation assuming no rotation (transform = 0)
+function computeAlignment(currentTransform: LogicalMonitorTransform, targetOrientation: AccelerometerOrientation) {
+    // Base alignment for each targetOrientation assuming no rotation (transform = 0)
     const [baseX, baseY] = {
         normal: [1, 1],       // Bottom-right
         'left-up': [1, 0],    // Bottom-left
         'bottom-up': [0, 0],  // Top-left
         'right-up': [0, 1],   // Top-right
-    }[orientation] || [1.0, 1.0];  // default value, just in case (even though this should never happen)
+    }[targetOrientation] || [1.0, 1.0];  // default value, just in case (even though this should never happen)
 
     // Adjust alignment based on the transform
     // Transformation maps original alignment based on display rotation or flipping
@@ -177,7 +173,7 @@ function computeAlignment(transform: LogicalMonitorTransform, orientation: Accel
         5: [baseY, baseX],                // 90° Flipped
         6: [baseX, 1.0 - baseY],          // 180° Flipped
         7: [1.0 - baseY, 1.0 - baseX]     // 270° Flipped
-    }[transform] || [baseX, baseY];  // default value, just in case (even though this should never happen)
+    }[currentTransform] || [baseX, baseY];  // default value, just in case (even though this should never happen)
 }
 
 
