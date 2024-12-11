@@ -93,8 +93,8 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
             x: monitorGeometry.x + clamp(monitorGeometry.width * aX, 40 * sf, monitorGeometry.width - 40 * sf - 40 * sf),
             y: monitorGeometry.y + clamp(monitorGeometry.height * aY, 40 * sf, monitorGeometry.height - 40 * sf - 40 * sf),
             onClicked: () => {
-                setMonitorTransform(targetTransform);
                 btn?.destroy();
+                setMonitorTransform(targetTransform);
             },
             onDestroy: () => btn = null,
             opacity: 128,
