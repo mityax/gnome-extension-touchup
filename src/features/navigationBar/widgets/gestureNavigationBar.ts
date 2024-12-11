@@ -1,17 +1,15 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
-import {css} from "$src/utils/ui/css";
 import {IntervalRunner} from "$src/utils/intervalRunner";
 import {clamp, UnknownClass} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {NavigationBarGestureTracker} from "../navigationBarGestureTracker";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {debugLog} from "$src/utils/logging";
+import {debugLog, log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar.ts";
 import {Widgets} from "$src/utils/ui/widgets.ts";
-import Ref = Widgets.Ref;
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -20,7 +18,7 @@ const LEFT_EDGE_OFFSET = 100;
 
 
 export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
-    private readonly pill = new Ref<St.Bin>();
+    declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
 
@@ -46,10 +44,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             trackHover: true,
             canFocus: true,
             layoutManager: new Clutter.BinLayout(),
-            style: css({ background: 'red' }),
             onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
-            child: new Widgets.Bin({  // the navigation bars pill:
-                ref: this.pill,
+            child: this.pill = new Widgets.Bin({  // the navigation bars pill:
                 name: 'gnometouch-navbar__pill',
                 styleClass: 'gnometouch-navbar__pill',
                 yAlign: Clutter.ActorAlign.CENTER,
@@ -75,8 +71,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         const height = 22 * sf;
         this.actor.set_height(height);
 
-        this.pill.current?.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
-        this.pill.current?.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
+        this.pill.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
+        this.pill.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
     }
 
     private _setupGestureTracker() {
@@ -84,6 +80,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 
         //@ts-ignore
         const wsController: UnknownClass = Main.wm._workspaceAnimation;
+
+        // TODO: potentially delete the NavigationBarGestureTracker and just use a plain GestureRecognizer2D instead
 
         const gesture = new NavigationBarGestureTracker();
         this.actor.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Clutter.Action);
@@ -200,7 +198,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         if (this.reserveSpace && this._isWindowNear) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('gnometouch-navbar--transparent');
-            this.pill.current?.remove_style_class_name('gnometouch-navbar__pill--dark');
+            this.pill.remove_style_class_name('gnometouch-navbar__pill--dark');
         } else {
             // Make navbar transparent:
             this.actor.add_style_class_name('gnometouch-navbar--transparent');
@@ -208,9 +206,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             // Adjust pill brightness:
             let brightness = await this.findBestPillBrightness();
             if (brightness == 'dark') {
-                this.pill.current?.add_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
             } else {
-                this.pill.current?.remove_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.remove_style_class_name('gnometouch-navbar__pill--dark')
             }
         }
     }
@@ -219,104 +217,110 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
      * Find the best pill brightness by analyzing what's on the screen behind the pill
      */
     private async findBestPillBrightness(): Promise<'dark' | 'light'> {
-        // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
-        //  that all have problems due to GJS/introspection limitations
+        try {
+            // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
+            //  that all have problems due to GJS/introspection limitations
 
-        const shooter = new Shell.Screenshot();
-        // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
-        // const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
-        // const wholeScreenTexture = content.get_texture();
+            const shooter = new Shell.Screenshot();
+            // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
+            // const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
+            // const wholeScreenTexture = content.get_texture();
 
-        // An area surrounding the pill to use for brightness analysis:
-        // const area = {
-        //     x: this.pill.x - 20 * this.scaleFactor,
-        //     y: this.y,
-        //     w: this.pill.width + 40 * this.scaleFactor,
-        //     h: this.height,
-        // };
-        // const verticalPadding = (area.h - this.pill.height) / 2;
+            // An area surrounding the pill to use for brightness analysis:
+            // const area = {
+            //     x: this.pill.x - 20 * this.scaleFactor,
+            //     y: this.y,
+            //     w: this.pill.width + 40 * this.scaleFactor,
+            //     h: this.height,
+            // };
+            // const verticalPadding = (area.h - this.pill.height) / 2;
 
-        // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
-        // const stream = Gio.MemoryOutputStream.new_resizable();
-        // // @ts-ignore (ts doesn't understand Gio._promisify())
-        // // noinspection JSVoidFunctionReturnValueUsed
-        // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
-        //     wholeScreenTexture, area.x, area.y, area.w, area.h,
-        //     this.scaleFactor, null, 0, 0, 1, stream
-        // );
-        // stream.close(null);
-        // //  -- memory leak is above this line --
-        // const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
-        //    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
-        //     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
-        // ]);
-        // const luminance = calculateLuminance(...avgColor);
-        // // Save pxibuf as png image to tempdir to inspect:
-        // // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
+            // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
+            // const stream = Gio.MemoryOutputStream.new_resizable();
+            // // @ts-ignore (ts doesn't understand Gio._promisify())
+            // // noinspection JSVoidFunctionReturnValueUsed
+            // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
+            //     wholeScreenTexture, area.x, area.y, area.w, area.h,
+            //     this.scaleFactor, null, 0, 0, 1, stream
+            // );
+            // stream.close(null);
+            // //  -- memory leak is above this line --
+            // const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
+            //    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
+            //     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
+            // ]);
+            // const luminance = calculateLuminance(...avgColor);
+            // // Save pxibuf as png image to tempdir to inspect:
+            // // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
 
-        // Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
-        // try {
-        //     const ctx = Clutter.get_default_backend().get_cogl_context();
-        //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-        //     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
-        //
-        //     if (subtex) {
-        //         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
-        //         //const buf = new Uint8Array(size);
-        //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
-        //
-        //         debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
-        //     } else {
-        //         debugLog("Subtex is null");
-        //     }
-        // } catch (e) {
-        //     debugLog("Error in updatePillBrightness: ", e);
-        // }
+            // Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
+            // try {
+            //     const ctx = Clutter.get_default_backend().get_cogl_context();
+            //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+            //     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
+            //
+            //     if (subtex) {
+            //         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
+            //         //const buf = new Uint8Array(size);
+            //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
+            //
+            //         debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+            //     } else {
+            //         debugLog("Subtex is null");
+            //     }
+            // } catch (e) {
+            //     debugLog("Error in updatePillBrightness: ", e);
+            // }
 
-        // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
-        // const ctx = Clutter.get_default_backend().get_cogl_context();
-        // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-        // debugLog("subtex: ", subtex);
-        // if (subtex) {
-        //     /*(global.stage as Clutter.Stage).paint_to_buffer(
-        //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-        //         1,
-        //         buf,
-        //         0,
-        //         PixelFormat.ARGB_8888,
-        //         PaintFlag.NO_CURSORS,
-        //     );*/
-        //     /*
-        //     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
-        //     const fb = Cogl.Offscreen.new_with_texture(tex);
-        //     global.stage.paint_to_framebuffer(
-        //         fb,
-        //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-        //         1,
-        //         PaintFlag.NO_CURSORS,
-        //     );
-        //     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
-        //     */
-        // }
+            // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
+            // const ctx = Clutter.get_default_backend().get_cogl_context();
+            // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+            // debugLog("subtex: ", subtex);
+            // if (subtex) {
+            //     /*(global.stage as Clutter.Stage).paint_to_buffer(
+            //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+            //         1,
+            //         buf,
+            //         0,
+            //         PixelFormat.ARGB_8888,
+            //         PaintFlag.NO_CURSORS,
+            //     );*/
+            //     /*
+            //     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
+            //     const fb = Cogl.Offscreen.new_with_texture(tex);
+            //     global.stage.paint_to_framebuffer(
+            //         fb,
+            //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+            //         1,
+            //         PaintFlag.NO_CURSORS,
+            //     );
+            //     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
+            //     */
+            // }
 
-        // Individual pixel attempt:
-        let rect = this.pill.get_transformed_extents();
-        // @ts-ignore
-        let colors: Cogl.Color[] = (await Promise.all([
-            // We only use one pixel as doing this with multiple pixels appears to have very bad
-            // performance (screen lags, visible e.g. when moving a window):
-            shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
-            // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+            // Individual pixel attempt:
+            let rect = this.pill.get_transformed_extents();
+
             // @ts-ignore
-        ])).map(c => c[0]);
-        // Calculate the luminance of the average RGB values:
-        let luminance = calculateLuminance(
-            colors.reduce((a, b) => a + b.red, 0) / colors.length,
-            colors.reduce((a, b) => a + b.green, 0) / colors.length,
-            colors.reduce((a, b) => a + b.blue, 0) / colors.length
-        );
+            let colors: Cogl.Color[] = (await Promise.all([
+                // We only use one pixel as doing this with multiple pixels appears to have very bad
+                // performance (screen lags, visible e.g. when moving a window):
+                shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
+                // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+                // @ts-ignore
+            ])).map(c => c[0]);
+            // Calculate the luminance of the average RGB values:
+            let luminance = calculateLuminance(
+                colors.reduce((a, b) => a + b.red, 0) / colors.length,
+                colors.reduce((a, b) => a + b.green, 0) / colors.length,
+                colors.reduce((a, b) => a + b.blue, 0) / colors.length
+            );
 
-        return luminance > 0.5 ? 'dark' : 'light';
+            return luminance > 0.5 ? 'dark' : 'light';
+        } catch (e) {
+            log("Exception during `findBestPillBrightness` (falling back to 'dark' brightness): ", e);
+            return 'dark';
+        }
     }
 
     destroy() {
