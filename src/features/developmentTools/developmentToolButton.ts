@@ -5,6 +5,7 @@ import {css} from "$src/utils/ui/css";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Cogl from "gi://Cogl";
+import {Widgets} from "$src/utils/ui/widgets.ts";
 import Side = St.Side;
 
 
@@ -15,7 +16,7 @@ type DevToolButtonConstructorProps = {
 };
 
 
-export class DevToolButton extends St.Bin {
+export class DevToolButton extends Widgets.Bin {
     static {
         GObject.registerClass(this);
     }
@@ -32,6 +33,18 @@ export class DevToolButton extends St.Bin {
             xExpand: true,
             yExpand: false,
             trackHover: true,
+            onButtonReleaseEvent: props.onPressed,
+            // @ts-ignore
+            onTouchEvent: (_: any, e: Clutter.Event) => {
+                if (e.type() === Clutter.EventType.TOUCH_END) {
+                    props.onPressed();
+                }
+            },
+            notifyHover: () => {
+                this.hover
+                    ? this.tooltip.open(false, () => {})
+                    : this.tooltip.close(false, () => {});
+            },
         });
 
         this.icon = typeof props.icon === 'string'
@@ -41,13 +54,6 @@ export class DevToolButton extends St.Bin {
             })
             : props.icon;
         this.set_child(this.icon);
-
-        this.connect('button-release-event', props.onPressed);
-        this.connect('touch-event', (_: any, e: Clutter.Event) => {
-            if (e.type() === Clutter.EventType.TOUCH_END) {
-                props.onPressed();
-            }
-        });
 
         this.label = typeof props.label !== 'string' ? props.label : new St.Label({
             text: props.label,
@@ -64,13 +70,6 @@ export class DevToolButton extends St.Bin {
         this.tooltip.setSourceAlignment(0.5);
         this.tooltip.bin.translationY = 15;
         this.tooltip.hide();
-        this.connect('notify::hover', () => {
-            if (this.hover) {
-                this.tooltip.open(false, () => {});
-            } else {
-                this.tooltip.close(false, () => {});
-            }
-        });
         Main.layoutManager.addTopChrome(this.tooltip);
     }
 

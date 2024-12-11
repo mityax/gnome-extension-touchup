@@ -37,15 +37,9 @@ export class VirtualTouchpad {
             canFocus: true,
             xAlign: ActorAlign.END,
             yAlign: ActorAlign.START,
-            connect: {
-                'button-press-event': () => {
-                    debugLog('Button-pressed!!!');
-                    this.close();
-                },
-                'clicked': () => {
-                    debugLog('Clicked!!!');
-                    this.close();
-                },
+            onClicked: () => {
+                debugLog('Clicked!!!');
+                this.close();
             },
         }));
         this.actor.add_constraint(new MonitorConstraint({

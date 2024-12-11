@@ -13,83 +13,74 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
     private _virtualKeyboardDevice: Clutter.VirtualInputDevice;
 
     constructor() {
-        super({
-            reserveSpace: true,
-            actor: new Widgets.Row({
-                name: 'gnometouch-navbar',
-                styleClass: 'gnometouch-navbar bottom-panel',
-                children: [
-                    // Left side:
-                    new Widgets.Row({
-                        xExpand: false,
-                        children: [
-                            new Widgets.Button({
-                                name: 'gnometouch-navbar__osk-button',
-                                styleClass: 'gnometouch-navbar__button',
-                                iconName: 'input-keyboard-symbolic',
-                                connect: {
-                                    'clicked': () => {} // Main.keyboard.open(), // TODO: implement
-                                }
-                            }),
-                        ]
-                    }),
-                    // Center:
-                    new Widgets.Row({
-                        xExpand: true,
-                        xAlign: ActorAlign.CENTER,
-                        children: [
-
-                        ]
-                    }),
-                    // Right side:
-                    new Widgets.Row({
-                        xExpand: false,
-                        children: [
-                            new Widgets.Button({
-                                name: 'gnometouch-navbar__workspace-previous-button',
-                                styleClass: 'gnometouch-navbar__button',
-                                iconName: 'go-previous-symbolic',
-                                connect: {
-                                    'clicked': () => this.moveToWorkspace('left'),
-                                }
-                            }),
-                            new Widgets.Button({
-                                name: 'gnometouch-navbar__overview-button',
-                                styleClass: 'gnometouch-navbar__button',
-                                iconName: 'view-grid-symbolic',
-                                connect: {
-                                    'clicked': () => Main.overview.toggle(),
-                                }
-                            }),
-                            new Widgets.Button({
-                                name: 'gnometouch-navbar__workspace-next-button',
-                                styleClass: 'gnometouch-navbar__button',
-                                iconName: 'go-next-symbolic',
-                                connect: {
-                                    'clicked': () => this.moveToWorkspace('right'),
-                                }
-                            }),
-                            new Widgets.Bin({
-                                width: 15,
-                            }),
-                            new Widgets.Button({
-                                name: 'gnometouch-navbar__back-button',
-                                styleClass: 'gnometouch-navbar__button',
-                                iconName: 'media-playback-start-symbolic',  // TODO: replace with a proper icon
-                                scaleX: -1,  // flip the icon (ugly)
-                                pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-                                connect: {
-                                    'clicked': () => this._goBack(),
-                                }
-                            }),
-                        ]
-                    }),
-                ]
-            }),
-        });
+        super({ reserveSpace: true });
 
         let seat = Clutter.get_default_backend().get_default_seat();
         this._virtualKeyboardDevice = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
+    }
+
+    protected _buildActor(): St.BoxLayout {
+        return new Widgets.Row({
+            name: 'gnometouch-navbar',
+            styleClass: 'gnometouch-navbar bottom-panel',
+            children: [
+                // Left side:
+                new Widgets.Row({
+                    xExpand: false,
+                    children: [
+                        new Widgets.Button({
+                            name: 'gnometouch-navbar__osk-button',
+                            styleClass: 'gnometouch-navbar__button',
+                            iconName: 'input-keyboard-symbolic',
+                            onClicked: () => {}, // Main.keyboard.open(), // TODO: implement
+                        }),
+                    ]
+                }),
+                // Center:
+                new Widgets.Row({
+                    xExpand: true,
+                    xAlign: ActorAlign.CENTER,
+                    children: [
+
+                    ]
+                }),
+                // Right side:
+                new Widgets.Row({
+                    xExpand: false,
+                    children: [
+                        new Widgets.Button({
+                            name: 'gnometouch-navbar__workspace-previous-button',
+                            styleClass: 'gnometouch-navbar__button',
+                            iconName: 'go-previous-symbolic',
+                            onClicked: () => this.moveToWorkspace('left'),
+                        }),
+                        new Widgets.Button({
+                            name: 'gnometouch-navbar__overview-button',
+                            styleClass: 'gnometouch-navbar__button',
+                            iconName: 'view-grid-symbolic',
+                            onClicked: () => Main.overview.toggle(),
+                        }),
+                        new Widgets.Button({
+                            name: 'gnometouch-navbar__workspace-next-button',
+                            styleClass: 'gnometouch-navbar__button',
+                            iconName: 'go-next-symbolic',
+                            onClicked: () => this.moveToWorkspace('right'),
+                        }),
+                        new Widgets.Bin({
+                            width: 15,
+                        }),
+                        new Widgets.Button({
+                            name: 'gnometouch-navbar__back-button',
+                            styleClass: 'gnometouch-navbar__button',
+                            iconName: 'media-playback-start-symbolic',  // TODO: replace with a proper icon
+                            scaleX: -1,  // flip the icon (ugly)
+                            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
+                            onClicked: () => this._goBack(),
+                        }),
+                    ]
+                }),
+            ]
+        });
     }
 
     private moveToWorkspace(direction: 'left' | 'right') {

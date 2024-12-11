@@ -2,43 +2,49 @@ import St from "gi://St";
 import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
+import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
 
 
 export namespace Widgets {
-    export class Ref<T extends Clutter.Actor> {
-        get value(): T | null {
+    export class Ref<T extends St.Widget> {
+        get current(): T | null {
             return this._value;
         }
 
-        set value(value: T | null) {
+        set(value: T | null): void {
             this._value = value;
-            value?.connect('destroy', () => this.value = null);
+            value?.connect('destroy', () => this.set(null));
         }
 
         private _value: T | null = null;
     }
 
-    type UiProps<T extends Clutter.Actor> = {
+    type UiProps<T extends St.Widget> = {
         ref?: Ref<T>,
         connect?: Record<string, (...args: any[]) => any>,
-    };
+    } & Partial<SignalPropsForWidget<T>>;
 
-    function filterConfig<T extends Clutter.Actor>(config: UiProps<T>): any {
+    function filterConfig<T extends St.Widget>(config: UiProps<T>): any {
         const filterOut = ['ref', 'connect', 'children', 'child'];
         return filterObject(
             config,
             //@ts-ignore
-            entry => filterOut.indexOf(entry[0]) === -1
+            entry => typeof entry[0] === "string" && (
+                filterOut.indexOf(entry[0]) === -1
+                && !/^(on|notify)[A-Z]/.test(entry[0])
+            )
         )
     }
 
     function initWidget<T extends St.Widget>(w: T, props: UiProps<T>) {
-        if (props.ref) props.ref.value = w;
-        if (props.connect && Object.entries(props.connect).length > 0) {
-            for (let signal in props.connect) {
-                if (Object.hasOwn(props.connect, signal)) {
-                    w.connect(signal, props.connect[signal]);
-                }
+        if (props.ref) props.ref.set(w);
+
+        // Automatically connect signals from the constructor (e.g. `onClicked` or `notifySize`):
+        for (const [key, value] of Object.entries(props)) {
+            if (/^(on|notify)[A-Z]/.test(key) && typeof value === "function") {
+                const signalName = key.replace(/^on/, "").replace(/^notify/, 'notify::')
+                    .replace(/(\w)([A-Z])/g, "$1-$2").toLowerCase();
+                w.connect(signalName, value as any);
             }
         }
     }
@@ -84,9 +90,7 @@ export namespace Widgets {
         constructor(config: Partial<St.Bin.ConstructorProps> & UiProps<Bin>) {
             super(filterConfig(config));
             initWidget(this, config);
-            if (config.child) {
-                this.set_child(config.child);
-            }
+            if (config.child) this.set_child(config.child);
         }
     }
 
@@ -98,9 +102,7 @@ export namespace Widgets {
         constructor(config: Partial<St.BoxLayout.ConstructorProps> & UiProps<Box> & { children?: St.Widget[] }) {
             super(filterConfig(config));
             initWidget(this, config);
-            if (config.children) {
-                config.children.forEach(c => this.add_child(c));
-            }
+            config.children?.forEach(c => this.add_child(c));
         }
     }
 
@@ -117,9 +119,7 @@ export namespace Widgets {
                 vertical: false,
             });
             initWidget(this, config);
-            if (config.children) {
-                config.children.forEach(c => this.add_child(c));
-            }
+            config.children?.forEach(c => this.add_child(c));
         }
     }
 
@@ -137,9 +137,7 @@ export namespace Widgets {
                 vertical: true,
             });
             initWidget(this, config);
-            if (config.children) {
-                config.children.forEach(c => this.add_child(c));
-            }
+            config.children?.forEach(c => this.add_child(c));
         }
     }
 
@@ -167,3 +165,9 @@ export namespace Widgets {
         }
     }
 }
+
+
+// Defines signal properties for a widget, incorporating common widget classes and notify signals.
+type SignalPropsForWidget<T> = SignalPropsFromClasses<
+    [T, St.Widget, Clutter.Actor, GObject.InitiallyUnowned]
+> & NotifySignalProps<T>;

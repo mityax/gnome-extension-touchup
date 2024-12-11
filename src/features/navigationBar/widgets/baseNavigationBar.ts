@@ -21,9 +21,10 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     readonly onVisibilityChanged = new Signal<boolean>();
     readonly onReserveSpaceChanged = new Signal<boolean>();
 
-    protected constructor({actor, reserveSpace}: {actor: A, reserveSpace: boolean}) {
-        this.actor = actor;
+    protected constructor({reserveSpace}: {reserveSpace: boolean}) {
         this._reserveSpace = reserveSpace;
+
+        this.actor = this._buildActor();
 
         this.windowPositionTracker = new WindowPositionTracker(windows => {
             // Check if at least one window is near enough to the navigation bar:
@@ -43,6 +44,13 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
             }
         });
     }
+
+    /**
+     * Build the main UI of the navigation bar.
+     *
+     * Note: This method is called during the class constructor (i.e. when subclases call `super()`).
+     */
+    protected abstract _buildActor(): A;
 
     get monitor(): Monitor {
         return this._monitor;
@@ -99,7 +107,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     }
 
     private _addActor() {
-        Main.layoutManager.addChrome(this.actor, {
+        Main.layoutManager.addTopChrome(this.actor, {
             affectsStruts: this.reserveSpace,
             trackFullscreen: true,
             affectsInputRegion: true,
@@ -108,6 +116,11 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
 
     private _removeActor() {
         Main.layoutManager.removeChrome(this.actor);
+    }
+
+    private _ensureActorIsOnTop() {
+        this._removeActor();
+        this._addActor();
     }
 
     protected abstract onIsWindowNearChanged(isWindowNear: boolean): void;

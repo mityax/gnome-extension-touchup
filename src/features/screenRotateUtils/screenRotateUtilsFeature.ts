@@ -27,7 +27,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         super();
 
         this.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', (manager: Meta.MonitorManager) => {
-            this.currentFloatingButton.value?.destroy();
+            this.currentFloatingButton.current?.destroy();
         });
 
         const handlerId = Gio.DBus.system.signal_subscribe(
@@ -83,7 +83,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
         const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
-        this.currentFloatingButton.value?.destroy();
+        this.currentFloatingButton.current?.destroy();
         let btn: Widgets.Button | null = new Widgets.Button({
             ref: this.currentFloatingButton,
             styleClass: 'gnometouch-floating-screen-rotation-button',
@@ -92,13 +92,11 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
             height: 40 * sf,
             x: monitorGeometry.x + clamp(monitorGeometry.width * aX, 40 * sf, monitorGeometry.width - 40 * sf - 40 * sf),
             y: monitorGeometry.y + clamp(monitorGeometry.height * aY, 40 * sf, monitorGeometry.height - 40 * sf - 40 * sf),
-            connect: {
-                'clicked': () => {
-                    setMonitorTransform(targetTransform);
-                    btn?.destroy();
-                },
-                'destroy': () => btn = null,
+            onClicked: () => {
+                setMonitorTransform(targetTransform);
+                btn?.destroy();
             },
+            onDestroy: () => btn = null,
             opacity: 128,
             scaleX: 0.5,
             scaleY: 0.5,

@@ -10,6 +10,8 @@ import {IdleRunner} from "$src/utils/idleRunner";
 import {debugLog} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar.ts";
+import {Widgets} from "$src/utils/ui/widgets.ts";
+import Ref = Widgets.Ref;
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -18,34 +20,12 @@ const LEFT_EDGE_OFFSET = 100;
 
 
 export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
-    private readonly pill: St.Bin;
+    private readonly pill = new Ref<St.Bin>();
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
 
     constructor({reserveSpace} : {reserveSpace: boolean}) {
-        super({
-            actor: new St.Bin({
-                name: 'gnometouch-navbar',
-                styleClass: 'gnometouch-navbar gnometouch-navbar--transparent bottom-panel',
-                reactive: true,
-                trackHover: true,
-                canFocus: true,
-                layoutManager: new Clutter.BinLayout(),
-            }),
-            reserveSpace: reserveSpace,
-        });
-
-        // Create and add the pill:
-        this.pill = new St.Bin({
-            name: 'gnometouch-navbar__pill',
-            styleClass: 'gnometouch-navbar__pill',
-            yAlign: Clutter.ActorAlign.CENTER,
-            xAlign: Clutter.ActorAlign.CENTER,
-            style: css({
-                borderRadius: '20px',
-            })
-        });
-        this.actor.set_child(this.pill);
+        super({ reserveSpace: reserveSpace });
 
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
 
@@ -53,11 +33,29 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         this.onReserveSpaceChanged.connect('changed', (reserveSpace) => {
             this.styleClassUpdateInterval.setActive(!reserveSpace);
             void this.updateStyleClasses();
-        })
-
-        this.actor.connect('realize', () => this.styleClassUpdateInterval.scheduleOnce());
+        });
 
         this._setupGestureTracker();
+    }
+
+    protected _buildActor(): St.Bin {
+        return new Widgets.Bin({
+            name: 'gnometouch-navbar',
+            styleClass: 'gnometouch-navbar gnometouch-navbar--transparent bottom-panel',
+            reactive: true,
+            trackHover: true,
+            canFocus: true,
+            layoutManager: new Clutter.BinLayout(),
+            style: css({ background: 'red' }),
+            onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
+            child: new Widgets.Bin({  // the navigation bars pill:
+                ref: this.pill,
+                name: 'gnometouch-navbar__pill',
+                styleClass: 'gnometouch-navbar__pill',
+                yAlign: Clutter.ActorAlign.CENTER,
+                xAlign: Clutter.ActorAlign.CENTER,
+            }),
+        });
     }
 
     protected onIsWindowNearChanged(isWindowNear: boolean): void {
@@ -66,7 +64,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             let newInterval = Main.overview.visible || !isWindowNear ? 3000 : 500;
             if (newInterval != this.styleClassUpdateInterval.interval) {
                 // if a window is moved onto/away from the panel or overview is toggled, schedule update soonish:
-                this.styleClassUpdateInterval.scheduleOnce(100);
+                this.styleClassUpdateInterval.scheduleOnce(250);
             }
             this.styleClassUpdateInterval.setInterval(newInterval);
         }
@@ -77,8 +75,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         const height = 22 * sf;
         this.actor.set_height(height);
 
-        this.pill.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
-        this.pill.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
+        this.pill.current?.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
+        this.pill.current?.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
     }
 
     private _setupGestureTracker() {
@@ -202,7 +200,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         if (this.reserveSpace && this._isWindowNear) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('gnometouch-navbar--transparent');
-            this.pill.remove_style_class_name('gnometouch-navbar__pill--dark');
+            this.pill.current?.remove_style_class_name('gnometouch-navbar__pill--dark');
         } else {
             // Make navbar transparent:
             this.actor.add_style_class_name('gnometouch-navbar--transparent');
@@ -210,9 +208,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             // Adjust pill brightness:
             let brightness = await this.findBestPillBrightness();
             if (brightness == 'dark') {
-                this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.current?.add_style_class_name('gnometouch-navbar__pill--dark')
             } else {
-                this.pill.remove_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.current?.remove_style_class_name('gnometouch-navbar__pill--dark')
             }
         }
     }
@@ -221,7 +219,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
      * Find the best pill brightness by analyzing what's on the screen behind the pill
      */
     private async findBestPillBrightness(): Promise<'dark' | 'light'> {
-        // FIXME: This does not work as of now, see below for several attempts that all have problems...
+        // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
+        //  that all have problems due to GJS/introspection limitations
 
         const shooter = new Shell.Screenshot();
         // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
@@ -300,11 +299,12 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         //     */
         // }
 
-        // Individual pixel attempt (causes screen lags, visible e.g. when moving a window):
+        // Individual pixel attempt:
         let rect = this.pill.get_transformed_extents();
         // @ts-ignore
         let colors: Cogl.Color[] = (await Promise.all([
-            // For now we only use one pixel as this appears to have very bad performance:
+            // We only use one pixel as doing this with multiple pixels appears to have very bad
+            // performance (screen lags, visible e.g. when moving a window):
             shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
             // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
             // @ts-ignore

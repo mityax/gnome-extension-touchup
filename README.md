@@ -16,8 +16,8 @@ experience for devices with a touchscreen.
  - [x] Key popups for the onscreen keyboard
  - [ ] Virtual Touchpad (use device as touchpad when connected to a 
        second monitor)
- - [ ] Floating temporary screen rotation button when auto-rotation
-       is disabled but device is rotated (as in android)
+ - [x] Floating temporary screen rotation button when auto-rotation
+       is disabled but device is being rotated (as in android)
  - [ ] Pattern unlock
  - [ ] Improved swipe gestures in the overview
    - [ ] Swipe up windows in overview to close them
