@@ -12,6 +12,7 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
 import {debugLog} from "$src/utils/logging.ts";
+import Mtk from "gi://Mtk";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
@@ -27,7 +28,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         super();
 
         this.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', (manager: Meta.MonitorManager) => {
-            this.currentFloatingButton.current?.destroy();
+            this.removeFloatingRotateButton({animate: false});
         });
 
         const handlerId = Gio.DBus.system.signal_subscribe(
@@ -56,42 +57,44 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         return this.touchscreenSettings.get_boolean('orientation-lock');
     }
 
-    private onAccelerometerOrientationChanged(orientation: AccelerometerOrientation) {
+    private async onAccelerometerOrientationChanged(orientation: AccelerometerOrientation) {
+        this.removeFloatingRotateButton({animate: true});
+
         if (this.isOrientationLockEnabled) {
-            this.showFloatingRotateButton(orientation);
+            const targetTransform = {
+                'normal': 0,
+                'left-up': 1,
+                'bottom-up': 2,
+                'right-up': 3,
+            }[orientation] as LogicalMonitorTransform & (0 | 1 | 2 | 3);
+
+            const {geometry, transform: currentTransform} = await this.getBuiltinMonitorGeometryAndTransform();
+
+            if (currentTransform !== targetTransform) {
+                this.showFloatingRotateButton(currentTransform, targetTransform, geometry);
+            }
         }
     }
 
-    private async showFloatingRotateButton(orientation: AccelerometerOrientation): Promise<void> {
-        const targetTransform = {
-            'normal': 0,
-            'left-up': 1,
-            'bottom-up': 2,
-            'right-up': 3,
-        }[orientation] as LogicalMonitorTransform;
-
-        const state = await DisplayConfigState.getCurrent();
-        const monitorConnector = (state.builtinMonitor ?? state.monitors[0]).connector;
-        const monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitorConnector);
-
-        const monitorGeometry = global.display.get_monitor_geometry(monitorIndex);
-        const currentTransform = state.getLogicalMonitorFor(monitorConnector)!.transform;
-
-        if (currentTransform === targetTransform) return;
-
-        let [aX, aY] = computeAlignment(currentTransform, orientation);
+    private showFloatingRotateButton(
+        currentTransform: LogicalMonitorTransform,
+        targetTransform: LogicalMonitorTransform & (0 | 1 | 2 | 3),
+        monitorGeometry: Mtk.Rectangle,
+    ): void {
+        let [aX, aY] = computeAlignment(currentTransform, targetTransform);
 
         const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+        const buttonSize = 40 * sf;
+        const margin = 40 * sf;
 
-        this.currentFloatingButton.current?.destroy();
         let btn: Widgets.Button | null = new Widgets.Button({
             ref: this.currentFloatingButton,
             styleClass: 'gnometouch-floating-screen-rotation-button',
             iconName: 'rotation-allowed-symbolic',
             width: 40 * sf,
             height: 40 * sf,
-            x: monitorGeometry.x + clamp(monitorGeometry.width * aX, 40 * sf, monitorGeometry.width - 40 * sf - 40 * sf),
-            y: monitorGeometry.y + clamp(monitorGeometry.height * aY, 40 * sf, monitorGeometry.height - 40 * sf - 40 * sf),
+            x: monitorGeometry.x + clamp(monitorGeometry.width * aX, margin, monitorGeometry.width - buttonSize - margin),
+            y: monitorGeometry.y + clamp(monitorGeometry.height * aY, margin, monitorGeometry.height - buttonSize - margin),
             onClicked: () => {
                 btn?.destroy();
                 setMonitorTransform(targetTransform);
@@ -122,13 +125,22 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                 btn?.ease({
                     rotationAngleZ: btn.rotationAngleZ - 90,
                     duration: 550, // ms
-                    mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,  // bounce/back?
+                    mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
                 });
             });
         }
 
         // Animate out and destroy:
         delay(7000).then(() => {
+            if (btn === this.currentFloatingButton.current) {  // Check if btn is still the current button, to not destroy another one
+                this.removeFloatingRotateButton({animate: true});
+            }
+        });
+    }
+
+    private removeFloatingRotateButton({animate = false}: {animate: boolean}) {
+        if (animate) {
+            const btn = this.currentFloatingButton.current;
             // @ts-ignore
             btn?.ease({
                 scaleX: 0.5,
@@ -138,7 +150,20 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                 mode: Clutter.AnimationMode.EASE_IN_QUAD,
                 onComplete: () => btn?.destroy(),
             });
-        });
+        } else {
+            this.currentFloatingButton.current?.destroy();
+        }
+
+    }
+
+    private async getBuiltinMonitorGeometryAndTransform() {
+        const state = await DisplayConfigState.getCurrent();
+        const monitorConnector = (state.builtinMonitor ?? state.monitors[0]).connector;
+        const monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitorConnector);
+
+        const geometry = global.display.get_monitor_geometry(monitorIndex);
+        const transform = state.getLogicalMonitorFor(monitorConnector)!.transform;
+        return {geometry, transform};
     }
 }
 
@@ -148,17 +173,17 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
  * on the bottom-right edge of the screen, considering the current transform and targetOrientation.
  *
  * @param currentTransform - The current display rotation/transformation (0-7).
- * @param targetOrientation - The potential new screen targetOrientation.
+ * @param targetTransform - The potential new screen transform (0-3).
  * @returns A tuple [x-alignment, y-alignment] in the range [0, 1].
  */
-function computeAlignment(currentTransform: LogicalMonitorTransform, targetOrientation: AccelerometerOrientation) {
+function computeAlignment(currentTransform: LogicalMonitorTransform, targetTransform: LogicalMonitorTransform & (0 | 1 | 2 | 3)) {
     // Base alignment for each targetOrientation assuming no rotation (transform = 0)
     const [baseX, baseY] = {
-        normal: [1, 1],       // Bottom-right
-        'left-up': [1, 0],    // Bottom-left
-        'bottom-up': [0, 0],  // Top-left
-        'right-up': [0, 1],   // Top-right
-    }[targetOrientation] || [1.0, 1.0];  // default value, just in case (even though this should never happen)
+        0: [1, 1],  // Bottom-right
+        1: [1, 0],  // Bottom-left
+        2: [0, 0],  // Top-left
+        3: [0, 1],  // Top-right
+    }[targetTransform] || [1.0, 1.0];  // default value, just in case (even though this should never happen)
 
     // Adjust alignment based on the transform
     // Transformation maps original alignment based on display rotation or flipping
