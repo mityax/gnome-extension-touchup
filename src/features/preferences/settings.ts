@@ -1,4 +1,4 @@
-import {BoolSetting, EnumSetting, IntSetting} from "./backend";
+import {BoolSetting, EnumSetting, IntSetting, StringListSetting} from "./backend";
 
 
 // NOTE: the doc comments in the following structure will be automatically included in the GSettings schema
@@ -22,6 +22,49 @@ export const settings = {
          * This setting has no effect when the navigation bar mode is set to "buttons".
          */
         gesturesReserveSpace: new BoolSetting('navigation-bar-gestures-reserve-space', true),
+
+        /**
+         * Which buttons to show on the left side of the button navigation bar
+         *
+         * Available choices are:
+         *  - "keyboard" - keyboard open button
+         *  - "workspace-previous" - switch to previous workspace
+         *  - "workspace-next" - switch to next workspace
+         *  - "overview" - open overview
+         *  - "apps" - open apps overview
+         *  - "back" - navigate back
+         *  - "spacer" - adds a little space between buttons
+         */
+        buttonsLeft: new StringListSetting('navigation-bar-buttons-left', ["keyboard"]),
+
+        /**
+         * Which buttons to show in the middle of the button navigation bar
+         *
+         * Available choices are:
+         *  - "keyboard" - keyboard open button
+         *  - "workspace-previous" - switch to previous workspace
+         *  - "workspace-next" - switch to next workspace
+         *  - "overview" - open overview
+         *  - "apps" - open apps overview
+         *  - "back" - navigate back
+         *  - "spacer" - adds a little space between buttons
+         */
+        buttonsMiddle: new StringListSetting('navigation-bar-buttons-middle', []),
+
+        /**
+         * Which buttons to show on the right side of the button navigation bar
+         *
+         * Available choices are:
+         *  - "keyboard" - keyboard open button
+         *  - "workspace-previous" - switch to previous workspace
+         *  - "workspace-next" - switch to next workspace
+         *  - "overview" - open overview
+         *  - "apps" - open apps overview
+         *  - "back" - navigate back
+         *  - "spacer" - adds a little space between buttons
+         */
+        buttonsRight: new StringListSetting('navigation-bar-buttons-right',
+            ["workspace-left", "workspace-right", "spacer", "apps", "overview", "back"]),
     },
 
     oskKeyPopups: {
@@ -33,6 +76,16 @@ export const settings = {
          * How long to show the OSK key popups for (in milliseconds).
          */
         duration: new IntSetting('osk-key-popups-duration', 35, 15, 250),
+    },
+
+    screenRotateUtils: {
+        /**
+         * Whether to show a floating screen rotate button when Gnome's auto-rotate setting is disabled,
+         * and the device is physically rotated.
+         *
+         * Note: This has no effect if the device does not have an accelerometer.
+         */
+        floatingScreenRotateButtonEnabled: new BoolSetting('screen-rotate-utils-floating-screen-rotate-button-enabled', true),
     }
 }
 

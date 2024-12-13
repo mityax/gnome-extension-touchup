@@ -77,3 +77,32 @@ export class IntSetting extends Setting<number> {
         gioSettings!.set_int(this.key, clamp(value, this.min, this.max));
     }
 }
+
+export class StringListSetting extends Setting<string[]>{
+    get(): string[] {
+        let res: any;
+        gioSettings!.get_mapped(this.key, value => {
+            if (value === null) res = [];
+            try {
+                res = JSON.parse(value.get_string()[0]);
+                this._validateValue(res);
+            } catch (e) {
+                return false;
+            }
+            return true;
+        });
+        return res;
+    }
+
+    set(value: string[]) {
+        this._validateValue(value);
+        gioSettings!.set_string(this.key, JSON.stringify(value));
+    }
+
+    private _validateValue(value: any) {
+        if (!Array.isArray(value) || (value as any[]).some(v => typeof v !== 'string')) {
+            throw Error(`Invalid value for StringListSetting (not an array of strings): ${value}`);
+        }
+    }
+}
+

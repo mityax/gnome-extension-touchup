@@ -140,6 +140,12 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
                 }
             });
 
+            // Close OSK if it is open:
+            if (Main.keyboard.visible)
+                Main.keyboard._keyboard
+                    ? Main.keyboard._keyboard.close(true)  // close with immediate = true
+                    : Main.keyboard.close();
+
             idleRunner.start();
         });
 

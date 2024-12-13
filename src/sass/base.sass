@@ -3,12 +3,19 @@
 
 .gnometouch-navbar-visible
     &--gestures
+        $height: 20px
+
         #dashtodockContainer #dash
-            padding-bottom: 20px !important
+            padding-bottom: $height !important
+        #keyboard
+            padding-bottom: $height !important
 
     &--buttons
+        $height: 41px
         #dashtodockContainer #dash
-            padding-bottom: 41px !important
+            padding-bottom: $height !important
+        #keyboard
+            padding-bottom: $height !important
 
 
 // The dark color of the gnome shell theme
