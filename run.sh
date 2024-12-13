@@ -47,6 +47,21 @@ echo "Installing extension (from $zipFile)..."
 gnome-extensions install -f "$zipFile" && echo "done."
 echo "Enabling extension (via id $extensionId)..."
 gnome-extensions enable "$extensionId" && echo "done."
+gnome-extensions info "$extensionId"
+
+# Monitor extension status until it is running:
+echo "Waiting for the extension to be started..."
+while state=$(gnome-extensions info "$extensionId" | grep -oP 'State: \K\w+'); do
+    if [ "$state" == "ERROR" ]; then
+        echo "The extension encountered an error during startup."
+        notify-send "Extension error" "The extension $extensionId encountered an error during startup."
+        exit 1
+    elif [ "$state" != "UNKNOWN" ]; then
+        echo "Extension state: $state"
+        break
+    fi
+    sleep 0.2
+done
 
 # Wait until shell is closed:
 wait $PID

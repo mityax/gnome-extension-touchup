@@ -12,8 +12,8 @@
     "install": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
     "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh",
     "dev-tty-verbose": "dbus-run-session $(pwd)/run.sh --tty --build",
-    "dev": "npm run dev-verbose  2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
-    "dev-tty": "npm run dev-tty-verbose   2> >(grep -i -P --color 'gjs|gnometouch|JS Error' 1>&2)",
+    "dev": "npm run dev-verbose  2> >(grep -i -P --color 'gnometouch' 1>&2)",
+    "dev-tty": "npm run dev-tty-verbose   2> >(grep -i -P --color 'gnometouch' 1>&2)",
     "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE"
   },
   "devDependencies": {
