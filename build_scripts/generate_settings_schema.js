@@ -100,6 +100,14 @@ function generateXMLForSetting(node, sourceFile, source) {
             const max = node.initializer.arguments[3]?.getText(sourceFile) || '1';
             additionalXml = `<range min="${min}" max="${max}"/>`;
         }
+    } else if (settingType === "StringListSetting") {
+        gtype = 's';
+        // We use JSON.stringify to easily escape quotes in the code and automatically add surrounding quotes, i.e.
+        // to convert ["a-value"] to "[\"a-value\"]":
+        defaultValue = JSON.stringify(node.initializer.arguments[1]?.getText(sourceFile) || '[]');
+        JSON.parse(JSON.parse(defaultValue));  // throw an error if the default value is not valid json
+    } else {
+        throw Error(`Unknown settings type ${settingType} - you need to implement this type in the settings schema generator.`);
     }
 
     return `

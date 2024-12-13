@@ -1,4 +1,5 @@
 import * as esbuild from "esbuild";
+import {exec} from "child_process";
 import GjsPlugin from "esbuild-gjs";
 import copy from "esbuild-plugin-copy";
 import {dirname, join, resolve} from 'path';
@@ -21,9 +22,13 @@ const rootDir = dirname(fileURLToPath(import.meta.url));
  */
 const metadata = JSON.parse(fs.readFileSync(join(rootDir, "src/metadata.json")).toString());
 
+// Clear up/remove previous build:
+if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });
+
 
 await esbuild.build({
     sourceRoot: rootDir,
+    outdir: 'dist',
     entryPoints: [
         "src/extension.ts",
         "src/prefs.ts",
@@ -33,6 +38,7 @@ await esbuild.build({
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
+    treeShaking: true,
     plugins: [
         GjsPlugin({}),
 
@@ -67,14 +73,18 @@ await esbuild.build({
             blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
         }),
     ],
-    outdir: 'dist',
-    treeShaking: true,
 }).then(async () => {
     const sassDist = resolve(rootDir, `dist/sass`);
     for (let fn of fs.readdirSync(sassDist)) {
         await mv(join(sassDist, fn), resolve(rootDir, `dist/${fn}`), {mkdirp: false}, console.error);
     }
     fs.rmSync(sassDist, {recursive: true});
+}).then(async () => {
+    exec(`glib-compile-schemas ${resolve(rootDir, 'dist/schemas/')}`, (error, stdout, stderr) => {
+        if (stderr) {
+            throw Error(`Compiling the schemas failed: ${stderr}`)
+        }
+    });
 }).then(async () => {
     const zipFilename = `${metadata.uuid}.zip`;
     const zipDist = resolve(rootDir, `dist/${zipFilename}`);
