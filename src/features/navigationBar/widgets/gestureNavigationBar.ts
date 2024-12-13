@@ -32,8 +32,6 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             this.styleClassUpdateInterval.setActive(!reserveSpace);
             void this.updateStyleClasses();
         });
-
-        this._setupGestureTracker();
     }
 
     protected _buildActor(): St.Bin {
@@ -44,6 +42,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             trackHover: true,
             canFocus: true,
             layoutManager: new Clutter.BinLayout(),
+            onCreated: (widget) => this._setupGestureTrackerFor(widget),
             onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
             child: this.pill = new Widgets.Bin({  // the navigation bars pill:
                 name: 'gnometouch-navbar__pill',
@@ -75,7 +74,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         this.pill.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
     }
 
-    private _setupGestureTracker() {
+    private _setupGestureTrackerFor(actor: Clutter.Actor) {
         const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
         //@ts-ignore
@@ -84,7 +83,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         // TODO: potentially delete the NavigationBarGestureTracker and just use a plain GestureRecognizer2D instead
 
         const gesture = new NavigationBarGestureTracker();
-        this.actor.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Clutter.Action);
+        actor.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Clutter.Action);
         gesture.orientation = null; // Clutter.Orientation.HORIZONTAL;
 
         let baseDistX = 900;

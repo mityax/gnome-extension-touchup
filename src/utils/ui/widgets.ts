@@ -21,17 +21,20 @@ export namespace Widgets {
 
     type UiProps<T extends St.Widget> = {
         ref?: Ref<T>,
-        connect?: Record<string, (...args: any[]) => any>,
+        onCreated?: (widget: T) => void,
     } & Partial<SignalPropsForWidget<T>>;
 
     function filterConfig<T extends St.Widget>(config: UiProps<T>): any {
-        const filterOut = ['ref', 'connect', 'children', 'child'];
+        const filterOut = [
+            'ref', 'children', 'child', 'onCreated', /^(on|notify)[A-Z]/,
+        ];
         return filterObject(
             config,
             //@ts-ignore
             entry => typeof entry[0] === "string" && (
-                filterOut.indexOf(entry[0]) === -1
-                && !/^(on|notify)[A-Z]/.test(entry[0])
+                !filterOut.some((filter) => filter instanceof RegExp
+                    ? filter.test(entry[0] as string)
+                    : filter === entry[0])
             )
         )
     }
@@ -41,12 +44,14 @@ export namespace Widgets {
 
         // Automatically connect signals from the constructor (e.g. `onClicked` or `notifySize`):
         for (const [key, value] of Object.entries(props)) {
-            if (/^(on|notify)[A-Z]/.test(key) && typeof value === "function") {
+            if (/^(on|notify)[A-Z]/.test(key) && typeof value === "function" && key !== "onCreated") {
                 const signalName = key.replace(/^on/, "").replace(/^notify/, 'notify::')
                     .replace(/(\w)([A-Z])/g, "$1-$2").toLowerCase();
                 w.connect(signalName, value as any);
             }
         }
+
+        props.onCreated?.(w)
     }
 
     export class Button extends St.Button {

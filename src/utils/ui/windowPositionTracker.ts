@@ -50,7 +50,7 @@ export default class WindowPositionTracker {
     }
 
     _onWindowActorRemoved(container: Clutter.Actor, metaWindowActor: Meta.WindowActor) {
-        for (const signalId of this._windowSignalIds.get(metaWindowActor)) {
+        for (const signalId of this._windowSignalIds.get(metaWindowActor) ?? []) {
             metaWindowActor.disconnect(signalId);
         }
         this._windowSignalIds.delete(metaWindowActor);
