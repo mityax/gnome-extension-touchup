@@ -58,7 +58,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         if (!this.reserveSpace) {
             let newInterval = Main.overview.visible || !isWindowNear ? 3000 : 500;
             if (newInterval != this.styleClassUpdateInterval.interval) {
-                // if a window is moved onto/away from the panel or overview is toggled, schedule update soonish:
+                // if a window is moved onto/away from the navigation bar or overview is toggled, schedule update soonish:
                 this.styleClassUpdateInterval.scheduleOnce(250);
             }
             this.styleClassUpdateInterval.setInterval(newInterval);
