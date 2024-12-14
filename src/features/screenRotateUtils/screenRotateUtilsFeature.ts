@@ -22,7 +22,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
     private touchscreenSettings = new Gio.Settings({
         schema_id: 'org.gnome.settings-daemon.peripherals.touchscreen',
     });
-    private readonly currentFloatingButton = new Ref<Widgets.Button>();
+    private readonly floatingButton = new Ref<Widgets.Button>();
 
     constructor() {
         super();
@@ -47,7 +47,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                     ?.AccelerometerOrientation
                     ?.deepUnpack();
                 if (orientation) {
-                    this.onAccelerometerOrientationChanged(orientation);
+                    this.onAccelerometerOrientationChanged(orientation).then();
                 }
             });
         this.onCleanup(() => Gio.DBus.session.signal_unsubscribe(handlerId));
@@ -88,7 +88,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         const margin = 40 * sf;
 
         let btn: Widgets.Button | null = new Widgets.Button({
-            ref: this.currentFloatingButton,
+            ref: this.floatingButton,
             styleClass: 'gnometouch-floating-screen-rotation-button',
             iconName: 'rotation-allowed-symbolic',
             width: 40 * sf,
@@ -132,7 +132,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
         // Animate out and destroy:
         delay(7000).then(() => {
-            if (btn === this.currentFloatingButton.current) {  // Check if btn is still the current button, to not destroy another one
+            if (btn === this.floatingButton.current) {  // Check if btn is still the current button, to not destroy another one
                 this.removeFloatingRotateButton({animate: true});
             }
         });
@@ -140,7 +140,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
     private removeFloatingRotateButton({animate = false}: {animate: boolean}) {
         if (animate) {
-            const btn = this.currentFloatingButton.current;
+            const btn = this.floatingButton.current;
             // @ts-ignore
             btn?.ease({
                 scaleX: 0.5,
@@ -151,7 +151,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                 onComplete: () => btn?.destroy(),
             });
         } else {
-            this.currentFloatingButton.current?.destroy();
+            this.floatingButton.current?.destroy();
         }
 
     }
@@ -164,6 +164,11 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         const geometry = global.display.get_monitor_geometry(monitorIndex);
         const transform = state.getLogicalMonitorFor(monitorConnector)!.transform;
         return {geometry, transform};
+    }
+
+    destroy() {
+        this.floatingButton.current?.destroy();
+        super.destroy();
     }
 }
 

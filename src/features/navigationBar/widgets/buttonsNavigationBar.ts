@@ -5,7 +5,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Graphene from "gi://Graphene";
 import Clutter from "gi://Clutter";
 import Meta from "gi://Meta";
-import {settings} from "$src/features/preferences/settings.ts";
+import {settings} from "$src/settings.ts";
 import {debugLog, log} from "$src/utils/logging.ts";
 import ActorAlign = Clutter.ActorAlign;
 import MotionDirection = Meta.MotionDirection;

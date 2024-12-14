@@ -56,7 +56,7 @@ await esbuild.build({
 
         // Generate the GSettings schema from our settings.ts file:
         gsettingsSchemaPlugin({
-            inputFile: 'src/features/preferences/settings.ts',
+            inputFile: 'src/settings.ts',
             outputFile: 'dist/schemas/org.gnome.shell.extensions.gnometouch.gschema.xml',
             schemaId: 'org.gnome.shell.extensions.gnometouch',
             schemaPath: '/org/gnome/shell/extensions/gnometouch/'

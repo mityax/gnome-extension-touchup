@@ -1,4 +1,4 @@
-import {BoolSetting, EnumSetting, IntSetting, StringListSetting} from "./backend";
+import {BoolSetting, EnumSetting, IntSetting, StringListSetting} from "./features/preferences/backend";
 
 
 // NOTE: the doc comments in the following structure will be automatically included in the GSettings schema
@@ -35,7 +35,9 @@ export const settings = {
          *  - "back" - navigate back
          *  - "spacer" - adds a little space between buttons
          */
-        buttonsLeft: new StringListSetting('navigation-bar-buttons-left', ["keyboard"]),
+        buttonsLeft: new StringListSetting<
+            "keyboard" | "workspace-previous" | "workspace-next" | "overview" | "apps" | "back" | "spacer"
+        >('navigation-bar-buttons-left', ["keyboard"]),
 
         /**
          * Which buttons to show in the middle of the button navigation bar
@@ -49,7 +51,9 @@ export const settings = {
          *  - "back" - navigate back
          *  - "spacer" - adds a little space between buttons
          */
-        buttonsMiddle: new StringListSetting('navigation-bar-buttons-middle', []),
+        buttonsMiddle: new StringListSetting<
+            "keyboard" | "workspace-previous" | "workspace-next" | "overview" | "apps" | "back" | "spacer"
+        >('navigation-bar-buttons-middle', []),
 
         /**
          * Which buttons to show on the right side of the button navigation bar
@@ -63,8 +67,10 @@ export const settings = {
          *  - "back" - navigate back
          *  - "spacer" - adds a little space between buttons
          */
-        buttonsRight: new StringListSetting('navigation-bar-buttons-right',
-            ["workspace-left", "workspace-right", "spacer", "apps", "overview", "back"]),
+        buttonsRight: new StringListSetting<
+            "keyboard" | "workspace-previous" | "workspace-next" | "overview" | "apps" | "back" | "spacer"
+        >('navigation-bar-buttons-right',
+            ["workspace-previous", "workspace-next", "spacer", "apps", "overview", "back"]),
     },
 
     oskKeyPopups: {

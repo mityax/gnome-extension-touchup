@@ -56,8 +56,8 @@ export class BoolSetting extends Setting<boolean> {
 }
 
 export class IntSetting extends Setting<number> {
-    private readonly min: number;
-    private readonly max: number;
+    readonly min: number;
+    readonly max: number;
 
     constructor(key: string, defaultValue: number, min: number, max: number) {
         assert(min <= max);
@@ -78,8 +78,8 @@ export class IntSetting extends Setting<number> {
     }
 }
 
-export class StringListSetting extends Setting<string[]>{
-    get(): string[] {
+export class StringListSetting<T extends string> extends Setting<T[]>{
+    get(): T[] {
         let res: any;
         gioSettings!.get_mapped(this.key, value => {
             if (value === null) res = [];
@@ -94,7 +94,7 @@ export class StringListSetting extends Setting<string[]>{
         return res;
     }
 
-    set(value: string[]) {
+    set(value: T[]) {
         this._validateValue(value);
         gioSettings!.set_string(this.key, JSON.stringify(value));
     }
@@ -105,4 +105,10 @@ export class StringListSetting extends Setting<string[]>{
         }
     }
 }
+
+
+/**
+ * Returns the value type of a Setting, i.e. SettingsType<BoolSetting> => bool
+ */
+export type SettingsType<S> = S extends Setting<infer T> ? T : never;
 

@@ -7,7 +7,7 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import St from "gi://St";
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
-import {settings} from "$src/features/preferences/settings";
+import {settings} from "$src/settings.ts";
 
 
 export default class OskKeyPopupsFeature extends ExtensionFeature {

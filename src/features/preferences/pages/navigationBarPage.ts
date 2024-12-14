@@ -1,7 +1,7 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
-import Gtk from "gi://Gtk";
-import {settings} from "$src/features/preferences/settings";
+import {settings} from "$src/settings.ts";
+import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils.ts";
 
 
 export class NavigationBarPage extends Adw.PreferencesPage {
@@ -15,40 +15,53 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             icon_name: "computer-apple-ipad-symbolic",
         });
 
-        // Create a group for the main settings
-        const navGroup = new Adw.PreferencesGroup({
+        this.add(buildPreferencesGroup({
             title: "Navigation Bar",
             description: "Configure the behavior and appearance of the navigation bar",
-        });
-        this.add(navGroup);
+            children: [
+                buildSwitchRow({
+                    title: "Enable Navigation Bar",
+                    subtitle: "Toggle to enable or disable the navigation bar feature",
+                    setting: settings.navigationBar.enabled,
+                }),
+                buildToggleButtonRow<'gestures' | 'buttons'>({
+                    title: "Navigation Bar Mode",
+                    subtitle: "Choose which kind of navigation experience you prefer",
+                    items: [
+                        { label: "Gestures", value: "gestures" },
+                        { label: "Buttons", value: "buttons" },
+                    ],
+                    setting: settings.navigationBar.mode,
+                }),
+            ]
+        }));
 
-        // Enable Navigation Bar - Toggle Switch
-        const enableNavBarRow = new Adw.SwitchRow({
-            title: "Enable Navigation Bar",
-            subtitle: "Toggle to enable or disable the navigation bar feature",
-        });
-        navGroup.add(enableNavBarRow);
-        settings.navigationBar.enabled.bind(enableNavBarRow, 'active');
+        this.add(buildPreferencesGroup({
+            title: "Gestures Navigation Bar",
+            children: [
+                buildSwitchRow({
+                    title: "Reserve Space",
+                    subtitle: "Keep space available for the navigation bar to avoid overlaying windows. If disabled, " +
+                        "the navigation bar is shown on top of overlapping windows and adjusts its color dynamically.",
+                    setting: settings.navigationBar.gesturesReserveSpace,
+                }),
+            ],
+            // Only show this group when mode is set to "gestures":
+            onCreated: (group) => {
+                const id = settings.navigationBar.mode.connect("changed", (mode) => group.visible = mode === 'gestures');
+                group.connect('destroy', () => settings.navigationBar.mode.disconnect(id));
+            },
+        }));
 
-        // Navigation Bar Mode - Drop-down for gestures or buttons
-        const items = [['Gesture-based', 'gestures'], ['Button-based', 'buttons']];
-        const navModeRow = new Adw.ComboRow({
+        // TODO: implement configurable layouts
+        /*
+        type navbarButtonsGroupButtons = SettingsType<typeof settings.navigationBar.buttonsLeft>;
+
+        buttonBarGroup.add(buildToggleButtonRow<[navbarButtonsGroupButtons, navbarButtonsGroupButtons, navbarButtonsGroupButtons]>({
             title: "Navigation Bar Mode",
-            subtitle: "Choose between gesture navigation or button navigation",
-            model: new Gtk.StringList({
-                strings: items.map(i => i[0]),
-            }),
-        });
-        navModeRow.set_selected(items.findIndex(i => i[1] === settings.navigationBar.mode.get()))
-        navModeRow.connect('notify::selected-item', () => settings.navigationBar.mode.set(items[navModeRow.selected][1] as any))
-        navGroup.add(navModeRow);
-
-        // Reserve Space for Navigation Bar - Toggle Switch
-        const reserveSpaceRow = new Adw.SwitchRow({
-            title: "Reserve Space for Navigation Bar",
-            subtitle: "Keep space available for the navigation bar to avoid overlaying content. Ignored if using button navigation.",
-        });
-        navGroup.add(reserveSpaceRow);
-        settings.navigationBar.gesturesReserveSpace.bind(reserveSpaceRow, 'active');
+            subtitle: "Choose which kind of navigation experience you prefer",
+            setting: 
+        }));
+        */
     }
 }

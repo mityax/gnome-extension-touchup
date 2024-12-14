@@ -2,7 +2,7 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import BaseNavigationBar from "./widgets/baseNavigationBar";
 import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
-import {settings} from "$src/features/preferences/settings";
+import {settings} from "$src/settings.ts";
 import Clutter from "gi://Clutter";
 import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";

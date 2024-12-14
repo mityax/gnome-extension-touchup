@@ -27,9 +27,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
 
-        this.onVisibilityChanged.connect('changed', (value) => this.styleClassUpdateInterval.setActive(value));
+        this.onVisibilityChanged.connect('changed', () => this._updateStyleClassIntervalActivity());
         this.onReserveSpaceChanged.connect('changed', (reserveSpace) => {
-            this.styleClassUpdateInterval.setActive(!reserveSpace);
+            this._updateStyleClassIntervalActivity();
             void this.updateStyleClasses();
         });
     }
@@ -62,6 +62,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
                 this.styleClassUpdateInterval.scheduleOnce(250);
             }
             this.styleClassUpdateInterval.setInterval(newInterval);
+        } else {
+            void this.updateStyleClasses();
         }
     }
 
@@ -326,6 +328,10 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             log("Exception during `findBestPillBrightness` (falling back to 'dark' brightness): ", e);
             return 'dark';
         }
+    }
+
+    private _updateStyleClassIntervalActivity() {
+        this.styleClassUpdateInterval.setActive(this.isVisible && !this.reserveSpace);
     }
 
     destroy() {

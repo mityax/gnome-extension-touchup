@@ -11,7 +11,7 @@ import {log} from "$src/utils/logging";
  * Class that handles commons for all navigation bar types
  */
 export default abstract class BaseNavigationBar<A extends St.Widget> {
-    private readonly windowPositionTracker: WindowPositionTracker;
+    private windowPositionTracker?: WindowPositionTracker;
     declare private _monitor: Monitor;
     private _visible: boolean = false;
     private _reserveSpace: boolean = true;
@@ -25,24 +25,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         this._reserveSpace = reserveSpace;
 
         this.actor = this._buildActor();
-
-        this.windowPositionTracker = new WindowPositionTracker(windows => {
-            // Check if at least one window is near enough to the navigation bar:
-            const top = this.actor.get_transformed_position()[1];
-            const isWindowNear = windows.some((metaWindow: Meta.Window) => {
-                const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
-                return windowBottom >= top;
-            });
-
-            if (this.actor.realized) {
-                this.onIsWindowNearChanged(isWindowNear);
-            } else {
-                let id = this.actor.connect('realize', () => {
-                    this.onIsWindowNearChanged(isWindowNear);
-                    this.actor.disconnect(id);
-                });
-            }
-        });
     }
 
     /**
@@ -71,11 +53,13 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         this._visible = true;
         this.onVisibilityChanged.emit(true);
         this.reallocate();
+        this._createWindowPositionTracker();
     }
 
     hide() {
         if (!this.isVisible) return;
 
+        this.windowPositionTracker?.destroy();
         this._removeActor();
         this._visible = false;
         this.onVisibilityChanged.emit(false);
@@ -101,11 +85,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         this.actor.set_width(this.monitor.width);
     }
 
-    destroy() {
-        this.actor.destroy();
-        this.windowPositionTracker.destroy();
-    }
-
     private _addActor() {
         Main.layoutManager.addTopChrome(this.actor, {
             affectsStruts: this.reserveSpace,
@@ -118,12 +97,26 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         Main.layoutManager.removeChrome(this.actor);
     }
 
-    private _ensureActorIsOnTop() {
-        this._removeActor();
-        this._addActor();
-    }
-
     protected abstract onIsWindowNearChanged(isWindowNear: boolean): void;
 
     protected onBeforeReallocate(): void {}
+
+    private _createWindowPositionTracker() {
+        this.windowPositionTracker = new WindowPositionTracker(windows => {
+            if (this.actor.realized) {
+                // Check if at least one window is near enough to the navigation bar:
+                const top = this.actor.get_transformed_position()[1];
+                const isWindowNear = windows.some((metaWindow: Meta.Window) => {
+                    const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
+                    return windowBottom >= top;
+                });
+                this.onIsWindowNearChanged(isWindowNear);
+            }
+        });
+    }
+
+    destroy() {
+        this.actor.destroy();
+        this.windowPositionTracker?.destroy();
+    }
 }
