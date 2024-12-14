@@ -102,6 +102,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     protected onBeforeReallocate(): void {}
 
     private _createWindowPositionTracker() {
+        let lastIsWindowNear = false;
         this.windowPositionTracker = new WindowPositionTracker(windows => {
             if (this.actor.realized) {
                 // Check if at least one window is near enough to the navigation bar:
@@ -110,7 +111,10 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
                     const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
                     return windowBottom >= top;
                 });
-                this.onIsWindowNearChanged(isWindowNear);
+                if (isWindowNear !== lastIsWindowNear) {
+                    this.onIsWindowNearChanged(isWindowNear);
+                }
+                lastIsWindowNear = isWindowNear;
             }
         });
     }
