@@ -1,6 +1,6 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
-import {filterObject} from "$src/utils/utils";
+import {delay, filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
 import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
 
@@ -24,8 +24,8 @@ export namespace Widgets {
         onCreated?: (widget: T) => void,
     } & Partial<SignalPropsForWidget<T>>;
 
-    function filterConfig<T extends St.Widget>(config: UiProps<T>): any {
-        const filterOut = [
+    function filterConfig<T extends St.Widget>(config: UiProps<T>, filterOut?: (string | RegExp)[]): any {
+        filterOut ??= [
             'ref', 'children', 'child', 'onCreated', /^(on|notify)[A-Z]/,
         ];
         return filterObject(
@@ -59,9 +59,42 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.Button.ConstructorProps> & UiProps<Button>) {
+        constructor(config: Partial<St.Button.ConstructorProps> & UiProps<Button> & {onLongPress?: (source: Button) => void}) {
             super(filterConfig(config));
-            initWidget(this, config)
+            initWidget(this, filterConfig(config, config.onLongPress ? ['onLongPress', 'onClicked'] : []))
+            if (config.onLongPress) {
+                this._setupLongPress(config.onLongPress, config.onClicked as any);
+            }
+        }
+
+        // A simple long press implementation, that is triggered after holding the button for 500ms
+        // and cancelled when moving up earlier or when moving the finger too much. Only pays attention
+        // to touch events.
+        private _setupLongPress(onLongPress: (source: Button) => void, onClicked?: (source: Button) => void) {
+            let downAt: {t: number, x: number, y: number} | undefined;
+
+            this.connect('touch-event', (_, evt: Clutter.Event) => {
+                if (evt.type() == Clutter.EventType.TOUCH_BEGIN) {
+                    let thisDownAt = downAt = {t: evt.get_time(), x: evt.get_coords()[0], y: evt.get_coords()[1]};
+                    delay(500).then(() => {
+                        if (downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
+                            // Long press detected!
+                            onLongPress(this);
+                            downAt = undefined;
+                        }
+                    })
+                } else if (evt.type() == Clutter.EventType.TOUCH_END && downAt) {
+                    if (evt.get_time() - downAt.t < 500) onClicked?.(this);  // Normal click detected!
+                    downAt = undefined;
+                } else if (evt.type() == Clutter.EventType.TOUCH_CANCEL) {
+                    downAt = undefined;  // Click/long press cancelled
+                } else if (evt.type() == Clutter.EventType.TOUCH_UPDATE && downAt) {
+                    let dist = Math.sqrt((evt.get_coords()[0] - downAt.x)**2 + (evt.get_coords()[1] - downAt.y)**2)
+                    if (dist > 15 * St.ThemeContext.get_for_stage(global.stage as any).scaleFactor) {
+                        downAt = undefined;  // Long press cancelled, finger moved too much
+                    }
+                }
+            });
         }
     }
 

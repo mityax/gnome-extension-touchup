@@ -7,8 +7,8 @@ import Clutter from "gi://Clutter";
 import Meta from "gi://Meta";
 import {settings} from "$src/settings.ts";
 import {debugLog, log} from "$src/utils/logging.ts";
+import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils.ts";
 import ActorAlign = Clutter.ActorAlign;
-import MotionDirection = Meta.MotionDirection;
 
 
 export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout> {
@@ -46,19 +46,6 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         });
     }
 
-    private moveToWorkspace(direction: 'left' | 'right') {
-        const wm = global.workspaceManager;
-
-        if (direction == 'left' && wm.get_active_workspace_index() == 0) return;
-        if (direction == 'right' && wm.get_active_workspace_index() == wm.get_n_workspaces() - 1) return;
-
-        const ws = wm.get_active_workspace().get_neighbor(direction == 'left' ? MotionDirection.LEFT : MotionDirection.RIGHT);
-
-        if (!ws.active) {
-            ws.activate(global.get_current_time());
-        }
-    }
-
     protected onIsWindowNearChanged(isWindowNear: boolean): void {
         if (isWindowNear && !Main.overview.visible) {
             // Make navbar opaque (black or white, based on shell theme brightness):
@@ -92,14 +79,14 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                     name: 'gnometouch-navbar__workspace-previous-button',
                     styleClass: 'gnometouch-navbar__button',
                     iconName: 'go-previous-symbolic',
-                    onClicked: () => this.moveToWorkspace('left'),
+                    onClicked: () => moveToWorkspace('left'),
                 });
             case "workspace-next":
                 return new Widgets.Button({
                     name: 'gnometouch-navbar__workspace-next-button',
                     styleClass: 'gnometouch-navbar__button',
                     iconName: 'go-next-symbolic',
-                    onClicked: () => this.moveToWorkspace('right'),
+                    onClicked: () => moveToWorkspace('right'),
                 });
             case "overview":
                 return new Widgets.Button({
@@ -122,7 +109,19 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                     iconName: 'media-playback-start-symbolic',  // TODO: replace with a proper icon
                     scaleX: -1,  // flip the icon (ugly)
                     pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-                    onClicked: () => this._goBack(),
+                    onClicked: () => {
+                        debugLog("Clicked!");
+                        navigateBack({
+                            virtualKeyboardDevice: this._virtualKeyboardDevice,
+                        });
+                    },
+                    onLongPress: () => {
+                        debugLog("Long pressed!");
+                        navigateBack({
+                            virtualKeyboardDevice: this._virtualKeyboardDevice,
+                            greedyMode: true,
+                        });
+                    },
                 });
             case "spacer":
                 return new Widgets.Bin({
@@ -131,39 +130,6 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
             default:
                 log(`Unknown button for ButtonNavigationBar: ${buttonType}`);
                 return new St.Bin({});  // fallback to not crash on invalid settings
-        }
-    }
-
-    private _goBack() {
-        // Close OSK:
-        if (Main.keyboard.visible) {
-            Main.keyboard._keyboard
-                ? Main.keyboard._keyboard.close(true)  // close with immediate = true
-                : Main.keyboard.close()
-
-        // Close apps overview:
-        } else if (Main.overview.dash.showAppsButton.checked) {
-            Main.overview.dash.showAppsButton.checked = false;
-
-        // Close overview:
-        } else if (Main.overview.visible) {
-            Main.overview.hide();
-
-        // Invoke Clutter.KEY_Back:
-        } else {
-            // Ideas: invoke "Alt + Left" keystroke (see: https://askubuntu.com/a/422448)
-            //  or potentially "Esc", depending on context/active window/window type
-
-            // TODO:
-            //  - extract as a reusable function for other components
-            //  - unfullscreen window if there's a fullscreen window focused
-            //  - consider closing modal dialogs, if present  (maybe invoke escape key?)
-            //  - consider closing current window on double or long tap
-
-            this._virtualKeyboardDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
-                Clutter.KEY_Back, Clutter.KeyState.PRESSED);
-            this._virtualKeyboardDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
-                Clutter.KEY_Back, Clutter.KeyState.RELEASED);
         }
     }
 
