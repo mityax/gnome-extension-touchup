@@ -62,8 +62,8 @@ await esbuild.build({
             schemaPath: '/org/gnome/shell/extensions/gnometouch/'
         }),
 
-        // Ensure that no disallowed modules are imported in either extension.js or prefs.js
-        // as per the review guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
+        // Ensure that no disallowed modules are imported in either extension.js or prefs.js as per the review
+        // guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
         disallowImportsPlugin({
             outputFileName: 'extension.js',
             blacklist: ['gi://Gdk', 'gi://Gtk', 'gi://Adw'],
