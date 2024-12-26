@@ -10,7 +10,6 @@ import {DevelopmentTools} from "$src/features/developmentTools/developmentTools"
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {initSettings} from "$src/features/preferences/backend";
-import {kDebugMode} from "$src/config";
 import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
 
 
@@ -36,9 +35,7 @@ export default class GnomeTouchExtension extends Extension {
         // @ts-ignore
         initSettings(this.getSettings());
 
-        if (kDebugMode) {
-            this.developmentTools = new DevelopmentTools(this);
-        }
+        DEBUG: this.developmentTools = new DevelopmentTools(this);
 
         this.navigationBar = new NavigationBarFeature();
         this.oskKeyPopups = new OskKeyPopupsFeature();
@@ -66,7 +63,9 @@ export default class GnomeTouchExtension extends Extension {
     }
 
     syncUI() {
-        const touchMode = Clutter.get_default_backend().get_default_seat().touchMode || (kDebugMode && this.developmentTools?.enforceTouchMode == true);
+        let touchMode = Clutter.get_default_backend().get_default_seat().touchMode;
+
+        DEBUG: if (this.developmentTools?.enforceTouchMode) touchMode = true;
 
         if (touchMode) {
             this.navigationBar?.show();

@@ -6,10 +6,12 @@
   "type": "module",
   "main": "dist/extension.js",
   "private": true,
+  "sideEffects": false,
   "scripts": {
     "clear": "rm -rf dist",
     "build": "node esbuild.js",
-    "install": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
+    "build-release": "npm run build -- --release",
+    "install": "npm run build-release && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
     "dev-verbose": "npm run build && dbus-run-session -- $(pwd)/run.sh",
     "dev-tty-verbose": "dbus-run-session $(pwd)/run.sh --tty --build",
     "dev": "npm run dev-verbose  2> >(grep -i -P --color 'gnometouch|Gjs-CRITICAL' 1>&2)",

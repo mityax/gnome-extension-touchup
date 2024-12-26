@@ -1,6 +1,6 @@
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
-import {kDebugMode, logFile} from "$src/config";
+import {logFile} from "$src/config";
 
 
 /**
@@ -42,9 +42,7 @@ export function log(...text: any[]) {
  * Note: This function is **not** optimized for speed (!)
  */
 export function debugLog(...text: any[]) {
-    if (kDebugMode || logFile) {
-        log(...text);
-    }
+    DEBUG: log(...text);
 }
 
 
@@ -95,7 +93,7 @@ export function removeLogCallback(id: number) {
 }
 
 export function assert(condition: boolean, message?: string) {
-    if (!condition && kDebugMode) {
+    DEBUG: if (!condition) {
         throw message ?? "Assertion error";
     }
 }

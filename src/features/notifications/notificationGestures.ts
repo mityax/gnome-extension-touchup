@@ -31,7 +31,7 @@ export class NotificationGestures {
         // New message added to message list section in popup:
         PatchManager.appendToMethod(MessageListSection.prototype, 'addMessageAtIndex',
             function(this: MessageListSection, message: NotificationMessage, idx: number, animate: boolean) {
-                debugLog("New message in MessageListSection");
+                DEBUG: log("New message in MessageListSection");
                 self.patchNotification(message, false);
             },
             { scope: NotificationGestures.PATCH_SCOPE },

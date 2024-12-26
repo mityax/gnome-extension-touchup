@@ -25,6 +25,10 @@ const metadata = JSON.parse(fs.readFileSync(join(rootDir, "src/metadata.json")).
 // Clear up/remove previous build:
 if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });
 
+const DEBUG = !process.argv.includes('--release');
+
+console.log(`Building Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+
 
 await esbuild.build({
     sourceRoot: rootDir,
@@ -35,6 +39,8 @@ await esbuild.build({
         "src/sass/stylesheet-light.sass",
         "src/sass/stylesheet-dark.sass",
     ],
+    dropLabels: DEBUG ? [] : ['DEBUG'],
+    pure: DEBUG ? [] : ['debugLog'],
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
