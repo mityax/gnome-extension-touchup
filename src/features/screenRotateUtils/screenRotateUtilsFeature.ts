@@ -50,7 +50,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
                     this.onAccelerometerOrientationChanged(orientation).then();
                 }
             });
-        this.onCleanup(() => Gio.DBus.session.signal_unsubscribe(handlerId));
+        this.onCleanup(() => Gio.DBus.system.signal_unsubscribe(handlerId));
     }
 
     private get isOrientationLockEnabled(): boolean {
