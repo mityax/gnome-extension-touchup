@@ -20,6 +20,7 @@ projectDir="$(dirname "$(readlink -f "$0")")"
 zipFile="$(ls "$projectDir"/dist/*.zip)"
 extensionId="$(basename "$zipFile" .zip)"
 
+
 if [[ -z "$zipFile" ]]; then
   echo "Extension zip file not present in directory $projectDir"
   exit 1
