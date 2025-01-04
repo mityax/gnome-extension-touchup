@@ -25,17 +25,23 @@ if [[ -z "$zipFile" ]]; then
   exit 1
 fi
 
-# Uninstall old version of extension:
-gnome-extensions uninstall "$extensionId" || echo "Note: Failed to uninstall old extension."
+# Remove old version of extension:
+gnome-extensions uninstall "$extensionId"
 
 sleep 0.5s
 
 echo "Starting Gnome Shell..."
 
+export GNOMETOUCH_PROJECT_DIR=$projectDir
+if [[ $* == *--watch* ]]; then
+  export GNOMETOUCH_WATCH_EVENT_URL="http://localhost:9876/"
+  export GNOMETOUCH_BUILD_DIRECTORY="$projectDir/dist/output"
+fi
+
 if [[ $* == *--tty* ]]; then
-  GNOMETOUCH_PROJECT_DIR=$projectDir gnome-shell --wayland &
+  gnome-shell --wayland &
 else
-  GNOMETOUCH_PROJECT_DIR=$projectDir gnome-shell --nested --wayland &
+  gnome-shell --nested --wayland &
 fi
 
 PID=$!
@@ -47,7 +53,6 @@ echo "Installing extension (from $zipFile)..."
 gnome-extensions install -f "$zipFile" && echo "done."
 echo "Enabling extension (via id $extensionId)..."
 gnome-extensions enable "$extensionId" && echo "done."
-gnome-extensions info "$extensionId"
 
 # Monitor extension status until it is running:
 echo "Waiting for the extension to be started..."

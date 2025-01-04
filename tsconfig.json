@@ -17,7 +17,8 @@
     "jsx": "preserve"
   },
   "include": [
-    "src/ambient.d.ts"
+    "src/ambient.d.ts",
+    "@girs/gjs"
   ],
   "files": [
     "src/extension.ts",

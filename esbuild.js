@@ -1,15 +1,15 @@
 import * as esbuild from "esbuild";
-import {exec} from "child_process";
 import GjsPlugin from "esbuild-gjs";
 import copy from "esbuild-plugin-copy";
-import {dirname, join, resolve} from 'path';
+import {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
-import AdmZip from "adm-zip";
 import {sassPlugin} from 'esbuild-sass-plugin'
 import * as fs from "fs";
-import mv from "mv";
 import gsettingsSchemaPlugin from "./build_scripts/generate_settings_schema.js";
 import disallowImportsPlugin from "./build_scripts/disallow_imports.js";
+import move from "./build_scripts/move.js";
+import createZip from "./build_scripts/create_zip.js";
+import compileGSchemas from "./build_scripts/compile_gschemas.js";
 
 
 /**
@@ -27,12 +27,9 @@ if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });
 
 const DEBUG = !process.argv.includes('--release');
 
-console.log(`Building Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
-
-
-await esbuild.build({
+const BUILD_OPTIONS = {
     sourceRoot: rootDir,
-    outdir: 'dist',
+    outdir: 'dist/output',
     entryPoints: [
         "src/extension.ts",
         "src/prefs.ts",
@@ -40,16 +37,23 @@ await esbuild.build({
         "src/sass/stylesheet-dark.sass",
     ],
     dropLabels: DEBUG ? [] : ['DEBUG'],
-    pure: DEBUG ? [] : ['debugLog'],
+    pure: DEBUG ? [] : ['debugLog'],  // FIXME: this is apparently ignored
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
-    treeShaking: true,
+    treeShaking: false,  // tree-shaking appears to wrongly remove the `repr` function from utils/logging.ts in release builds and doesn't add much benefit
     plugins: [
         GjsPlugin({}),
 
+        // Compile sass to css and move it to the root output file:
         sassPlugin({
-            filter: /.*\.sass/
+            filter: /.*\.sass/,
+            embedded: true,
+        }),
+        move({
+            pattern: 'sass/*',
+            to: '.',
+            deleteEmptySourceDirs: true,
         }),
 
         // Copy metadata.json file:
@@ -65,7 +69,11 @@ await esbuild.build({
             inputFile: 'src/settings.ts',
             outputFile: 'schemas/org.gnome.shell.extensions.gnometouch.gschema.xml',
             schemaId: 'org.gnome.shell.extensions.gnometouch',
-            schemaPath: '/org/gnome/shell/extensions/gnometouch/'
+            schemaPath: '/org/gnome/shell/extensions/gnometouch/',
+            validate: true,
+        }),
+        compileGSchemas({
+            schemasDir: 'schemas',
         }),
 
         // Ensure that no disallowed modules are imported in either extension.js or prefs.js as per the review
@@ -78,35 +86,58 @@ await esbuild.build({
             outputFileName: 'prefs.js',
             blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
         }),
+
+        createZip({
+            input: '.',  // relative to output dir
+            zipFilename: `../${metadata.uuid}.zip`,  // relative to output dir
+        }),
     ],
-}).then(async () => {
-    const sassDist = resolve(rootDir, `dist/sass`);
-    for (let fn of fs.readdirSync(sassDist)) {
-        await mv(join(sassDist, fn), resolve(rootDir, `dist/${fn}`), {mkdirp: false}, console.error);
-    }
-    fs.rmSync(sassDist, {recursive: true});
-}).then(async () => {
-    exec(`glib-compile-schemas ${resolve(rootDir, 'dist/schemas/')}`, (error, stdout, stderr) => {
-        if (stderr) {
-            throw Error(`Compiling the schemas failed: ${stderr}`)
-        }
+};
+
+
+async function build() {
+    console.log(`Building Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+
+    await esbuild.build(BUILD_OPTIONS)
+        .then(() => console.log(`✅ Build completed.\n`))
+        .catch(async error => {
+            if (error?.errors?.length > 0) {
+                for (let msg of await esbuild.formatMessages(error.errors, { kind: 'error' })) {
+                    console.error("");
+                    console.error(msg);
+                }
+            }
+
+            console.error("❌ Build failed.");
+        });
+}
+
+async function watch() {
+    console.log(`Serving Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+
+    const ctx = await esbuild.context(BUILD_OPTIONS);
+    await ctx.watch();
+    const serve = await ctx.serve({
+        port: 9876,
+        servedir: BUILD_OPTIONS.outdir,
+        onRequest: args => console.log(`Request ${args.method} ${args.path}: ${args.status}`),
     });
-}).then(async () => {
-    const zipFilename = `${metadata.uuid}.zip`;
-    const zipDist = resolve(rootDir, `dist/${zipFilename}`);
+    console.log(`Serving on http://${serve.host}:${serve.port}`);
 
-    const zip = new AdmZip();
-    await zip.addLocalFolderPromise(resolve(rootDir, "dist"), {});
-    await zip.writeZipPromise(zipDist, {overwrite: true});
+    const onKill = async () => {
+        console.log("Stopping watch mode.")
+        await ctx.dispose();
+    };
 
-    console.log(`✅ Build completed successfully. Zip file: dist/${zipFilename}\n`);
-}).catch(async error => {
-    if (error?.errors?.length > 0) {
-        for (let msg of await esbuild.formatMessages(error.errors, { kind: 'error' })) {
-            console.error("");
-            console.error(msg);
-        }
-    }
+    process.on('SIGINT', onKill);
+    process.on('SIGTERM', onKill);
+    process.on('SIGABRT', onKill);
+    process.on('SIGTSTP', onKill);
+}
 
-    console.error("❌ Build failed.");
-})
+
+if (process.argv.includes("--watch")) {
+    watch();  // note: do NOT use `await` here (see https://stackoverflow.com/a/75784438)
+} else {
+    await build();
+}

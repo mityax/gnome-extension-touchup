@@ -1,23 +1,27 @@
-import {DevelopmentRestartButton} from "$src/features/developmentTools/developmentRestartButton";
-import {PatchManager} from "$src/utils/patchManager";
+import {RestartButton} from "$src/features/developmentTools/restartButton.ts";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/developmentLogDisplay";
+import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay.ts";
 import {Widgets} from "$src/utils/ui/widgets";
-import {debugLog} from "$src/utils/logging";
+import {debugLog, log} from "$src/utils/logging";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import GnomeTouchExtension from "$src/extension";
+import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton.ts";
+import GLib from "gi://GLib";
+import EventSource from "$src/utils/eventSource.ts";
+import {_hotReloadExtension} from "$src/features/developmentTools/utils.ts";
+import ExtensionFeature from "$src/utils/extensionFeature.ts";
+import {CancellablePromise, delay} from "$src/utils/utils.ts";
 
 
-export class DevelopmentTools {
-    static readonly PATCH_SCOPE = Symbol('development-tools');
-
+export class DevelopmentTools extends ExtensionFeature {
     private _enforceTouchMode = false;
     private extension: GnomeTouchExtension;
 
     constructor(extension: GnomeTouchExtension) {
+        super();
         this.extension = extension;
         this.enable();
     }
@@ -40,41 +44,73 @@ export class DevelopmentTools {
                 }
             }),
             new Widgets.Bin({width: 15}),
-            new DevelopmentRestartButton(),
+            new RestartButton(),
+            new Widgets.Bin({width: 15}),
+            new HotReloadButton(),
         ];
-    }
-
-    enable() {
-        PatchManager.patch(() => {
-            const box = new Widgets.Row({
-                yExpand: false,
-                style: css({
-                    border: '1px solid #cbcbcb',
-                    borderRadius: '25px',
-                    padding: '0 10px',
-                    margin: '3px 15px',
-                }),
-                scaleX: 0.8,
-                scaleY: 0.8,
-                pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-                children: this.buildToolbar(),
-            });
-
-            debugLog("Inserting devtools");
-
-            //@ts-ignore
-            Main.panel._rightBox.insert_child_at_index(box, 0);
-
-            return () => box.destroy();
-        }, {scope: DevelopmentTools.PATCH_SCOPE});
-    }
-
-    disable() {
-        PatchManager.disable(DevelopmentTools.PATCH_SCOPE);
     }
 
     get enforceTouchMode(): boolean {
         return this._enforceTouchMode;
     }
+
+    enable() {
+        this._setupDevToolBar();
+        this._setupHotReload();
+    }
+
+    private _setupDevToolBar() {
+        const box = new Widgets.Row({
+            yExpand: false,
+            style: css({
+                border: '1px solid #cbcbcb',
+                borderRadius: '25px',
+                padding: '0 10px',
+                margin: '3px 15px',
+            }),
+            scaleX: 0.8,
+            scaleY: 0.8,
+            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
+            children: this.buildToolbar(),
+        });
+
+        debugLog("Inserting devtools");
+
+        //@ts-ignore
+        Main.panel._rightBox.insert_child_at_index(box, 0);
+
+        this.onCleanup(() => box.destroy());
+    }
+
+    private _setupHotReload() {
+        const watchBaseUrl = GLib.getenv("GNOMETOUCH_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
+        const baseDir = GLib.getenv("GNOMETOUCH_BUILD_DIRECTORY")?.replace(/\/$/, "");
+
+        if (!watchBaseUrl || !baseDir) return () => {};
+
+        debugLog(`Auto-reload enabled; Listening to ${watchBaseUrl}`);
+
+        const source = new EventSource(`${watchBaseUrl}/esbuild`);
+        source.on('change', debounce(() => {
+            _hotReloadExtension({ baseUri: `file://${baseDir}` })
+                .catch((e) => debugLog("Error during auto-hot-reloading  extension: ", e));
+        }, 500));
+        source.start().catch((e) => log("Failed to start listening to SSE events: ", e));
+
+        this.onCleanup(() => source.close());
+    }
 }
+
+
+function debounce<T extends (...args: any[]) => void>(func: T, delay_ms: number): (...args: Parameters<T>) => void {
+    let d: CancellablePromise<boolean> | null = null;
+
+    return (...args: Parameters<T>): void => {
+        d?.cancel();
+        d = delay(delay_ms);
+        d.then(_ => func(...args));
+    };
+}
+
+
 

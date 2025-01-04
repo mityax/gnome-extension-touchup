@@ -58,6 +58,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 color: 'white',
                 padding: '15px',
                 borderRadius: '10px',
+                fontSize: '9pt',
             }),
             constraints: new Clutter.BindConstraint({
                 source: bgManager._container,

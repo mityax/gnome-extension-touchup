@@ -88,7 +88,7 @@ export default class GnomeTouchExtension extends Extension {
         this.notificationGestures?.destroy();
         this.virtualTouchpad?.destroy();
         this.virtualTouchpadOpenButton?.destroy();
-        this.developmentTools?.disable();
+        this.developmentTools?.destroy();
 
         this.navigationBar = undefined;
         this.oskKeyPopups = undefined;
