@@ -56,7 +56,7 @@ export class DevelopmentTools extends ExtensionFeature {
 
     enable() {
         this._setupDevToolBar();
-        this._setupHotReload();
+        this._setupLiveReload();
     }
 
     private _setupDevToolBar() {
@@ -82,7 +82,7 @@ export class DevelopmentTools extends ExtensionFeature {
         this.onCleanup(() => box.destroy());
     }
 
-    private _setupHotReload() {
+    private _setupLiveReload() {
         const watchBaseUrl = GLib.getenv("GNOMETOUCH_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
         const baseDir = GLib.getenv("GNOMETOUCH_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
