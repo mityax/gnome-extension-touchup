@@ -1,7 +1,7 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Soup from "gi://Soup";
-import {debugLog, log} from "./logging";
+import {log} from "./logging";
 
 type EventCallback = (data: string, event: string, id: string | null) => void;
 
@@ -35,7 +35,6 @@ export default class EventSource {
     private stream: Gio.DataInputStream | null = null;
     private isOpen = false;
     private callbacks: Record<string, EventCallback[]> = {};
-    private stream_read_cancellable?: Gio.Cancellable;
 
     constructor(url: string) {
         this.session = new Soup.Session();
@@ -58,7 +57,7 @@ export default class EventSource {
         this.isOpen = true;
 
         const stream = await new Promise<Gio.InputStream>((resolve, reject) => {
-            this.session.send_async(this.message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+            this.session.send_async(this.message, GLib.PRIORITY_DEFAULT, null, (session: Soup.Session, result: Gio.AsyncResult) => {
                 if (session === null) {
                     reject(new Error('Session is null'));
                 } else {
@@ -71,8 +70,6 @@ export default class EventSource {
                 }
             });
         });
-
-        debugLog(`Connected to ${this.uri.to_string()}; Now listening to events.`);
 
         this.stream = new Gio.DataInputStream({ base_stream: stream });
 
@@ -88,9 +85,8 @@ export default class EventSource {
         let buffer = '';
         while (this.isOpen) {
             try {
-                this.stream_read_cancellable = new Gio.Cancellable();
                 const [line, length] = await new Promise<[Uint8Array | null, number]>((resolve, reject) => {
-                    this.stream!.read_line_async(GLib.PRIORITY_DEFAULT, this.stream_read_cancellable, (stream, result) => {
+                    this.stream!.read_line_async(GLib.PRIORITY_DEFAULT, null, (stream, result) => {
                         if (stream === null) {
                             reject(new Error("Stream is null"));
                         } else {
@@ -98,12 +94,13 @@ export default class EventSource {
                                 const line = stream.read_line_finish(result);
                                 resolve(line);
                             } catch (error) {
-                                reject(error);
+                                if (!(error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))) {
+                                    reject(error);
+                                }
                             }
                         }
                     });
                 });
-                this.stream_read_cancellable = undefined;
 
                 if (line === null) {
                     break;  // End of stream
@@ -152,7 +149,6 @@ export default class EventSource {
     }
 
     private dispatchEvent(event: string, data: string, id: string | null) {
-        debugLog(`Received SSE event: ${event} (id: ${id}), data=${data}`);
         const callbacks = this.callbacks[event] || [];
         for (const callback of callbacks) {
             callback(data, event, id);
@@ -176,14 +172,11 @@ export default class EventSource {
 
     close() {
         this.isOpen = false;
-        this.stream_read_cancellable?.cancel();
+        this.session.abort();
 
         if (this.stream) {
-            this.stream.close(null);
             this.stream = null;
         }
-
-        this.session.abort();
     }
 }
 
