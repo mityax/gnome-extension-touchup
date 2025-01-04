@@ -37,7 +37,9 @@ export default class GnomeTouchExtension extends Extension {
         // @ts-ignore
         initSettings(this.getSettings());
 
-        DEBUG: this.developmentTools = new DevelopmentTools(this);
+        DEBUG: if (devMode) {
+            this.developmentTools = new DevelopmentTools(this);
+        }
 
         this.navigationBar = new NavigationBarFeature();
         this.oskKeyPopups = new OskKeyPopupsFeature();

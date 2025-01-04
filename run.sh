@@ -29,8 +29,6 @@ fi
 # Remove old version of extension:
 gnome-extensions uninstall "$extensionId"
 
-sleep 0.5s
-
 echo "Starting Gnome Shell..."
 
 export GNOMETOUCH_PROJECT_DIR=$projectDir
@@ -40,9 +38,17 @@ if [[ $* == *--watch* ]]; then
 fi
 
 if [[ $* == *--tty* ]]; then
-  gnome-shell --wayland &
+  if [[ $* == *--verbose* ]]; then
+    gnome-shell --wayland &
+  else
+    gnome-shell --wayland 2> >(grep -i -P --color 'gnometouch|Gjs-CRITICAL' 1>&2) &
+  fi
 else
-  gnome-shell --nested --wayland &
+  if [[ $* == *--verbose* ]]; then
+    gnome-shell --nested --wayland &
+  else
+    gnome-shell --nested --wayland 2> >(grep -i -P --color 'gnometouch|Gjs-CRITICAL' 1>&2) &
+  fi
 fi
 
 PID=$!
