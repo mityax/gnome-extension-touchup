@@ -2,7 +2,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {delay, findActorBy, UnknownClass} from "$src/utils/utils";
+import {Delay, findActorBy, UnknownClass} from "$src/utils/utils";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import St from "gi://St";
 import {log} from "$src/utils/logging";
@@ -43,14 +43,14 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
             }
             this._gnometouch_boxPointer?.open(BoxPointer.PopupAnimation.FULL);
 
-            delay(2000).then(() => {
+            Delay.ms(2000).then(() => {
                 this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
             });
         });
 
         // Hide the key popup a few ms after a key has been released:
         this.appendToMethod(keyProto, '_release', function (this: UnknownClass, button, commitString) {
-            delay(settings.oskKeyPopups.duration.get()).then(() => {
+            Delay.ms(settings.oskKeyPopups.duration.get()).then(() => {
                 this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
             })
         });

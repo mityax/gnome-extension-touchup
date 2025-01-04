@@ -106,7 +106,7 @@ export async function measureTime(label: string, fn: () => Promise<any> | any) {
  *
  * ### Usage
  * ```typescript
- * const promise = delay(1000, 'resolve').then(result => {
+ * const promise = Delay.ms(1000, 'resolve').then(result => {
  *     console.log(result ? 'Delay ended!' : 'Cancelling delay!');
  * });
  *
@@ -116,30 +116,49 @@ export async function measureTime(label: string, fn: () => Promise<any> | any) {
  * console.log(wasCanceled ? "Delay has been canceled successfully!" : "Too late, delay was already over!");
  * ```
  */
-export function delay(durationMs: number, onCancel: 'throw' | 'resolve' | 'nothing' = 'nothing'): CancellablePromise<boolean> {
-    let timeoutHandle: number | null = null;
-    let resolve: (v: boolean) => void;
-    let reject: () => void;
+export class Delay {
+    private static pendingDelays: CancellablePromise<boolean>[] = [];
 
-    return new CancellablePromise(
-        (res, rej) => {
-            [resolve, reject] = [res, rej];
-            timeoutHandle = GLib.timeout_add(GLib.PRIORITY_DEFAULT, durationMs, () => {
-                timeoutHandle = null;
-                resolve(true);
-                return GLib.SOURCE_REMOVE;
-            });
-        },
-        () => {
-            if (timeoutHandle !== null) {
-                GLib.source_remove(timeoutHandle);
-                if (onCancel === 'throw') reject();
-                else if (onCancel === 'resolve') resolve(false);
-                return true;
+    static ms(durationMs: number, onCancel: 'throw' | 'resolve' | 'nothing' = 'nothing'): CancellablePromise<boolean> {
+        let timeoutHandle: number | null = null;
+        let resolve: (v: boolean) => void;
+        let reject: () => void;
+
+        const promise = new CancellablePromise<boolean>(
+            (res, rej) => {
+                [resolve, reject] = [res, rej];
+                timeoutHandle = GLib.timeout_add(GLib.PRIORITY_DEFAULT, durationMs, () => {
+                    timeoutHandle = null;
+                    Delay.pendingDelays = Delay.pendingDelays.filter(d => d !== promise);
+                    resolve(true);
+                    return GLib.SOURCE_REMOVE;
+                });
+            },
+            () => {
+                if (timeoutHandle !== null) {
+                    GLib.source_remove(timeoutHandle);
+                    Delay.pendingDelays = Delay.pendingDelays.filter(d => d !== promise);
+                    if (onCancel === 'throw') reject();
+                    else if (onCancel === 'resolve') resolve(false);
+                    return true;
+                }
+                return false;
             }
-            return false;
-        }
-    );
+        );
+
+        this.pendingDelays.push(promise);
+
+        return promise;
+    }
+
+    /**
+     * Get a list of all pending delays.
+     *
+     * Only use this if you who know what you're doing.
+     */
+    public static getAllPendingDelays(): CancellablePromise<boolean>[] {
+        return [...this.pendingDelays];
+    }
 }
 
 

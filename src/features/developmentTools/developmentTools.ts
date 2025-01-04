@@ -13,7 +13,7 @@ import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource.ts";
 import {_hotReloadExtension} from "$src/features/developmentTools/utils.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
-import {CancellablePromise, delay} from "$src/utils/utils.ts";
+import {CancellablePromise, Delay} from "$src/utils/utils.ts";
 
 
 export class DevelopmentTools extends ExtensionFeature {
@@ -74,8 +74,6 @@ export class DevelopmentTools extends ExtensionFeature {
             children: this.buildToolbar(),
         });
 
-        debugLog("Inserting devtools");
-
         //@ts-ignore
         Main.panel._rightBox.insert_child_at_index(box, 0);
 
@@ -88,14 +86,14 @@ export class DevelopmentTools extends ExtensionFeature {
 
         if (!watchBaseUrl || !baseDir) return () => {};
 
-        debugLog(`Auto-reload enabled; Listening to ${watchBaseUrl}`);
-
         const source = new EventSource(`${watchBaseUrl}/esbuild`);
         source.on('change', debounce(() => {
             _hotReloadExtension({ baseUri: `file://${baseDir}` })
-                .catch((e) => debugLog("Error during auto-hot-reloading  extension: ", e));
+                .catch((e) => debugLog("Error during auto-hot-reloading extension: ", e));
         }, 500));
-        source.start().catch((e) => log("Failed to start listening to SSE events: ", e));
+        source.start()
+            .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))
+            .catch((e) => log("[Live-reload] Failed to start listening to SSE events: ", e));
 
         this.onCleanup(() => source.close());
     }
@@ -107,7 +105,7 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay_ms: number)
 
     return (...args: Parameters<T>): void => {
         d?.cancel();
-        d = delay(delay_ms);
+        d = Delay.ms(delay_ms);
         d.then(_ => func(...args));
     };
 }

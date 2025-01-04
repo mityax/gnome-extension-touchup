@@ -1,6 +1,6 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
-import {delay, filterObject} from "$src/utils/utils";
+import {Delay, filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
 import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
 
@@ -76,7 +76,7 @@ export namespace Widgets {
             this.connect('touch-event', (_, evt: Clutter.Event) => {
                 if (evt.type() == Clutter.EventType.TOUCH_BEGIN) {
                     let thisDownAt = downAt = {t: evt.get_time(), x: evt.get_coords()[0], y: evt.get_coords()[1]};
-                    delay(500).then(() => {
+                    Delay.ms(500).then(() => {
                         if (downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
                             // Long press detected!
                             onLongPress(this);

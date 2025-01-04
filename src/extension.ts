@@ -11,6 +11,8 @@ import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {initSettings} from "$src/features/preferences/backend";
 import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
+import {Delay} from "$src/utils/utils.ts";
+import {devMode} from "$src/config.ts";
 
 
 export default class GnomeTouchExtension extends Extension {
@@ -81,6 +83,8 @@ export default class GnomeTouchExtension extends Extension {
     }
 
     disable() {
+        debugLog(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
+        Delay.getAllPendingDelays().forEach(d => d.cancel());
         PatchManager.clear();
         this.navigationBar?.destroy();
         this.oskKeyPopups?.destroy();

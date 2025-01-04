@@ -2,9 +2,9 @@ import St from "gi://St";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Widgets} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
-import {clamp, delay} from "$src/utils/utils";
+import {clamp, Delay} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
-import {addLogCallback, debugLog, removeLogCallback} from "$src/utils/logging";
+import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import Stage = Clutter.Stage;
@@ -18,7 +18,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         GObject.registerClass(this);
     }
 
-    private readonly logDisplays: St.Widget[] = [];
+    private logDisplays: St.Widget[] = [];
     private readonly logAddedCallbacks: ((text: string) => void)[] = [];
     private readonly logCallbackId: number;
 
@@ -39,7 +39,6 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     }
 
     private _addLogDisplay(bgManager: any): void {
-        debugLog("Adding log display.");
         const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
         const label = new Widgets.Label({
@@ -73,7 +72,9 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             label.text = (label.text + '\n' + t).slice(-DevelopmentLogDisplayButton.MAX_LENGTH).trimStart();
 
             if (isAtBottom) {
-                delay(10).then(() => a.set_value(a.upper));
+                Delay.ms(10).then(() => {
+                    if (this.logDisplays.includes(display)) a.set_value(a.upper);
+                });
             }
         });
         this.logDisplays.push(display);
@@ -86,8 +87,9 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     }
 
     vfunc_destroy() {
-        this.logDisplays.forEach((d) => d.destroy());
         removeLogCallback(this.logCallbackId);
+        this.logDisplays.forEach((d) => d.destroy());
+        this.logDisplays = [];
         super.destroy();
     }
 }

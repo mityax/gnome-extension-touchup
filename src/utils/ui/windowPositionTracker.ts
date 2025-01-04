@@ -2,7 +2,7 @@ import Meta from 'gi://Meta';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
-import {CancellablePromise, delay} from "$src/utils/utils.ts";
+import {CancellablePromise, Delay} from "$src/utils/utils.ts";
 
 
 export default class WindowPositionTracker {
@@ -77,7 +77,7 @@ export default class WindowPositionTracker {
     }
 
     _updateDelayed() {
-        this._updateDelay = delay(100).then(() => {
+        this._updateDelay = Delay.ms(100).then(() => {
             this._update();
         });
     }

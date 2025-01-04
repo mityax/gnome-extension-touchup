@@ -7,7 +7,7 @@ import {
     setMonitorTransform,
 } from "$src/features/screenRotateUtils/monitorDBusUtils.ts";
 import {Widgets} from "$src/utils/ui/widgets.ts";
-import {clamp, delay} from "$src/utils/utils.ts";
+import {clamp, Delay} from "$src/utils/utils.ts";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
@@ -120,7 +120,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
 
         // Rotate/wiggle animation:
         for (let i = 0; i < 3; i++) {
-            delay(700 + 2000 * i).then(() => {
+            Delay.ms(700 + 2000 * i).then(() => {
                 // @ts-ignore
                 btn?.ease({
                     rotationAngleZ: btn.rotationAngleZ - 90,
@@ -131,7 +131,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         }
 
         // Animate out and destroy:
-        delay(7000).then(() => {
+        Delay.ms(7000).then(() => {
             if (btn === this.floatingButton.current) {  // Check if btn is still the current button, to not destroy another one
                 this.removeFloatingRotateButton({animate: true});
             }
