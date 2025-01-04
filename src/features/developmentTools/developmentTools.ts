@@ -13,7 +13,7 @@ import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource.ts";
 import {_hotReloadExtension} from "$src/features/developmentTools/utils.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
-import {CancellablePromise, Delay} from "$src/utils/utils.ts";
+import {CancellablePromise, Delay} from "$src/utils/delay.ts";
 
 
 export class DevelopmentTools extends ExtensionFeature {

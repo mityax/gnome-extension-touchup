@@ -2,6 +2,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Meta from "gi://Meta";
 import Clutter from "gi://Clutter";
 import Shell from "gi://Shell";
+import {debugLog} from "$src/utils/logging.ts";
 
 
 /**
@@ -37,6 +38,13 @@ export function navigateBack(props: {virtualKeyboardDevice?: Clutter.VirtualInpu
 
 
     const focusWindow = global.display.focus_window;
+    debugLog("Window info: ", focusWindow.get_title(), focusWindow.get_window_type(), focusWindow.get_client_type(),
+        focusWindow.get_layer(), focusWindow.get_role(), focusWindow.get_mutter_hints(), focusWindow.get_compositor_private(),
+        focusWindow.has_attached_dialogs());
+    const focusApp = Shell.WindowTracker.get_default().focusApp;
+    debugLog("FocusApp info: ", focusApp.get_windows(), focusApp.get_state(), focusApp.get_description(),
+        focusApp.get_windows()[0].has_attached_dialogs(), focusApp.get_windows().map(w => w.get_window_type()),
+        focusApp.get_windows().map(w => w.get_role()), focusApp.get_windows().map(w => w.get_layer()));
 
     // Unfullscreen the focused window
     if (focusWindow?.is_fullscreen()) {
@@ -53,12 +61,14 @@ export function navigateBack(props: {virtualKeyboardDevice?: Clutter.VirtualInpu
             || focusWindow.get_window_type() == Meta.WindowType.POPUP_MENU
             || focusWindow.get_window_type() == Meta.WindowType.COMBO
             || focusWindow.get_window_type() == Meta.WindowType.DND) {
-            focusWindow.emit("close");
+            // FIXME: both of these approaches don't work:
+            // focusWindow.emit("close");
+            // focusWindow.kill();
             return true;
         }
         if (props.greedyMode && focusWindow.get_window_type() == Meta.WindowType.NORMAL) {
-            const windowTracker = Shell.WindowTracker.get_default().focusApp;
-            windowTracker.request_quit();
+            const focusApp = Shell.WindowTracker.get_default().focusApp;
+            focusApp.request_quit();
             return true;
         }
     }

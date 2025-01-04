@@ -2,12 +2,13 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {Delay, findActorBy, UnknownClass} from "$src/utils/utils";
+import {findActorBy, UnknownClass} from "$src/utils/utils";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import St from "gi://St";
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings.ts";
+import {Delay} from "$src/utils/delay.ts";
 
 
 export default class OskKeyPopupsFeature extends ExtensionFeature {

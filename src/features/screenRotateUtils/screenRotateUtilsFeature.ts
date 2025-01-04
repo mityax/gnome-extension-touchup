@@ -7,12 +7,13 @@ import {
     setMonitorTransform,
 } from "$src/features/screenRotateUtils/monitorDBusUtils.ts";
 import {Widgets} from "$src/utils/ui/widgets.ts";
-import {clamp, Delay} from "$src/utils/utils.ts";
+import {clamp} from "$src/utils/utils.ts";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
 import {debugLog} from "$src/utils/logging.ts";
 import Mtk from "gi://Mtk";
+import {Delay} from "$src/utils/delay.ts";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';

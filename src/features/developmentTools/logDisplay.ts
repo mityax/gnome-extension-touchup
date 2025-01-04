@@ -2,11 +2,12 @@ import St from "gi://St";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Widgets} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
-import {clamp, Delay} from "$src/utils/utils";
+import {clamp} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
+import {Delay} from "$src/utils/delay.ts";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
 

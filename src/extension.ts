@@ -11,7 +11,7 @@ import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {initSettings} from "$src/features/preferences/backend";
 import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
-import {Delay} from "$src/utils/utils.ts";
+import {Delay} from "$src/utils/delay.ts";
 import {devMode} from "$src/config.ts";
 
 

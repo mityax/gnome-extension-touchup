@@ -1,8 +1,9 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
-import {Delay, filterObject} from "$src/utils/utils";
+import {filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
 import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
+import {Delay} from "$src/utils/delay.ts";
 
 
 export namespace Widgets {
