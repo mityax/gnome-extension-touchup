@@ -57,12 +57,12 @@ export default class EventSource {
         this.isOpen = true;
 
         const stream = await new Promise<Gio.InputStream>((resolve, reject) => {
-            this.session.send_async(this.message, GLib.PRIORITY_DEFAULT, null, (session: Soup.Session, result: Gio.AsyncResult) => {
+            this.session.send_async(this.message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
                 if (session === null) {
                     reject(new Error('Session is null'));
                 } else {
                     try {
-                        const inputStream = session.send_finish(result);
+                        const inputStream = session.send_finish(result) as Gio.InputStream;
                         resolve(inputStream);
                     } catch (error) {
                         reject(error);

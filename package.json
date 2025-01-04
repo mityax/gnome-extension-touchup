@@ -10,9 +10,9 @@
   "scripts": {
     "clear": "rm -rf dist",
     "build": "node esbuild.js",
-    "build:release": "npm run build -- --release",
-    "install": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
-    "install:release": "npm run build:release && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
+    "build:release": "npm run lint && npm run build -- --release",
+    "enable": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
+    "enable:release": "npm run lint && npm run build:release && gnome-extensions install -f ./dist/gnometouch@mityax.github.com.zip && gnome-extensions enable gnometouch@mityax.github.com",
     "dev": "dbus-run-session -- $(pwd)/run.sh --build",
     "dev:verbose": "dbus-run-session -- $(pwd)/run.sh --build --verbose",
     "watch": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch; pkill --signal SIGINT -P $pid",
@@ -21,7 +21,8 @@
     "dev-tty:verbose": "dbus-run-session $(pwd)/run.sh --tty --build --vebose",
     "watch-tty": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty; pkill --signal SIGINT -P $pid",
     "watch-tty:verbose": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty --verbose; pkill --signal SIGINT -P $pid",
-    "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE"
+    "logs": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE",
+    "lint": "tsc --noEmit"
   },
   "devDependencies": {
     "@girs/adw-1": "^1.6.0-4.0.0-beta.16",
