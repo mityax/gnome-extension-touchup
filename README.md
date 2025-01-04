@@ -31,6 +31,6 @@ experience for devices with a touchscreen.
 ## Contributing
 
 Should you want to contribute, which I'd greatly appreciate, please first
-have a look at [CONTRIBUTING.md](./CONTRIBUTING.md), especially if you
-plan to contribute more than just a simple bugfix or typo.
+have a look at [CONTRIBUTING.md](./CONTRIBUTING.md). This is especially
+important if you plan to contribute more than just a simple typo- or bugfix.
 

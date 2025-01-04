@@ -81,12 +81,12 @@ documentation in the source code for each utility.
     ```
  - **Intervals** – the `IntervalRunner` class provides a very friendly
     and easy interface to have functions ran repeatedly, at a dynamic
-    interval and stop or pause when needed. Also check out `IdleRunner`
+    interval and to stop or pause when needed. Also check out `IdleRunner`
     which does the same but calls the function as often as possible when
     the shell is idle.
  - **ExtensionFeature** – subclass this class when developing a new,
     independent feature for the extension. It provides some utilities 
-    for patching parts of gnome shell and simplify cleanup upon extension
+    for patching parts of gnome shell and to simplify cleanup upon extension
     disabling. Take a look at the existing features to see how it is used.
  - **Widgets** – the `Widgets` namespace provides subclasses for most 
     `St.Widget`s, that offer a way easier, briefer and more elegant way
@@ -116,6 +116,18 @@ documentation in the source code for each utility.
    properties and events are available for each widget. If a widget
    you'd like to use is missing, it is dead simple to add it – have a 
    look at the existing widgets to see how.
+ - **Debug-only code** – if you, for whatever reason, want or need to
+   write code that is not included in release builds of the extension,
+   prefix it with the `DEBUG` label, like this:
+   ```js
+   // This is included in release builds:
+   log("Hello World!");
+   
+   // And this is stripped out of releases:
+   DEBUG: for (let i=0; i<10; i++) {
+     someDebugOnlyAction(i);
+   }
+   ```
  - **Others** – there are many more utils in `src/utils` (especially 
    in `utils.ts`), which may be helpful for you.
 
