@@ -69,13 +69,20 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         bgManager._container.add_child(display);
 
         this.logAddedCallbacks.push((t) => {
+            // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
             const a = display.get_vadjustment();
-            const isAtBottom = a.value + a.pageSize >= a.upper - 25 * scaleFactor;
-            console.log(`[gnometouch]: ${a.value} + ${a.pageSize} >= ${a.upper} - 25 * ${scaleFactor}`);
+            if (a.value + a.pageSize >= a.upper - 25 * scaleFactor) {
+                Delay.ms(25).then(() => {
+                    if (this.logDisplays.includes(display)) a.set_value(a.upper);
+                });
+            }
 
+            // Remove first log message if there are too many:
             if ((col.current?.get_n_children() ?? 0) > DevelopmentLogDisplayButton.MAX_LENGTH) {
                 col.current!.remove_child(col.current!.get_child_at_index(0)!);
             }
+
+            // Add the log message:
             col.current?.add_child(new Widgets.Label({
                 text: t,
                 onCreated: (l) => {
@@ -95,12 +102,6 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                     fontSize: '9pt',
                 })
             }));
-
-            if (isAtBottom) {
-                Delay.ms(10).then(() => {
-                    if (this.logDisplays.includes(display)) a.set_value(a.upper);
-                });
-            }
         });
         this.logDisplays.push(display);
     }
