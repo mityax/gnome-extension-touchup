@@ -39,12 +39,14 @@ export function _restartShell() {
  * Thus, GTypeNames will no longer match the class names – this should not have any consequences relevant to this
  * extension, but it is good to be aware of this, still.
  */
-export async function _hotReloadExtension(config?: { baseUri?: string }) {
+export async function _hotReloadExtension(config?: { baseUri?: string, stylesheetsOnly?: boolean }) {
     assert(!config?.baseUri || config.baseUri.startsWith('file://'), "Only file:// uris are supported as baseUri.");
 
     const reloadId = `hr${Date.now().toString()}`;
 
-    debugLog(`Hot-restarting extension (reload id: ${reloadId})…`);
+    debugLog(config?.stylesheetsOnly
+        ? `Hot-Reloading extension stylesheets (reload id: ${reloadId})...`
+        : `Hot-restarting extension (reload id: ${reloadId})…`);
 
     const extObj = Main.extensionManager.lookup(GnomeTouchExtension.instance!.uuid!);
 
@@ -89,7 +91,16 @@ export async function _hotReloadExtension(config?: { baseUri?: string }) {
     }
 
     try {
-        await Main.extensionManager.reloadExtension(extObj);
+        if (config?.stylesheetsOnly) {
+            // Reload stylesheets only:
+            // @ts-ignore
+            Main.extensionManager._unloadExtensionStylesheet(extObj);
+            // @ts-ignore
+            Main.extensionManager._loadExtensionStylesheet(extObj);
+        } else {
+            // Reload code and stylesheets:
+            await Main.extensionManager.reloadExtension(extObj);
+        }
     } finally {
         // Undo all patches:
         extObj.dir.get_child = origGetChildFn;

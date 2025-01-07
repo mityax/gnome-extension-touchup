@@ -87,9 +87,14 @@ export class DevelopmentTools extends ExtensionFeature {
         if (!watchBaseUrl || !baseDir) return () => {};
 
         const source = new EventSource(`${watchBaseUrl}/esbuild`);
-        source.on('change', debounce(() => {
-            _hotReloadExtension({ baseUri: `file://${baseDir}` })
-                .catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
+        source.on('change', debounce((data) => {
+            _hotReloadExtension({
+                baseUri: `file://${baseDir}`,
+                // Data is a JSON-string containing info about changed files, e.g.:
+                //      {"added":[],"removed":[],"updated":["/extension.js"]}
+                // We're lazy here and just check whether '.js"' is present in that string:
+                stylesheetsOnly: !/\.js"/.test(data),
+            }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
         }, 500));
         source.start()
             .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))
