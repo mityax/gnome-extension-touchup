@@ -45,7 +45,7 @@ export async function _hotReloadExtension(config?: { baseUri?: string, styleshee
     const reloadId = `hr${Date.now().toString()}`;
 
     debugLog(config?.stylesheetsOnly
-        ? `Hot-Reloading extension stylesheets (reload id: ${reloadId})...`
+        ? `Hot-Reloading extension stylesheets (reload id: ${reloadId})…`
         : `Hot-restarting extension (reload id: ${reloadId})…`);
 
     const extObj = Main.extensionManager.lookup(GnomeTouchExtension.instance!.uuid!);
