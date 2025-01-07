@@ -58,8 +58,10 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     hide() {
         if (!this.isVisible) return;
 
-        this.windowPositionTracker?.destroy();
         this._removeActor();
+        this.windowPositionTracker?.destroy();
+        this.windowPositionTracker = undefined;
+
         this._visible = false;
         this.onVisibilityChanged.emit(false);
     }
