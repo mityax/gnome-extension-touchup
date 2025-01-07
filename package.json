@@ -21,7 +21,8 @@
     "dev-tty:verbose": "dbus-run-session $(pwd)/run.sh --tty --build --vebose",
     "watch-tty": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty; pkill --signal SIGINT -P $pid",
     "watch-tty:verbose": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty --verbose; pkill --signal SIGINT -P $pid",
-    "logs": "journalctl -f | grep gnometouch",
+    "logs": "journalctl -f -n 20 | grep gnometouch",
+    "logs:file": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {

@@ -92,11 +92,11 @@ documentation in the source code for each utility.
     `St.Widget`s, that offer a way easier, briefer and more elegant way
     to create complex user interfaces:
     ```js
-    const myWidget = Widgets.Column({
+    const myWidget = new Widgets.Column({
       children: [
-        Widgets.Label("Hello World"),
-        Widgets.Bin({height: 10}),   // some spacing
-        Widgets.Button({
+        new Widgets.Label("Hello World"),
+        new Widgets.Bin({height: 10}),   // some spacing
+        new Widgets.Button({
           label: "Clicke me please!",
           style: css({
             color: 'red',
@@ -104,7 +104,7 @@ documentation in the source code for each utility.
           }),
           onClick: () => debugLog("I've been clicked!")
         }),
-        Widgets.Icon({
+        new Widgets.Icon({
           iconName: 'emblem-ok-symbolic',
           onCreated: (icon) => icon.ease({ scale: 1.5 })
         }),

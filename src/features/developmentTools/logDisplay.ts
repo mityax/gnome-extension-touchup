@@ -8,12 +8,15 @@ import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import {Delay} from "$src/utils/delay.ts";
+import Pango from "@girs/pango-1.0";
+import Cogl from "gi://Cogl";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
+import Ref = Widgets.Ref;
 
 
 export class DevelopmentLogDisplayButton extends DevToolToggleButton {
-    static readonly MAX_LENGTH = 25_000;
+    static readonly MAX_LENGTH = 500;
 
     static {
         GObject.registerClass(this);
@@ -42,13 +45,11 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     private _addLogDisplay(bgManager: any): void {
         const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
-        const label = new Widgets.Label({
-            text: '',
-            style: 'font-family: monospace;',
-        });
-        //label.clutterText.ellipsize = Pango.EllipsizeMode.NONE;  // leads to bugs with St.ScrollView :/
+        const col = new Ref<Widgets.Column>();
         const display = new Widgets.ScrollView({
-            child: label,
+            child: new Widgets.Column({
+                ref: col,
+            }),
             width: clamp(global.screenWidth * 0.5, 250 * scaleFactor, 900 * scaleFactor),
             height: clamp(global.screenHeight * 0.5, 250 * scaleFactor, 900 * scaleFactor),
             hscrollbarPolicy: PolicyType.AUTOMATIC,
@@ -58,7 +59,6 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 color: 'white',
                 padding: '15px',
                 borderRadius: '10px',
-                fontSize: '9pt',
             }),
             constraints: new Clutter.BindConstraint({
                 source: bgManager._container,
@@ -67,10 +67,34 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             }),
         });
         bgManager._container.add_child(display);
+
         this.logAddedCallbacks.push((t) => {
             const a = display.get_vadjustment();
             const isAtBottom = a.value + a.pageSize >= a.upper - 25 * scaleFactor;
-            label.text = (label.text + '\n' + t).slice(-DevelopmentLogDisplayButton.MAX_LENGTH).trimStart();
+            console.log(`[gnometouch]: ${a.value} + ${a.pageSize} >= ${a.upper} - 25 * ${scaleFactor}`);
+
+            if ((col.current?.get_n_children() ?? 0) > DevelopmentLogDisplayButton.MAX_LENGTH) {
+                col.current!.remove_child(col.current!.get_child_at_index(0)!);
+            }
+            col.current?.add_child(new Widgets.Label({
+                text: t,
+                onCreated: (l) => {
+                    l.clutterText.lineWrap = true;
+                    l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
+                    l.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
+                    l.clutterText.selectable = true;
+                    l.clutterText.reactive = true;
+                    l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
+                },
+                style: css({
+                    backgroundColor: "rgba(255,255,255,0.2)",
+                    borderRadius: "7px",
+                    padding: "7px",
+                    marginTop: "7px",
+                    fontFamily: "monospace",
+                    fontSize: '9pt',
+                })
+            }));
 
             if (isAtBottom) {
                 Delay.ms(10).then(() => {

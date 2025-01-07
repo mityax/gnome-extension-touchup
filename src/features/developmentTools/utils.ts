@@ -108,7 +108,7 @@ export async function _rebuildExtension(showDialogOnError: boolean = true) {
         });
         debugLog("Rebuilding extension, cwd: ", PROJECT_DIR);
         launcher.set_cwd(PROJECT_DIR!);
-        const proc = launcher.spawnv(['npm', 'run', 'install']);
+        const proc = launcher.spawnv(['npm', 'run', 'enable']);
         // @ts-ignore
         const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 
