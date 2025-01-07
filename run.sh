@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Load the .env file(s)
 set -a
 source .env
@@ -51,8 +50,9 @@ else
   fi
 fi
 
-PID=$!
+SHELL_PID=$!
 
+# Wait until shell is really ready
 sleep 1s
 
 # Install and enable new extension version:
@@ -76,6 +76,6 @@ while state=$(gnome-extensions info "$extensionId" | grep -oP 'State: \K\w+'); d
 done
 
 # Wait until shell is closed:
-wait $PID
+wait $SHELL_PID
 
 echo "Note: The extension is still installed and will run after the next restart of Gnome Shell. If this is not intended, run: gnome-extensions uninstall $extensionId"
