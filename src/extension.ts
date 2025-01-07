@@ -9,7 +9,7 @@ import {NotificationGestures} from "$src/features/notifications/notificationGest
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
-import {initSettings} from "$src/features/preferences/backend";
+import {initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
 import {Delay} from "$src/utils/delay.ts";
 import {devMode} from "$src/config.ts";
@@ -87,7 +87,9 @@ export default class GnomeTouchExtension extends Extension {
     disable() {
         debugLog(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
         Delay.getAllPendingDelays().forEach(d => d.cancel());
+
         PatchManager.clear();
+
         this.navigationBar?.destroy();
         this.oskKeyPopups?.destroy();
         this.screenRotateUtils?.destroy();
@@ -104,6 +106,7 @@ export default class GnomeTouchExtension extends Extension {
         this.virtualTouchpadOpenButton = undefined;
         this.developmentTools = undefined;
 
+        uninitSettings();
         GnomeTouchExtension.instance = undefined;
     }
 }

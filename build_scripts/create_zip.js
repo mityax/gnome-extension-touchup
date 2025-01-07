@@ -24,7 +24,6 @@ export default function createZip({ input, zipFilename }) {
 
                 // Write the zip file to the output directory
                 zip.writeZip(zipDist);
-                console.log(`Build successfully zipped into: ${zipDist}`);
             });
         },
     };

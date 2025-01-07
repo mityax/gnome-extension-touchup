@@ -6,8 +6,19 @@ import {assert} from "$src/utils/logging";
 
 let gioSettings: Gio.Settings | null = null;
 
+
+/**
+ * Initialize the settings using the given [Gio.Settings] instance.
+ *
+ * Do not forget to call [uninitSettings] when settings are no longer needed to
+ * free the global reference kept to the [Gio.Settings] instance.
+ */
 export function initSettings(settings: Gio.Settings) {
     gioSettings = settings;
+}
+
+export function uninitSettings() {
+    gioSettings = null;
 }
 
 export abstract class Setting<T> {

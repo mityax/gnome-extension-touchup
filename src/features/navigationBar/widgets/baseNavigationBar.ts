@@ -4,7 +4,6 @@ import Meta from "gi://Meta";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import Signal from "$src/utils/signal";
-import {log} from "$src/utils/logging";
 
 
 /**
@@ -67,7 +66,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
 
     setReserveSpace(reserveSpace: boolean) {
         if (reserveSpace != this._reserveSpace) {
-            log(`Setting reserveSpace to ${reserveSpace}`);
             this._reserveSpace = reserveSpace;
             this._removeActor();
             this._addActor();

@@ -8,8 +8,8 @@ import {logFile} from "$src/config";
  *
  * Note: This function is **not** optimized for speed (!)
  */
-export function log(...text: any[]) {
-    console.log("GJS:gnometouch:", ...text.map(item => {
+export function log(...text: any[]): string {
+    console.log("[gnometouch] ", ...text.map(item => {
         if (item && item instanceof Error) {
             console.error(item, item.message || '', "\n", item.stack)
         }
@@ -33,6 +33,8 @@ export function log(...text: any[]) {
     for(let cb of logCallbacks.values()) {
         cb(msg);
     }
+
+    return msg;
 }
 
 
@@ -41,8 +43,8 @@ export function log(...text: any[]) {
  *
  * Note: This function is **not** optimized for speed (!)
  */
-export function debugLog(...text: any[]) {
-    DEBUG: log(...text);
+export function debugLog(...text: any[]): string | null {
+    DEBUG: return log(...text);
 }
 
 

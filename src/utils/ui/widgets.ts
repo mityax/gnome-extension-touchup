@@ -69,7 +69,7 @@ export namespace Widgets {
         }
 
         // A simple long press implementation, that is triggered after holding the button for 500ms
-        // and cancelled when moving up earlier or when moving the finger too much. Only pays attention
+        // and cancelled when moving up earlier or when moving the finger too much. Only reacts
         // to touch events.
         private _setupLongPress(onLongPress: (source: Button) => void, onClicked?: (source: Button) => void) {
             let downAt: {t: number, x: number, y: number} | undefined;

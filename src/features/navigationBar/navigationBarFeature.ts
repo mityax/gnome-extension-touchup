@@ -30,7 +30,6 @@ export default class NavigationBarFeature extends ExtensionFeature {
 
         // Connect to settings:
         this.connectTo(settings.navigationBar.mode, 'changed', (mode) => {
-            log(`Mode changed: ${mode}`);
             this.setMode(mode);
         });
         this.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {

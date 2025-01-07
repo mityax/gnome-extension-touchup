@@ -89,7 +89,7 @@ export class DevelopmentTools extends ExtensionFeature {
         const source = new EventSource(`${watchBaseUrl}/esbuild`);
         source.on('change', debounce(() => {
             _hotReloadExtension({ baseUri: `file://${baseDir}` })
-                .catch((e) => debugLog("Error during auto-hot-reloading extension: ", e));
+                .catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
         }, 500));
         source.start()
             .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))

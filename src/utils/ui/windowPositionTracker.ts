@@ -3,11 +3,13 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
 import {CancellablePromise, Delay} from "$src/utils/delay.ts";
+import GObject from "gi://GObject";
+import {debugLog, repr} from "$src/utils/logging.ts";
 
 
 export default class WindowPositionTracker {
-    private _actorSignalIds: Map<any, any> = new Map();
-    private _windowSignalIds: Map<any, any> = new Map();
+    private _actorSignalIds: Map<GObject.Object, number[]> = new Map();
+    private _windowSignalIds: Map<Meta.WindowActor, number[]> = new Map();
     private _updateDelay?: CancellablePromise<boolean | void>;
     private readonly callback: (windows: Meta.Window[]) => void;
 
@@ -86,7 +88,24 @@ export default class WindowPositionTracker {
         for (const actorSignalIds of [this._actorSignalIds, this._windowSignalIds]) {
             for (const [actor, signalIds] of actorSignalIds) {
                 for (const signalId of signalIds) {
-                    actor.disconnect(signalId);
+                    try {
+                        actor.disconnect(signalId);
+                    } catch (e) {
+                        // Sometimes, the signalId is no longer connected to the actor; this happens for example
+                        // when an actor is destroyed before the window tracker or when it is replaced due to some
+                        // internals of the shell workings. In these cases, an error like this is thrown here:
+                        //   Error: No signal connection 156 found
+                        // We can safely ignore this, as it just means we don't have to disconnect the signal anymore
+                        let msg = (
+                            `An error occurred while trying to disconnect signal ${signalId} from ${repr(actor)} - ` +
+                            "you can safely ignore this as it means that the signal is no longer connected anyways. " +
+                            "This message is only here for debugging purposes (finding the exact cause as there" +
+                            "could potentially be the need to re-connect the signal (e.g. if an important actor has" +
+                            "been replaced earlier, causing this now)."
+                        );
+                        debugLog(msg);
+                        DEBUG: throw Error(msg);
+                    }
                 }
             }
         }

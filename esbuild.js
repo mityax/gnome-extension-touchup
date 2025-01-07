@@ -37,7 +37,7 @@ const BUILD_OPTIONS = {
         "src/sass/stylesheet-dark.sass",
     ],
     dropLabels: DEBUG ? [] : ['DEBUG'],
-    pure: DEBUG ? [] : ['debugLog'],  // FIXME: this is apparently ignored
+    pure: DEBUG ? [] : ['debugLog'],  // FIXME: this is apparently ignored by esbuild (?)
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
@@ -114,6 +114,15 @@ async function build() {
 
 async function watch() {
     console.log(`Serving Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+
+    // Log a success/error message on each rebuild:
+    let buildCounter = 0;
+    BUILD_OPTIONS.plugins.push({ name: 'rebuild-notifier', setup: (build) => build.onEnd(_ => {
+        if (buildCounter++ > 0) console.log(_.errors.length === 0
+            ? "✅ Rebuilt extension."
+            : "❌ Errors occurred during rebuilding."
+        );
+    })})
 
     const ctx = await esbuild.context(BUILD_OPTIONS);
     await ctx.watch();

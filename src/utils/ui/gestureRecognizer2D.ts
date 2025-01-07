@@ -111,8 +111,8 @@ export class GestureRecognizer2D {
     /**
      * Manually clear the recognizers state and notify it that a new gesture has started.
      *
-     * This function only needs to be called in contexts where now sequence-start
-     * event, such as touch down or button press is pushed to the recognizer. This
+     * This function only needs to be called in contexts where no sequence-start
+     * events, such as touch down or button press are pushed to the recognizer. This
      * is normally not the case, but for example within a Clutter.Gesture the sequence
      * start events are not available.
      */
