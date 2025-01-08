@@ -11,7 +11,7 @@ import GnomeTouchExtension from "$src/extension";
 import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton.ts";
 import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource.ts";
-import {_hotReloadExtension} from "$src/features/developmentTools/utils.ts";
+import {_hotReloadExtension} from "$src/features/developmentTools/developmentReloadUtils.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {CancellablePromise, Delay} from "$src/utils/delay.ts";
 
