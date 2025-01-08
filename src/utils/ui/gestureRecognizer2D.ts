@@ -1,5 +1,6 @@
 import Clutter from "gi://Clutter";
 import St from "gi://St";
+import {assert} from "$src/utils/logging.ts";
 import Stage = Clutter.Stage;
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
@@ -66,7 +67,20 @@ export type Pattern = SwipePattern | HoldPattern;
  * and responding accordingly.
  */
 export class GestureRecognizer2D {
+    /**
+     * A sufficient time with movements less than this amount of (logical) pixels may lead to a hold
+     * pattern being recognized.
+     */
     static readonly PAUSE_TOLERANCE = 12; // delta_pixels
+    /**
+     * Swipe patterns with less than this distance will be merged with the patterns following them.
+     * Should the only recognized pattern have less movement than this, [isTab] will return true.
+     */
+    static readonly MIN_SWIPE_DISTANCE = 5;  // delta_pixels
+    /**
+     * The number of milliseconds no (actually: less than [PAUSE_TOLERANCE]) movements needs to take
+     * place for a hold pattern to be recognized.
+     */
     static readonly SIGNIFICANT_PAUSE = 500; // milliseconds
 
     private scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
@@ -144,8 +158,40 @@ export class GestureRecognizer2D {
      *
      * Should only be called after a gesture is complete.
      */
-    isTap() {
-        return this.recordedPatterns.length == 0;
+    isTap(allowLongTap = false) {
+        assert(!this.isDuringGesture, "You should call `isTap` only when a gesture is completed, not during a gesture.");
+
+        return (
+            // If no pattern has been recognized, this is a tap:
+            this.recordedPatterns.length === 0
+
+            // Extremely short swipes are also classified as a tap:
+            || (
+                this.recordedPatterns.length === 1
+                && this.recordedPatterns[0].type == 'swipe'
+                && this.recordedPatterns[0].swipeDistance < GestureRecognizer2D.MIN_SWIPE_DISTANCE
+            )
+
+            // If requested, also let long taps pass:
+            || (
+                allowLongTap && this.isLongTap()
+            )
+        );
+    }
+
+    /**
+     * Returns true if the last gesture was a long-tap gesture (default: longer than [SIGNIFICANT_PAUSE]).
+     *
+     * Should only be called after a gesture is complete.
+     */
+    isLongTap(minDuration?: number) {
+        assert(!this.isDuringGesture, "You should call `isLongTap` only when a gesture is completed, not during a gesture.");
+
+        return (
+            this.recordedPatterns.length === 1
+            && this.recordedPatterns[0].type === 'hold'
+            && this.recordedPatterns[0].duration > (minDuration ?? GestureRecognizer2D.SIGNIFICANT_PAUSE)
+        );
     }
 
     /**
@@ -336,6 +382,22 @@ export class GestureRecognizer2D {
                 ignorePattern = true;
             }
         } else if (pattern.type == 'swipe') {
+            // "eat up" all previous swipe patterns if they don't have enough movement. This is
+            // done instead of not adding the patterns in the first place in order to improve
+            // reactivity in scenarios where an actor immediately follows the gesture:
+            while ((lastPattern = this.recordedPatterns.at(-1)) &&
+                    lastPattern.type == 'swipe' &&
+                    lastPattern.swipeDistance < GestureRecognizer2D.MIN_SWIPE_DISTANCE * this.scaleFactor) {
+                pattern.deltaX += lastPattern.deltaX;
+                pattern.deltaY += lastPattern.deltaY;
+                pattern.totalTime += lastPattern.totalTime;
+                pattern.swipeDistance += Math.sqrt(pattern.deltaX ** 2 + pattern.deltaY ** 2);
+                pattern.swipeSpeed = pattern.swipeDistance / pattern.totalTime;
+                pattern.swipeAngle = this.angleBetween(pattern.deltaX, pattern.deltaY);
+                pattern.swipeDirection = this.directionForAngle(pattern.swipeAngle);
+                this.recordedPatterns.pop();
+            }
+
             // two `SwipePattern`s with the same direction are joined:
             if (lastPattern?.type == 'swipe' && lastPattern.swipeDirection === pattern.swipeDirection) {
                 lastPattern.deltaX = pattern.deltaX;

@@ -94,6 +94,11 @@ export function removeLogCallback(id: number) {
     logCallbacks.delete(id);
 }
 
+/**
+ * Throw an error if the given condition is not true.
+ *
+ * This is a no-op in release builds.
+ */
 export function assert(condition: boolean, message?: string) {
     DEBUG: if (!condition) {
         throw message ?? "Assertion error";

@@ -20,7 +20,7 @@ export class HotReloadButton extends DevToolButton {
 
     constructor() {
         super({
-            label: 'Hot-reload',
+            label: 'Rebuild and hot-reload',
             icon: new St.Icon({
                 iconName: 'view-refresh-symbolic',
                 iconSize: 16,

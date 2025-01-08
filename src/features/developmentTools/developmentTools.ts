@@ -36,7 +36,7 @@ export class DevelopmentTools extends ExtensionFeature {
             new DevelopmentLogDisplayButton(),
             new Widgets.Bin({width: 10}),
             new DevToolToggleButton({
-                label: 'Enforce Touch-Mode',
+                label: 'Enforce touch-mode',
                 icon: 'phone-symbolic',
                 onPressed: (v) => {
                     this._enforceTouchMode = v;
