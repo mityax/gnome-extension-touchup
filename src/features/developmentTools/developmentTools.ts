@@ -91,7 +91,7 @@ export class DevelopmentTools extends ExtensionFeature {
             _hotReloadExtension({
                 baseUri: `file://${baseDir}`,
                 // Data is a JSON-string containing info about changed files, e.g.:
-                //      {"added":[],"removed":[],"updated":["/extension.js"]}
+                //   {"added":[],"removed":[],"updated":["/extension.js"]}
                 // We're lazy here and just check whether '.js"' is present in that string:
                 stylesheetsOnly: !/\.js"/.test(data),
             }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
