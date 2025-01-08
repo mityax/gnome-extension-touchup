@@ -110,6 +110,11 @@ export class NotificationGestures {
             const updateHover = () => {
                 if (container.hover || recognizer.isDuringGesture) {
                     message.add_style_pseudo_class('hover');
+
+                    // Expand the message when hovering with the pointer:
+                    if (isTray && !recognizer.isTouchGesture && !message.expanded) {
+                        message.expand(true);
+                    }
                 } else {
                     message.remove_style_pseudo_class('hover');
                 }

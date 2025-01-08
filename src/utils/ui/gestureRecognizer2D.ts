@@ -169,7 +169,7 @@ export class GestureRecognizer2D {
             || (
                 this.recordedPatterns.length === 1
                 && this.recordedPatterns[0].type == 'swipe'
-                && this.recordedPatterns[0].swipeDistance < GestureRecognizer2D.MIN_SWIPE_DISTANCE
+                && this.recordedPatterns[0].swipeDistance < GestureRecognizer2D.MIN_SWIPE_DISTANCE * this.scaleFactor
             )
 
             // If requested, also let long taps pass:
@@ -455,6 +455,9 @@ export class GestureRecognizer2D {
             }
         }
 
-        return `<${this.constructor.name} (gesture ${this.isDuringGesture ? 'ongoing' : 'completed'}) patterns: [ ${s.join(' • ')} ]>`;
+        return `<${this.constructor.name} ` +
+               `(gesture ${this.isDuringGesture ? 'ongoing' : 'completed'}` +
+                  `${this.isLongTap() ? ', is-long-tap' : this.isTap() ? ', is-tap' : ''}) ` +
+               `patterns: [ ${s.join(' • ')} ]>`;
     }
 }
