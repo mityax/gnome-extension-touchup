@@ -129,5 +129,5 @@ documentation in the source code for each utility.
    }
    ```
  - **Others** – there are many more utils in `src/utils` (especially 
-   in `developmentReloadUtils.ts`), which may be helpful for you.
+   in `utils.ts`), which may be helpful for you.
 
