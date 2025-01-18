@@ -10,7 +10,7 @@ export class AssetIcon extends Gio.FileIcon {
 
     constructor(iconName: string) {
         super({
-            file: Gio.file_new_for_uri(assetPath.icon(iconName)),
+            file: Gio.File.new_for_uri(assetPath.icon(iconName)),
         });
     }
 }
