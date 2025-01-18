@@ -7,7 +7,6 @@ import St from "gi://St";
 import {Widgets} from "../../utils/ui/widgets";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import GnomeTouchExtension from "$src/extension.ts";
 import GObject from "gi://GObject";
 import PolicyType = St.PolicyType;
 
@@ -39,7 +38,7 @@ export function _restartShell() {
  * Thus, GTypeNames will no longer match the class names – this should not have any consequences relevant to this
  * extension, but it is good to be aware of this, still.
  */
-export async function _hotReloadExtension(config?: { baseUri?: string, stylesheetsOnly?: boolean }) {
+export async function _hotReloadExtension(extensionUuid: string, config?: { baseUri?: string, stylesheetsOnly?: boolean }) {
     assert(!config?.baseUri || config.baseUri.startsWith('file://'), "Only file:// uris are supported as baseUri.");
 
     const reloadId = `hr${Date.now().toString()}`;
@@ -48,7 +47,7 @@ export async function _hotReloadExtension(config?: { baseUri?: string, styleshee
         ? `Hot-Reloading extension stylesheets (reload id: ${reloadId})…`
         : `Hot-restarting extension (reload id: ${reloadId})…`);
 
-    const extObj = Main.extensionManager.lookup(GnomeTouchExtension.instance!.uuid!);
+    const extObj = Main.extensionManager.lookup(extensionUuid);
 
     // Patch the extension path function to append a cache-buster to the imported url; this
     // is what allows us to re-import the extension while bypassing the module cache:

@@ -14,14 +14,15 @@ import EventSource from "$src/utils/eventSource.ts";
 import {_hotReloadExtension} from "$src/features/developmentTools/developmentReloadUtils.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {CancellablePromise, Delay} from "$src/utils/delay.ts";
+import {PatchManager} from "$src/utils/patchManager.ts";
 
 
 export class DevelopmentTools extends ExtensionFeature {
     private _enforceTouchMode = false;
     private extension: GnomeTouchExtension;
 
-    constructor(extension: GnomeTouchExtension) {
-        super();
+    constructor(pm: PatchManager, extension: GnomeTouchExtension) {
+        super(pm);
         this.extension = extension;
         this.enable();
     }
@@ -46,7 +47,7 @@ export class DevelopmentTools extends ExtensionFeature {
             new Widgets.Bin({width: 15}),
             new RestartButton(),
             new Widgets.Bin({width: 15}),
-            new HotReloadButton(),
+            new HotReloadButton(this.extension.metadata.uuid),
         ];
     }
 
@@ -60,24 +61,26 @@ export class DevelopmentTools extends ExtensionFeature {
     }
 
     private _setupDevToolBar() {
-        const box = new Widgets.Row({
-            yExpand: false,
-            style: css({
-                border: '1px solid #cbcbcb',
-                borderRadius: '25px',
-                padding: '0 10px',
-                margin: '3px 15px',
-            }),
-            scaleX: 0.8,
-            scaleY: 0.8,
-            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-            children: this.buildToolbar(),
+        this.pm.patch(() => {
+            const box = new Widgets.Row({
+                yExpand: false,
+                style: css({
+                    border: '1px solid #cbcbcb',
+                    borderRadius: '25px',
+                    padding: '0 10px',
+                    margin: '3px 15px',
+                }),
+                scaleX: 0.8,
+                scaleY: 0.8,
+                pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
+                children: this.buildToolbar(),
+            });
+
+            //@ts-ignore
+            Main.panel._rightBox.insert_child_at_index(box, 0);
+
+            return () => box.destroy();
         });
-
-        //@ts-ignore
-        Main.panel._rightBox.insert_child_at_index(box, 0);
-
-        this.onCleanup(() => box.destroy());
     }
 
     private _setupLiveReload() {
@@ -86,21 +89,23 @@ export class DevelopmentTools extends ExtensionFeature {
 
         if (!watchBaseUrl || !baseDir) return () => {};
 
-        const source = new EventSource(`${watchBaseUrl}/esbuild`);
-        source.on('change', debounce((data) => {
-            _hotReloadExtension({
-                baseUri: `file://${baseDir}`,
-                // Data is a JSON-string containing info about changed files, e.g.:
-                //   {"added":[],"removed":[],"updated":["/extension.js"]}
-                // We're lazy here and just check whether '.js"' is present in that string:
-                stylesheetsOnly: !/\.js"/.test(data),
-            }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
-        }, 500));
-        source.start()
-            .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))
-            .catch((e) => log("[Live-reload] Failed to start listening to SSE events: ", e));
+        this.pm.patch(() => {
+            const source = new EventSource(`${watchBaseUrl}/esbuild`);
+            source.on('change', debounce((data) => {
+                _hotReloadExtension(this.extension.metadata.uuid, {
+                    baseUri: `file://${baseDir}`,
+                    // Data is a JSON-string containing info about changed files, e.g.:
+                    //   {"added":[],"removed":[],"updated":["/extension.js"]}
+                    // We're lazy here and just check whether '.js"' is present in that string:
+                    stylesheetsOnly: !/\.js"/.test(data),
+                }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
+            }, 500));
+            source.start()
+                .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))
+                .catch((e) => log("[Live-reload] Failed to start listening to SSE events: ", e));
 
-        this.onCleanup(() => source.close());
+            return () => source.close();
+        });
     }
 }
 

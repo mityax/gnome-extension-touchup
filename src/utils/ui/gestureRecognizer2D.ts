@@ -76,7 +76,7 @@ export class GestureRecognizer2D {
      * Swipe patterns with less than this distance will be merged with the patterns following them.
      * Should the only recognized pattern have less movement than this, [isTab] will return true.
      */
-    static readonly MIN_SWIPE_DISTANCE = 5;  // delta_pixels
+    static readonly MIN_SWIPE_DISTANCE = 10;  // delta_pixels
     /**
      * The number of milliseconds no (actually: less than [PAUSE_TOLERANCE]) movements needs to take
      * place for a hold pattern to be recognized.

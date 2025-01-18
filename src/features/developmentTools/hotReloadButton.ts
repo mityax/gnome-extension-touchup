@@ -18,11 +18,13 @@ Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
 
 export class HotReloadButton extends DevToolButton {
+    private readonly extensionUuid: string;
+
     static {
         GObject.registerClass(this);
     }
 
-    constructor() {
+    constructor(extensionUuid: string) {
         super({
             label: 'Rebuild and hot-reload',
             icon: new St.Icon({
@@ -33,6 +35,7 @@ export class HotReloadButton extends DevToolButton {
             }),
             onPressed: () => this._onPressed(),
         });
+        this.extensionUuid = extensionUuid;
     }
 
     private async _onPressed() {
@@ -45,7 +48,7 @@ export class HotReloadButton extends DevToolButton {
             this.icon.opacity = 255;
 
             if (res) {
-                await _hotReloadExtension();
+                await _hotReloadExtension(this.extensionUuid);
             }
         } catch (e) {
             debugLog("Error during hot reloading or building: ", e);

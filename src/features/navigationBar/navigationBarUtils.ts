@@ -1,8 +1,6 @@
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Meta from "gi://Meta";
 import Clutter from "gi://Clutter";
-import Shell from "gi://Shell";
-import {debugLog} from "$src/utils/logging.ts";
 
 
 /**
@@ -36,15 +34,8 @@ export function navigateBack(props: {virtualKeyboardDevice?: Clutter.VirtualInpu
         return true;
     }
 
-
+    // None of these experiments work for adwaita either:
     const focusWindow = global.display.focus_window;
-    debugLog("Window info: ", focusWindow.get_title(), focusWindow.get_window_type(), focusWindow.get_client_type(),
-        focusWindow.get_layer(), focusWindow.get_role(), focusWindow.get_mutter_hints(), focusWindow.get_compositor_private(),
-        focusWindow.has_attached_dialogs());
-    const focusApp = Shell.WindowTracker.get_default().focusApp;
-    debugLog("FocusApp info: ", focusApp.get_windows(), focusApp.get_state(), focusApp.get_description(),
-        focusApp.get_windows()[0].has_attached_dialogs(), focusApp.get_windows().map(w => w.get_window_type()),
-        focusApp.get_windows().map(w => w.get_role()), focusApp.get_windows().map(w => w.get_layer()));
 
     // Unfullscreen the focused window
     if (focusWindow?.is_fullscreen()) {
@@ -60,15 +51,16 @@ export function navigateBack(props: {virtualKeyboardDevice?: Clutter.VirtualInpu
             || focusWindow.get_window_type() == Meta.WindowType.DROPDOWN_MENU
             || focusWindow.get_window_type() == Meta.WindowType.POPUP_MENU
             || focusWindow.get_window_type() == Meta.WindowType.COMBO
-            || focusWindow.get_window_type() == Meta.WindowType.DND) {
-            // FIXME: both of these approaches don't work:
-            // focusWindow.emit("close");
-            // focusWindow.kill();
+            || focusWindow.get_window_type() == Meta.WindowType.DND
+            || focusWindow.get_transient_for() !== null) {
+            // Close the focused window:
+            focusWindow.delete(global.get_current_time());
             return true;
         }
         if (props.greedyMode && focusWindow.get_window_type() == Meta.WindowType.NORMAL) {
-            const focusApp = Shell.WindowTracker.get_default().focusApp;
-            focusApp.request_quit();
+            focusWindow.delete(global.get_current_time());
+            //const focusApp = Shell.WindowTracker.get_default().focusApp;
+            //focusApp.request_quit();
             return true;
         }
     }
@@ -82,6 +74,7 @@ export function navigateBack(props: {virtualKeyboardDevice?: Clutter.VirtualInpu
             Clutter.KEY_Back, Clutter.KeyState.PRESSED);
         props.virtualKeyboardDevice.notify_keyval(Clutter.get_current_event_time() * 1000,
             Clutter.KEY_Back, Clutter.KeyState.RELEASED);
+
         return null;
     }
 

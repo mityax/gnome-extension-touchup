@@ -7,15 +7,59 @@ import {Delay} from "$src/utils/delay.ts";
 
 
 export namespace Widgets {
-    export class Ref<T extends St.Widget> {
+    /**
+     * Helper class to manage references to [Clutter.Actor] instances.
+     *
+     * If the referenced actor is destroyed, the reference will be
+     * automatically set to `null`.
+     */
+    export class Ref<T extends Clutter.Actor> {
+        private _destroySignalId: number | undefined;
+
+        /**
+         * Create a reference with an optional initial value.
+         */
+        constructor(initialValue?: T | null) {
+            this.set(initialValue ?? null);
+        }
+
+        /**
+         * Get the actor the reference points to, or `null` if the actor has been
+         * destroyed or unset.
+         */
         get current(): T | null {
             return this._value;
         }
 
+        /**
+         * Update the reference to point to the given actor, unset the reference if
+         * `null` is passed.
+         */
         set(value: T | null): void {
+            if (this._destroySignalId !== undefined && this._value) {
+                this._value.disconnect(this._destroySignalId);
+            }
             this._value = value;
-            value?.connect('destroy', () => this.set(null));
+            this._destroySignalId = value?.connect('destroy', () => this.set(null));
         }
+
+        /**
+         * Convenience method to call the given function or closure on the referenced
+         * actor only if there is a referenced actor at the moment.
+         *
+         * Example:
+         * ```typescript
+         * const myRef = new Ref(myWidget);
+         *
+         * // Set the widget's opacity only if it has not been destroyed or in another way unset yet:
+         * myRef.apply(w => w.opacity = 0.8);
+         * ```
+         */
+        apply(fn: (current: T) => void) {
+            if (this.current) {
+                fn(this.current!);
+            }
+         }
 
         private _value: T | null = null;
     }
@@ -78,7 +122,7 @@ export namespace Widgets {
                 if (evt.type() == Clutter.EventType.TOUCH_BEGIN) {
                     let thisDownAt = downAt = {t: evt.get_time(), x: evt.get_coords()[0], y: evt.get_coords()[1]};
                     Delay.ms(500).then(() => {
-                        if (downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
+                        if (this.pressed && downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
                             // Long press detected!
                             onLongPress(this);
                             downAt = undefined;

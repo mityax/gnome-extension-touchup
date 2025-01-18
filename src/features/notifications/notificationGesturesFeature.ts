@@ -10,14 +10,18 @@ import {Patch, PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {debugLog} from "$src/utils/logging";
 import {findActorBy} from "$src/utils/utils";
+import {Widgets} from "$src/utils/ui/widgets.ts";
+import ExtensionFeature from "$src/utils/extensionFeature.ts";
+import Ref = Widgets.Ref;
 
 
-export class NotificationGestures {
+export class NotificationGesturesFeature extends ExtensionFeature {
     static readonly PATCH_SCOPE: unique symbol = Symbol('notification-gestures');
 
     private unpatchOnTrayClose: Patch[] = [];
 
-    constructor() {
+    constructor(pm: PatchManager) {
+        super(pm);
         const self = this;
 
         // Setup listeners for existing notifications in the panel:
@@ -29,49 +33,42 @@ export class NotificationGestures {
         });
 
         // New message added to message list section in popup:
-        PatchManager.appendToMethod(MessageListSection.prototype, 'addMessageAtIndex',
+        this.pm.appendToMethod(MessageListSection.prototype, 'addMessageAtIndex',
             function(this: MessageListSection, message: NotificationMessage, idx: number, animate: boolean) {
                 debugLog("New message in MessageListSection");
                 self.patchNotification(message, false);
             },
-            { scope: NotificationGestures.PATCH_SCOPE },
         );
 
         // New message added to message tray:
-        PatchManager.appendToMethod(MessageTray.prototype, '_showNotification',
+        this.pm.appendToMethod(MessageTray.prototype, '_showNotification',
             function(this: MessageTray & {_banner: NotificationMessage}) {
                 debugLog("New message in MessageTray");
                 self.unpatchOnTrayClose.push(self.patchNotification(this._banner, true));
             },
-            { scope: NotificationGestures.PATCH_SCOPE ,
-        });
+        );
 
         // When the notification tray banner is closed, un-patch the message and container
         // to avoid double callback invocations:
-        PatchManager.appendToMethod(MessageTray.prototype, '_hideNotification', function () {
-            self.unpatchOnTrayClose.forEach(p => p.undo())
+        this.pm.appendToMethod(MessageTray.prototype, '_hideNotification', function () {
+            self.unpatchOnTrayClose.forEach(p => p.disable())
             self.unpatchOnTrayClose = [];
         })
 
         // Path the message tray `_updateState` function such that it does not expand the banner on hover:
-        PatchManager.patchMethod(MessageTray.prototype, '_updateState',
+        this.pm.patchMethod(MessageTray.prototype, '_updateState',
             function(this: MessageTray & {_banner: NotificationMessage}, orig) {
-                if (this._banner) {
-                    // we achieve this by making it seem to the function that the banner is already expanded:
-                    const originalValue = this._banner?.expanded;
-                    this._banner.expanded = true;
-                    orig();
-                    this._banner.expanded = originalValue;
-                } else {
-                    orig();
-                }
+                // we achieve this by making it seem to the function that the banner is already expanded:
+                const originalValue = this._banner?.expanded;
+                if (this._banner) this._banner.expanded = true;
+                orig();
+                if (this._banner) this._banner.expanded = originalValue;
             },
-            { scope: NotificationGestures.PATCH_SCOPE },
         );
     }
 
     private patchNotification(message: NotificationMessage, isTray: boolean) {
-        return PatchManager.patch(() => {
+        return this.pm.patch(() => {
             // Make message unreactive to prevent immediate notification activation on any event:
             message.reactive = false;  // (this is necessary as message inherits from St.Button which conflicts with complex reactivity as we want it)
             // Prevent the insensitive styling from being applied:
@@ -126,21 +123,30 @@ export class NotificationGestures {
                 container.connect('button-press-event', onEvent),
                 container.connect('button-release-event', onEvent),
                 container.connect('notify::hover', updateHover),
-            ]
+            ];
 
-            return () => {
+            message.connect('destroy', () => undo());
+
+            // Use [Ref]s for the cleanup in order to skip cleanup on already
+            // destroyed actors easily:
+            let messageRef = new Ref(message);
+            let containerRef = new Ref(container);
+
+            const undo = () => {
                 // Undo all the changes:
-                signalIds.forEach(id => container.disconnect(id));
-                message.translationX = 0;
-                message.reactive = true;
-                container.reactive = false;
-                container.trackHover = false;
-            }
-        }, {scope: NotificationGestures.PATCH_SCOPE});
-    }
+                containerRef.apply(c => {
+                    signalIds.forEach(id => c.disconnect(id));
+                    c.reactive = false;
+                    c.trackHover = false
+                });
+                messageRef.apply(m => {
+                    m.translationX = 0;
+                    m.reactive = true;
+                });
+            };
 
-    destroy() {
-        PatchManager.clear(NotificationGestures.PATCH_SCOPE);
+            return undo;
+        });
     }
 
     private _onGestureFinished(message: NotificationMessage, recognizer: GestureRecognizer2D, isTray: boolean) {

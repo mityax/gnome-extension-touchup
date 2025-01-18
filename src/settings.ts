@@ -92,6 +92,20 @@ export const settings = {
          * Note: This has no effect if the device does not have an accelerometer.
          */
         floatingScreenRotateButtonEnabled: new BoolSetting('screen-rotate-utils-floating-screen-rotate-button-enabled', true),
+    },
+
+    notificationGestures: {
+        /**
+         * Whether to enable touchscreen gestures for notifications or not.
+         */
+        enabled: new BoolSetting('notification-gestures-enabled', true),
+    },
+
+    virtualTouchpad: {
+        /**
+         * Whether to enable the virtual touchpad feature or not.
+         */
+        enabled: new BoolSetting('virtual-touchpad-enabled', true),
     }
 }
 

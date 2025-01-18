@@ -7,17 +7,20 @@ import {Widgets} from "$src/utils/ui/widgets";
 import {randomChoice} from "$src/utils/utils";
 import {debugLog} from "$src/utils/logging";
 import Cogl from "gi://Cogl";
+import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import ActorAlign = Clutter.ActorAlign;
 import EventPhase = Clutter.EventPhase;
 
 
-export class VirtualTouchpad {
+export class VirtualTouchpadFeature extends ExtensionFeature {
     public static readonly PATCH_SCOPE: unique symbol = Symbol('virtual-touchpad');
     private readonly actor: St.Widget;
 
-    constructor() {
+    constructor(pm: PatchManager) {
+        super(pm);
+
         const buttonRef = new Widgets.Ref<Widgets.Button>();
-        this.actor = new St.Widget({
+        this.actor = new Widgets.Bin({
             name: 'gnometouch-virtual-touchpad',
             visible: false,
             reactive: true,
@@ -28,20 +31,20 @@ export class VirtualTouchpad {
                 source: Main.uiGroup,
                 coordinate: Clutter.BindCoordinate.ALL,
             }),
+            child: new Widgets.Button({
+                child: new Widgets.Icon({iconName: 'edit-delete-symbolic', style: 'color: white;'}),
+                ref: buttonRef,
+                reactive: true,
+                trackHover: true,
+                canFocus: true,
+                xAlign: ActorAlign.END,
+                yAlign: ActorAlign.START,
+                onClicked: () => {
+                    debugLog('Clicked!!!');
+                    this.close();
+                },
+            }),
         });
-        this.actor.add_child(new Widgets.Button({
-            child: new Widgets.Icon({iconName: 'edit-delete-symbolic', style: 'color: white;'}),
-            ref: buttonRef,
-            reactive: true,
-            trackHover: true,
-            canFocus: true,
-            xAlign: ActorAlign.END,
-            yAlign: ActorAlign.START,
-            onClicked: () => {
-                debugLog('Clicked!!!');
-                this.close();
-            },
-        }));
         this.actor.add_constraint(new MonitorConstraint({
             workArea: true,
             primary: true,  // TODO: show on touch-enabled monitor instead of primary one
@@ -61,8 +64,7 @@ export class VirtualTouchpad {
             ]))[1];
         })
 
-
-        PatchManager.patch(() => {
+        this.pm.patch(() => {
             Main.layoutManager.addChrome(this.actor, {
                 affectsStruts: false,
                 trackFullscreen: false,
@@ -70,7 +72,7 @@ export class VirtualTouchpad {
             });
 
             return () => Main.layoutManager.removeChrome(this.actor);
-        }, {scope: VirtualTouchpad.PATCH_SCOPE});
+        });
     }
 
     open() {
@@ -87,9 +89,5 @@ export class VirtualTouchpad {
         } else {
             this.actor.show();
         }
-    }
-
-    destroy() {
-        this.actor?.destroy();
     }
 }

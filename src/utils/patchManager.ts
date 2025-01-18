@@ -2,12 +2,17 @@ import GObject from "gi://GObject";
 //@ts-ignore
 import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
-import {debugLog, repr} from "$src/utils/logging";
+import {assert, debugLog} from "$src/utils/logging";
+import {Widgets} from "$src/utils/ui/widgets.ts";
+import Clutter from "gi://Clutter";
+import Ref = Widgets.Ref;
 
 
-type NoArgsFunc = () => (() => any);
-type AnyFunc = (...args: any) => ((...args: any) => any);
-type PatchOptions = {scope?: string | symbol | null, supportsReapply?: boolean, debugName?: string | null};
+type PatchFunc = () => (() => any);
+
+type AnyFunc = (...args: any[]) => any;
+type Connectable<A extends any[], R> = {connect: (s: string, h: (...args: A) => R) => any, disconnect: (id: number) => any};
+
 
 
 /**
@@ -15,19 +20,29 @@ type PatchOptions = {scope?: string | symbol | null, supportsReapply?: boolean, 
  * when the extension is disabled.
  */
 export class PatchManager {
-    private static _injectionManager = new InjectionManager();
-    private static _patches: Patch[] = [];
+    readonly debugName?: string;
+    private _parent?: PatchManager;
+    private _children: PatchManager[] = [];
+    private readonly _injectionManager = new InjectionManager();
+    private _patches: Patch[] = [];
+    private _isDestroyed = false;
+
+    constructor(debugName?: string) {
+        this.debugName = debugName;
+    }
 
     /**
      * Apply a patch. The callback peforming the patch is called immediately and must
      * return another function to undo the patch again.
     */
-    static patch(func: NoArgsFunc, opts?: PatchOptions): Patch {
+    patch(func: PatchFunc, debugName?: string): Patch {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         this._patches.push(new Patch({
-            func,
-            ...opts,
+            enable: func,
+            debugName,
         }));
-        this._patches.at(-1)!.reapply();
+        this._patches.at(-1)!.enable();
         return this._patches.at(-1)!;
     }
 
@@ -35,12 +50,37 @@ export class PatchManager {
      * Add a patch without automatically applying it. Otherwise, same
      * as [PatchManager.patch(...)]
      */
-    static patchLater(func: NoArgsFunc, opts?: PatchOptions): Patch {
+    registerPatch(func: PatchFunc, debugName?: string): Patch {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         this._patches.push(new Patch({
-            func,
-            ...opts,
+            enable: func,
+            debugName,
         }));
         return this._patches.at(-1)!;
+    }
+
+    /**
+     * Automatically destroy any object with a [destroy] method when the [PatchManager] is
+     * disabled or destroyed.
+     */
+    autoDestroy<T extends Clutter.Actor>(instance: T) {
+        this.patch(() => {
+            let ref = new Ref(instance);
+            return () => ref.current?.destroy();
+        });
+        return instance;
+    }
+
+    /**
+     * Connect to a signal from any GObject/widget and automatically disconnect when the [PatchManager]
+     * is disabled or destroyed.
+     */
+    connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string) {
+        this.patch(() => {
+            const signalId = instance.connect(signal, handler);
+            return () => instance.disconnect(signalId);
+        }, debugName ?? `connectTo(${instance.constructor.name}:${signal})`);
     }
 
     /**
@@ -49,15 +89,20 @@ export class PatchManager {
      * @param instance The instance to patch the signal handler on
      * @param signalId The signal to connect to
      * @param handler The new handler that is called in place of the original handler
-     * @param opts Additional options for the patch
+     * @param debugName A name for this patch for debug log messages
      */
-    static patchSignalHandler(instance: GObject.Object, signalId: string, handler: AnyFunc, opts?: PatchOptions): Patch
-    static patchSignalHandler(instance: GObject.Object, signalId: string[], handler: AnyFunc, opts?: PatchOptions): MultiPatch
-    static patchSignalHandler(instance: GObject.Object, signalId: string | string[], handler: AnyFunc, opts?: PatchOptions): Patch | MultiPatch {
+    patchSignalHandler(instance: GObject.Object, signalId: string, handler: AnyFunc, debugName?: string): Patch
+    patchSignalHandler(instance: GObject.Object, signalId: string[], handler: AnyFunc, debugName?: string): MultiPatch
+    patchSignalHandler(instance: GObject.Object, signalId: string | string[], handler: AnyFunc, debugName?: string): Patch | MultiPatch {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         if (Array.isArray(signalId)) {
             return new MultiPatch({
-                patches: signalId.map(s => this.patchSignalHandler(instance, s, handler, opts)),
-                ...opts,
+                patches: signalId.map(s => this.patchSignalHandler(
+                    instance, s, handler,
+                    `${debugName}#signal(${instance.constructor.name}:${signalId})`
+                )),
+                debugName,
             });
         } else {
             return this.patch(() => {
@@ -69,7 +114,7 @@ export class PatchManager {
                     GObject.signal_handler_disconnect(instance, newHandler);
                     GObject.signal_handler_unblock(instance, originalHandler);
                 }
-            }, opts);
+            }, debugName);
         }
     }
 
@@ -81,14 +126,20 @@ export class PatchManager {
      * @param method The method to be used in place of the original method. Receives the original function
      *               followed by any arguments on call as argument. This method should be written in `function`
      *               syntax to retrieve the correct value for `this`.
+     * @param debugName A name for this patch for debug log messages
      */
-    static patchMethod(prototype: object, methodName: string, method: (originalMethod: AnyFunc, ...args: any[]) => any, opts?: PatchOptions): Patch
-    static patchMethod(prototype: object, methodName: string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, opts?: PatchOptions): MultiPatch
-    static patchMethod(prototype: object, methodName: string | string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, opts?: PatchOptions): Patch | MultiPatch {
+    patchMethod(prototype: object, methodName: string, method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch
+    patchMethod(prototype: object, methodName: string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): MultiPatch
+    patchMethod(prototype: object, methodName: string | string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch | MultiPatch {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         if (Array.isArray(methodName)) {
             return new MultiPatch({
-                patches: methodName.map(m => this.patchMethod(prototype, m, method, opts)),
-                ...opts,
+                patches: methodName.map(m => this.patchMethod(
+                    prototype, m, method,
+                    `${debugName}#method(${prototype.constructor.name}:${methodName})`
+                )),
+                debugName,
             });
         } else {
             return this.patch(() => {
@@ -98,7 +149,7 @@ export class PatchManager {
                     }
                 });
                 return () => this._injectionManager.restoreMethod(prototype, methodName);
-            }, opts);
+            }, debugName);
         }
     }
 
@@ -112,125 +163,150 @@ export class PatchManager {
      * @param method The method to be called after the original method. Receives any arguments
      *               that the original method received on call. This method should be written in
      *               `function` syntax to retrieve the correct value for `this`.
+     * @param debugName A name for this patch for debug log messages
      */
-    static appendToMethod(prototype: object, methodName: string, method: (...args: any[]) => any, opts?: PatchOptions): Patch
-    static appendToMethod(prototype: object, methodName: string[], method: (...args: any[]) => any, opts?: PatchOptions): MultiPatch
-    static appendToMethod(prototype: object, methodName: string | string[], method: (...args: any[]) => any, opts?: PatchOptions): Patch | MultiPatch {
+    appendToMethod(prototype: object, methodName: string, method: AnyFunc, debugName?: string): Patch
+    appendToMethod(prototype: object, methodName: string[], method: AnyFunc, debugName?: string): MultiPatch
+    appendToMethod(prototype: object, methodName: string | string[], method: AnyFunc, debugName?: string): Patch | MultiPatch {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         if (Array.isArray(methodName)) {
             return new MultiPatch({
-                patches: methodName.map(m => this.appendToMethod(prototype, m, method, opts)),
-                ...opts,
+                patches: methodName.map(m => this.appendToMethod(
+                    prototype, m, method,
+                    `${debugName}#append-to-method(${prototype.constructor.name}:${methodName})`
+                )),
+                debugName,
             });
         } else {
             return this.patchMethod(prototype, methodName, function(this: UnknownClass, orig, ...args) {
                 orig.call(this, ...args);
                 method.call(this, ...args);
-            }, opts);
+            }, debugName);
         }
     }
 
 
     /**
-     * Undo all patches made so far. This function should usually only be called when the
-     * extension is being deactivated.
+     * Undo and delete all patches made so far.
      *
-     * @param scope If given, only patches belonging to the given scope are cleared.
+     * This function should only be called if the [PatchManager] is not going to be used anymore.
      */
-    static clear(scope?: string | symbol | null) {
-        for (let patch of this._patches) {
-            if (!scope || scope === patch.scope) {
-                patch.undo();
-            }
-        }
+    destroy() {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot destroy again.`);
 
-        this._patches = this._patches.filter(p => !scope || p.scope !== scope);
+        debugLog(`Destroying PatchManager ${this.debugName ?? ''}`.trim());
+
+        this._children.forEach(c => c.destroy());
+        this._patches.forEach(p => p.disable());
+
+        this._parent!._children = this._parent!._children.filter(c => c != this);
+        this._children = [];
+        this._patches = [];
+        DEBUG: this._isDestroyed = true;
     }
 
-    static disable(scope?: string | symbol | null) {
-        for (let patch of this._patches) {
-            if (patch.isApplied) {
-                if (!scope || scope === patch.scope) {
-                    patch.undo();
-                }
-            }
-        }
+    /**
+     * Undo all patches made so far, but keep them in store for a potential call to [enable]
+     */
+    disable() {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot disable anymore.`);
+
+        debugLog(`Disabling PatchManager ${this.debugName ?? ''}`.trim());
+
+        this._children.forEach(c => c.disable());
+        this._patches.forEach(p => p.disable());
     }
 
-    static enable(scope?: string | symbol | null) {
-        for (let patch of this._patches) {
-            if (!patch.supportsReapply) {
-                throw `Patch (debugName="${patch.debugName}", scope="${repr(patch.scope)}") cannot be reapplied.`
-            }
-            if (!patch.isApplied) {
-                if (!scope || scope === patch.scope) {
-                    patch.reapply();
-                }
-            }
-        }
+    /**
+     * Enable all disabled patches.
+     */
+    enable() {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot enable again.`);
+
+        debugLog(`Enabling PatchManager ${this.debugName ?? ''}`.trim());
+
+        this._patches.forEach(p => p.enable());
+        this._children.forEach(c => c.enable());
+    }
+
+    /**
+     * Create a descendent [PatchManager].
+     *
+     * This child [PatchManager] will react to any call to [clear], [disable] and [enable]
+     * on any parent [PatchManager] and will forward those calls to its own descendents, should
+     * it be forked again. This allows for a nice, tree-like structure and a consistent interface
+     * managing patches.
+     * @param debugName An optional label used for debug log messages
+     */
+    fork(debugName?: string): PatchManager {
+        const instance = new PatchManager(
+             this.debugName
+                 ? `${this.debugName}/${debugName ?? this._children.length + 1}`
+                 : debugName
+        );
+        instance._parent = this;
+        this._children.push(instance);
+        return instance;
     }
 }
 
 
 export class Patch {
     readonly debugName: string | null;
-    readonly scope: string | symbol | null;
-    private readonly func: (...args: any) => any;
-    private undoFunc?: (...args: any) => any;
-    private _applied: boolean = false;
-    readonly supportsReapply: boolean;
+    private readonly _enableCallback: (...args: any) => any;
+    private _disableCallback?: (...args: any) => any;
+    private _isEnabled: boolean = false;
 
-    constructor({scope, func, undoFunc, supportsReapply = true, debugName}: {scope?: string | symbol | null, func: (...args: any) => any, undoFunc?: (...args: any) => any, supportsReapply?: boolean, debugName?: string | null}) {
-        this.func = func;
-        this.undoFunc = undoFunc;
-        this.scope = scope ?? null;
-        this.debugName = debugName ?? null;
-        this.supportsReapply = supportsReapply || true;
+    constructor(props: {enable: PatchFunc, debugName?: string | null}) {
+        this._enableCallback = props.enable;
+        this.debugName = props.debugName ?? null;
     }
 
-    undo(force: boolean = false) {
-        if (!force && !this.isApplied) return;
-        debugLog(`Undoing patch ${this.debugName} (scope: ${repr(this.scope)})`);
-        this.undoFunc?.call(this);
-        this._applied = false;
+    disable(force: boolean = false) {
+        if (!force && !this.isEnabled) return;
+        debugLog(` - Undoing patch ${this.debugName}`);
+        this._disableCallback?.call(this);
+        this._isEnabled = false;
     }
 
-    reapply(force: boolean = false) {
-        if (!force && this.isApplied) return;
-        debugLog(`Applying patch ${this.debugName} (scope: ${repr(this.scope)})`);
-        this.undoFunc = this.func();
-        this._applied = true;
+    enable(force: boolean = false) {
+        if (!force && this.isEnabled) return;
+        debugLog(` - Applying patch ${this.debugName}`);
+        this._disableCallback = this._enableCallback();
+        this._isEnabled = true;
     }
 
-    get isApplied(): boolean {
-        return this._applied;
+    get isEnabled(): boolean {
+        return this._isEnabled;
     }
 }
 
 
 export class MultiPatch extends Patch {
-    private readonly patches: Patch[];
+    private readonly _patches: Patch[];
 
-    constructor({patches, scope, debugName}: {patches: Patch[], scope?: string | symbol | null, debugName?: string | null}) {
+    constructor(props: {patches: Patch[], debugName?: string | null}) {
         super({
-            func: () => patches.forEach(p => p.reapply()),
-            undoFunc: () => patches.forEach(p => p.undo()),
-            supportsReapply: patches.every(p => p.supportsReapply),
-            debugName: debugName,
-            scope: scope,
+            enable: () => {
+                props.patches.forEach(p => p.enable());
+                return () => props.patches.forEach(p => p.disable());
+            },
+            debugName: props.debugName,
         });
-        this.patches = patches;
+        this._patches = props.patches;
     }
 
-    get isApplied(): boolean {
-        return this.patches.every(p => p.isApplied);
+    get isEnabled(): boolean {
+        return this._patches.every(p => p.isEnabled);
     }
 
-    reapply(force: boolean = false) {
-        this.patches.forEach(p => p.reapply(force));
+    enable(force: boolean = false) {
+        this._patches.forEach(p => p.enable(force));
     }
 
-    undo(force: boolean = false) {
-        this.patches.forEach(p => p.undo(force));
+    disable(force: boolean = false) {
+        this._patches.forEach(p => p.disable(force));
     }
 }
 

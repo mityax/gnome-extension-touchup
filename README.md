@@ -13,6 +13,8 @@ experience for devices with a touchscreen.
  - [x] Touch gestures for Gnome Shell notifications
    - [x] Touchscreen swipe gesture
    - [ ] Touchpad two-finger gestures
+ - [ ] Add "copy"/"open" button in notifications for elements like 2FA
+       codes or links
  - [x] Key popups for the onscreen keyboard
  - [ ] Virtual Touchpad (use device as touchpad when connected to a 
        second monitor)

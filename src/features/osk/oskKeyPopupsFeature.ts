@@ -9,17 +9,20 @@ import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings.ts";
 import {Delay} from "$src/utils/delay.ts";
+import {PatchManager} from "$src/utils/patchManager.ts";
+import Clutter from "gi://Clutter";
 
 
 export default class OskKeyPopupsFeature extends ExtensionFeature {
     private keyPrototype: any;
+    private boxPointers: Map<Clutter.Actor, BoxPointer.BoxPointer> = new Map();
 
-    constructor() {
-        super();
+    constructor(pm: PatchManager) {
+        super(pm);
 
         const self = this;
 
-        this.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
             // Only do this once (this patch is only responsible for retrieving the `Key` prototype,
             // which is key (pun intended) to create the OSK popups):
             if (!self.keyPrototype) {
@@ -38,33 +41,46 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
         const self = this;
 
         // Show the key popup on key press:
-        this.appendToMethod(keyProto, '_press', function (this: UnknownClass, button, commitString) {
-            if (!this._gnometouch_boxPointer && commitString && commitString.trim().length > 0) {
-                this._gnometouch_boxPointer = self._buildBoxPointer(this, commitString);
+        this.pm.appendToMethod(keyProto, '_press', function (this: Clutter.Actor, button, commitString) {
+            if (!self.boxPointers.get(this) && commitString && commitString.trim().length > 0) {
+                self.pm.patch(() => {
+                    const bp = self._buildBoxPointer(this, commitString);
+                    Main.layoutManager.addTopChrome(bp);
+                    self.boxPointers.set(this, bp);
+                    // @ts-ignore
+                    bp.connect('destroy', () => self.boxPointers.delete(this));
+
+                    return () => bp.destroy();
+                });
             }
-            this._gnometouch_boxPointer?.open(BoxPointer.PopupAnimation.FULL);
+
+            // @ts-ignore
+            self.boxPointers.get(this)?.open(BoxPointer.PopupAnimation.FULL);
 
             Delay.ms(2000).then(() => {
-                this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
+                // @ts-ignore
+                self.boxPointers.get(this)?.close(BoxPointer.PopupAnimation.FULL);
             });
         });
 
         // Hide the key popup a few ms after a key has been released:
-        this.appendToMethod(keyProto, '_release', function (this: UnknownClass, button, commitString) {
+        this.pm.appendToMethod(keyProto, '_release', function (this: Clutter.Actor, button, commitString) {
             Delay.ms(settings.oskKeyPopups.duration.get()).then(() => {
-                this._gnometouch_boxPointer?.close(BoxPointer.PopupAnimation.FULL);
+                // @ts-ignore
+                self.boxPointers.get(this)?.close(BoxPointer.PopupAnimation.FULL);
             })
         });
 
         // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown:
-        this.appendToMethod(keyProto, '_showSubkeys', function (this: UnknownClass) {
-            this._gnometouch_boxPointer?.close();
+        this.pm.appendToMethod(keyProto, '_showSubkeys', function (this: Clutter.Actor) {
+            // @ts-ignore
+            self.boxPointers.get(this)?.close();
         });
 
         // Destroy the key popup/boxpointer when the key is destroyed:
-        this.appendToMethod(keyProto, '_onDestroy', function (this: UnknownClass) {
-            this._gnometouch_boxPointer?.destroy();
-            this._gnometouch_boxPointer = null;
+        this.pm.appendToMethod(keyProto, '_onDestroy', function (this: Clutter.Actor) {
+            // @ts-ignore
+            self.boxPointers.get(this)?.destroy();
         });
     }
 
@@ -73,7 +89,6 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
             styleClass: 'key-container',
         });
         bp.add_style_class_name('keyboard-subkeys');
-        Main.layoutManager.addTopChrome(bp);
         bp.setPosition(key.keyButton, 0.5);
 
         if (key._icon && key.iconName) {

@@ -5,42 +5,46 @@ import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings.ts";
 import Clutter from "gi://Clutter";
 import Signal from "$src/utils/signal";
-import {log} from "$src/utils/logging";
+import {debugLog, log} from "$src/utils/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import {Patch, PatchManager} from "$src/utils/patchManager.ts";
 
 
 export  type NavbarMode = 'gestures' | 'buttons';
 
 export default class NavigationBarFeature extends ExtensionFeature {
     declare private currentNavBar: BaseNavigationBar<any>;
-    private oskAction: Clutter.Action | null = null;
     private declare _mode: NavbarMode;
 
     readonly onVisibilityChanged = new Signal<boolean>();
+    private removeOskActionPatch: Patch;
 
-    constructor() {
-        super();
-
-        this.setMode(settings.navigationBar.mode.get());  // builds the appropriate navigation bar
+    constructor(pm: PatchManager) {
+        super(pm);
 
         // Connect to monitor changes:
-        this.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => {
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => {
             this.currentNavBar.reallocate();
         });
 
         // Connect to settings:
-        this.connectTo(settings.navigationBar.mode, 'changed', (mode) => {
+        this.pm.connectTo(settings.navigationBar.mode, 'changed', (mode) => {
             this.setMode(mode);
         });
-        this.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
+        this.pm.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
             if (this._mode === 'gestures') {
                 this.currentNavBar.setReserveSpace(value);
             }
         });
 
-        this.onCleanup(() => this.currentNavBar.destroy());
-        this.onCleanup(() => this.setOSKActionEnabled(true));
-        this.onCleanup(() => this.setGlobalStyleClassesEnabled(false))
+        this.removeOskActionPatch = this.pm.patch(() => {
+            let oskAction = global.stage.get_action('osk')!;
+            global.stage.remove_action(oskAction);
+
+            return () => global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, oskAction);
+        });
+
+        this.setMode(settings.navigationBar.mode.get());  // builds the appropriate navigation bar
     }
 
     setMode(mode: NavbarMode) {
@@ -61,13 +65,18 @@ export default class NavigationBarFeature extends ExtensionFeature {
                 break;
             default:
                 log(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
+                this._mode = 'gestures';
                 this.currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
         }
 
         if (visible) {
             this.currentNavBar.show();
+            this.updateGlobalStyleClasses();
         }
-        this.setOSKActionEnabled(this._mode !== 'gestures');
+
+        this._mode == 'gestures'
+            ? this.removeOskActionPatch.enable()
+            : this.removeOskActionPatch.disable();
     }
 
     get mode(): NavbarMode {
@@ -75,15 +84,17 @@ export default class NavigationBarFeature extends ExtensionFeature {
     }
 
     show() {
+        if (this.isVisible) return;
         this.currentNavBar.show();
         this.onVisibilityChanged.emit(true);
-        this.setGlobalStyleClassesEnabled(true);
+        this.updateGlobalStyleClasses();
     }
 
     hide() {
+        if (!this.isVisible) return;
         this.currentNavBar.hide();
         this.onVisibilityChanged.emit(false);
-        this.setGlobalStyleClassesEnabled(false);
+        this.removeGlobalStyleClasses();
     }
 
     get isVisible(): boolean {
@@ -91,26 +102,25 @@ export default class NavigationBarFeature extends ExtensionFeature {
     }
 
     /**
-     * Adds/removes style classes to allow the CSS-side of this extension to style different elements
-     * across the desktop in accordance with the current navigation bar mode and visibility.
-     * @param enabled Whether to set or unset the global style classes
+     * Adds/updates style classes to Main.uiGroup to allow the CSS-side of this extension to style
+     * different elements across the desktop in accordance with the current navigation bar mode and
+     * visibility. This is for example used to move up the dash to make place for the navigation bar
+     * below it.
      */
-    private setGlobalStyleClassesEnabled(enabled: boolean) {
-        if (enabled) {
-            Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible--${this.mode}`);
-            Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible`);
-        } else {
-            Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar-visible(-\w+)?/g, '');
-        }
+    private updateGlobalStyleClasses() {
+        this.removeGlobalStyleClasses();
+        Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible--${this.mode}`);
+        Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible`);
+        debugLog("Updated style classes: ", Main.uiGroup.style_class);
     }
 
-    private setOSKActionEnabled(enabled: boolean) {
-        if (enabled && this.oskAction) {  // `this.oskAction` is only set if the action has been removed earlier
-            global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, this.oskAction);
-            this.oskAction = null;
-        } else if (!enabled) {
-            this.oskAction = global.stage.get_action('osk')!;
-            global.stage.remove_action(this.oskAction);
-        }
+    private removeGlobalStyleClasses() {
+        Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar-visible(-\w+)?/g, '');
+    }
+
+    destroy() {
+        this.removeGlobalStyleClasses()
+        this.currentNavBar?.destroy();
+        super.destroy();
     }
 }

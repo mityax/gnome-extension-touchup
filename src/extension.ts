@@ -2,29 +2,31 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
-import {VirtualTouchpad} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
+import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
 import Clutter from "gi://Clutter";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
-import {NotificationGestures} from "$src/features/notifications/notificationGestures";
+import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature.ts";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
-import {initSettings, uninitSettings} from "$src/features/preferences/backend";
-import {ScreenRotateUtilsFeature} from "$src/features/screenRotateUtils/screenRotateUtilsFeature.ts";
+import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
+import {FloatingScreenRotateButtonFeature} from "$src/features/screenRotateUtils/floatingScreenRotateButtonFeature.ts";
 import {Delay} from "$src/utils/delay.ts";
 import {devMode} from "$src/config.ts";
+import ExtensionFeature from "$src/utils/extensionFeature.ts";
+import {settings} from "$src/settings.ts";
 
 
 export default class GnomeTouchExtension extends Extension {
+    pm?: PatchManager;
+
     navigationBar?: NavigationBarFeature;
     oskKeyPopups?: OskKeyPopupsFeature;
-    screenRotateUtils?: ScreenRotateUtilsFeature;
-    virtualTouchpad?: VirtualTouchpad;
+    floatingScreenRotateButtonFeature?: FloatingScreenRotateButtonFeature;
+    virtualTouchpad?: VirtualTouchpadFeature;
     virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
-    notificationGestures?: NotificationGestures;
+    notificationGestures?: NotificationGesturesFeature;
     developmentTools?: DevelopmentTools;
-
-    static instance?: GnomeTouchExtension;
 
     enable() {
         debugLog("*************************************************")
@@ -32,36 +34,39 @@ export default class GnomeTouchExtension extends Extension {
         debugLog("*************************************************")
         debugLog()
 
-        GnomeTouchExtension.instance = this;
+        // This is the root patch manager of which all other patch managers are descendents:
+        this.pm = new PatchManager("root");
 
-        // @ts-ignore
-        initSettings(this.getSettings());
+        // Initialize settings:
+        this.pm.patch(() => {
+            initSettings(this.getSettings());
+            return () => uninitSettings();
+        })
 
-        DEBUG: if (devMode) {
-            this.developmentTools = new DevelopmentTools(this);
-        }
+        DEBUG: if (devMode) this.pm!.patch(() => {
+            this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools-feature'), this);
+            return () => {
+                this.developmentTools?.destroy();
+                this.developmentTools = undefined;
+            }
+        });
 
-        this.navigationBar = new NavigationBarFeature();
-        this.oskKeyPopups = new OskKeyPopupsFeature();
-        this.screenRotateUtils = new ScreenRotateUtilsFeature();
-        this.notificationGestures = new NotificationGestures();
-        this.virtualTouchpad = new VirtualTouchpad();
+        // This is the entry point for all features of this extension:
+        this.defineFeatures();
 
+        // TODO: make this part of [VirtualTouchpadFeature]:
         // Add virtual touchpad open button to panel:
-        this.virtualTouchpadOpenButton = new VirtualTouchpadQuickSettingsItem(() => this.virtualTouchpad?.toggle());
-        Main.panel.statusArea.quickSettings._system._systemItem.child.insert_child_at_index(
-            this.virtualTouchpadOpenButton,
-            2,  // add after battery indicator and spacer
-        );
+        this.pm.patch(() => {
+            this.virtualTouchpadOpenButton = new VirtualTouchpadQuickSettingsItem(() => this.virtualTouchpad?.toggle());
+            Main.panel.statusArea.quickSettings._system._systemItem.child.insert_child_at_index(
+                this.virtualTouchpadOpenButton,
+                2,  // add after battery indicator and spacer
+            );
+            return () => this.virtualTouchpadOpenButton?.destroy();
+        });
 
         // React to touch-mode changes:
-        PatchManager.patch(() => {
-            const seat = Clutter.get_default_backend().get_default_seat();
-            const id = seat.connect('notify::touch-mode', () => {
-                this.syncUI();
-            });
-            return () => seat.disconnect(id);
-        })
+        this.pm.connectTo(Clutter.get_default_backend().get_default_seat(), 'notify::touch-mode', () => this.syncUI());
 
         this.syncUI();
     }
@@ -84,29 +89,79 @@ export default class GnomeTouchExtension extends Extension {
         }
     }
 
+    /**
+     * Create a patch using the given function that is synced with the given [BoolSetting],
+     * i.e. enabled and disabled automatically depending on the settings value.
+     */
+    private defineFeature<T extends ExtensionFeature>(
+        create: () => T,
+        assign: (feature?: T) => void,
+        setting: BoolSetting,
+    ) {
+        let p = this.pm!.registerPatch(() => {
+            // Create the feature and call `assign` to allow the callee to create references:
+            let feature: T | undefined = create();
+            assign(feature);
+
+            // Destroy the feature and call assign with `undefined` to remove all references:
+            return () => {
+                feature?.destroy();
+                feature = undefined;
+                assign(feature);
+            }
+        }, `enable-extension-feature(setting: ${setting.key})`);
+
+        // Enable the feature initially if setting is set to true:
+        if (setting.get()) p.enable();
+
+        // Connect to setting changes:
+        this.pm!.connectTo(setting, 'changed', value => {
+            if (value) {
+                p.enable();
+                this.syncUI();
+            } else {
+                p.disable();
+            }
+        });
+    }
+
     disable() {
         debugLog(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
         Delay.getAllPendingDelays().forEach(d => d.cancel());
 
-        PatchManager.clear();
+        this.pm?.destroy();
+        this.pm = undefined;
+    }
 
-        this.navigationBar?.destroy();
-        this.oskKeyPopups?.destroy();
-        this.screenRotateUtils?.destroy();
-        this.notificationGestures?.destroy();
-        this.virtualTouchpad?.destroy();
-        this.virtualTouchpadOpenButton?.destroy();
-        this.developmentTools?.destroy();
+    private defineFeatures() {
+        this.defineFeature(
+            () => new NavigationBarFeature(this.pm!.fork('navigation-bar-feature')),
+            (f) => this.navigationBar = f,
+            settings.navigationBar.enabled,
+        );
 
-        this.navigationBar = undefined;
-        this.oskKeyPopups = undefined;
-        this.screenRotateUtils = undefined;
-        this.notificationGestures = undefined;
-        this.virtualTouchpad = undefined;
-        this.virtualTouchpadOpenButton = undefined;
-        this.developmentTools = undefined;
+        this.defineFeature(
+            () => new OskKeyPopupsFeature(this.pm!.fork('osk-key-popup-feature')),
+            (f) => this.oskKeyPopups = f,
+            settings.oskKeyPopups.enabled,
+        );
 
-        uninitSettings();
-        GnomeTouchExtension.instance = undefined;
+        this.defineFeature(
+            () => new FloatingScreenRotateButtonFeature(this.pm!.fork('floating-screen-rotate-button-feature')),
+            (f) => this.floatingScreenRotateButtonFeature = f,
+            settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
+        );
+
+        this.defineFeature(
+            () => new NotificationGesturesFeature(this.pm!.fork('notification-gestures-feature')),
+            (f) => this.notificationGestures = f,
+            settings.notificationGestures.enabled,
+        );
+
+        this.defineFeature(
+            () => new VirtualTouchpadFeature(this.pm!.fork('virtual-touchpad-feature')),
+            (f) => this.virtualTouchpad = f,
+            settings.virtualTouchpad.enabled,
+        );
     }
 }

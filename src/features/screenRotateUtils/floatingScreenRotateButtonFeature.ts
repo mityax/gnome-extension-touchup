@@ -14,44 +14,47 @@ import Graphene from "gi://Graphene";
 import {debugLog} from "$src/utils/logging.ts";
 import Mtk from "gi://Mtk";
 import {Delay} from "$src/utils/delay.ts";
+import {PatchManager} from "$src/utils/patchManager.ts";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
 
 
-export class ScreenRotateUtilsFeature extends ExtensionFeature {
+export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
     private touchscreenSettings = new Gio.Settings({
         schema_id: 'org.gnome.settings-daemon.peripherals.touchscreen',
     });
     private readonly floatingButton = new Ref<Widgets.Button>();
 
-    constructor() {
-        super();
+    constructor(pm: PatchManager) {
+        super(pm);
 
-        this.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', (manager: Meta.MonitorManager) => {
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', (manager: Meta.MonitorManager) => {
             this.removeFloatingRotateButton({animate: false});
         });
 
-        const handlerId = Gio.DBus.system.signal_subscribe(
-            null,
-            'org.freedesktop.DBus.Properties',
-            'PropertiesChanged',
-            '/net/hadess/SensorProxy',
-            null,
-            Gio.DBusSignalFlags.NONE,
-            (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
-                // FIXME: Apparently, this signal subscription no longer works after turning Gnome Shell's
-                //  auto-rotate quicksetting on and off again.
-                debugLog("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
-                const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
-                    ?.at(1)
-                    ?.AccelerometerOrientation
-                    ?.deepUnpack();
-                if (orientation) {
-                    this.onAccelerometerOrientationChanged(orientation).then();
-                }
-            });
-        this.onCleanup(() => Gio.DBus.system.signal_unsubscribe(handlerId));
+        this.pm.patch(() => {
+            const handlerId = Gio.DBus.system.signal_subscribe(
+                null,
+                'org.freedesktop.DBus.Properties',
+                'PropertiesChanged',
+                '/net/hadess/SensorProxy',
+                null,
+                Gio.DBusSignalFlags.NONE,
+                (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
+                    // FIXME: Apparently, this signal subscription no longer works after turning Gnome Shell's
+                    //  auto-rotate quicksetting on and off again.
+                    debugLog("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
+                    const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
+                        ?.at(1)
+                        ?.AccelerometerOrientation
+                        ?.deepUnpack();
+                    if (orientation) {
+                        this.onAccelerometerOrientationChanged(orientation).then();
+                    }
+                });
+            return () => Gio.DBus.system.signal_unsubscribe(handlerId);
+        });
     }
 
     private get isOrientationLockEnabled(): boolean {
@@ -88,7 +91,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         const buttonSize = 40 * sf;
         const margin = 40 * sf;
 
-        let btn: Widgets.Button | null = new Widgets.Button({
+        let btn: Widgets.Button | null = this.pm.autoDestroy(new Widgets.Button({
             ref: this.floatingButton,
             styleClass: 'gnometouch-floating-screen-rotation-button',
             iconName: 'rotation-allowed-symbolic',
@@ -105,7 +108,7 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
             scaleX: 0.5,
             scaleY: 0.5,
             pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-        });
+        }));
 
         global.stage.add_child(btn);
 
@@ -165,11 +168,6 @@ export class ScreenRotateUtilsFeature extends ExtensionFeature {
         const geometry = global.display.get_monitor_geometry(monitorIndex);
         const transform = state.getLogicalMonitorFor(monitorConnector)!.transform;
         return {geometry, transform};
-    }
-
-    destroy() {
-        this.floatingButton.current?.destroy();
-        super.destroy();
     }
 }
 
