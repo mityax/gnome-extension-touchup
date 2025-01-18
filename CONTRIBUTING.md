@@ -4,7 +4,7 @@
 I'm always open to and very thankful for contributions by anyone!
 
 Before you start working on big changes or new features though, please
-make sure to read this document. Also, if you intend to do more then
+make sure to read this document. Also, if you intend to do more than
 tiny bug fixes, **please open an issue upfront** telling me about your 
 plans, so I can make sure your work is not for nothing and potentially
 help you out, should it be needed.
