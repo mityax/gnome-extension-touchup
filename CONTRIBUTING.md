@@ -95,8 +95,8 @@ documentation in the source code for each utility.
    less clean. Particularly useful:
    - `PatchManager.patch` (arbitrary callback with 
        cleanup), 
-   - `PatchManager.connectTo` (connect and auto-disconnect) to
-       a signal, 
+   - `PatchManager.connectTo` (connect and auto-disconnect to
+       a signal), 
    - `PatchManager.patchMethod` and `PatchManager.appendToMethod` 
        (overwrite/append code to methods of any class), 
    - `PatchManager.autoDestroy` (destroy actors on cleanup)
