@@ -85,9 +85,23 @@ documentation in the source code for each utility.
     which does the same but calls the function as often as possible when
     the shell is idle.
  - **ExtensionFeature** – subclass this class when developing a new,
-    independent feature for the extension. It provides some utilities 
-    for patching parts of gnome shell and to simplify cleanup upon extension
-    disabling. Take a look at the existing features to see how it is used.
+    independent feature for the extension. It provides a `PatchManager`
+    instance that you can access using `this.pm` out of the box.
+ - **PatchManager** - provides some utilities for patching parts of 
+   gnome shell with automatic cleanup upon extension or feature disabling.
+   Take a look at the existing features to see how it is used and what 
+   helpers it provides. This should generally be used for any code snippet
+   that needs cleanup, except for the rare case where it makes code stucture
+   less clean. Particularly useful:
+   - `PatchManager.patch` (arbitrary callback with 
+       cleanup), 
+   - `PatchManager.connectTo` (connect and auto-disconnect) to
+       a signal, 
+   - `PatchManager.patchMethod` and `PatchManager.appendToMethod` 
+       (overwrite/append code to methods of any class), 
+   - `PatchManager.autoDestroy` (destroy actors on cleanup)
+   - `PatchManager.fork` (creates a child PM that you can pass around 
+     in your code)
  - **Widgets** – the `Widgets` namespace provides subclasses for most 
     `St.Widget`s, that offer a way easier, briefer and more elegant way
     to create complex user interfaces:
