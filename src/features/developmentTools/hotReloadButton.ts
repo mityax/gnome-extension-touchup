@@ -12,6 +12,7 @@ import {
     PROJECT_DIR
 } from "$src/features/developmentTools/developmentReloadUtils.ts";
 import {debugLog} from "$src/utils/logging.ts";
+import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
@@ -28,7 +29,7 @@ export class HotReloadButton extends DevToolButton {
         super({
             label: 'Rebuild and hot-reload',
             icon: new St.Icon({
-                iconName: 'view-refresh-symbolic',
+                gicon: new AssetIcon('camera-flash-symbolic'),
                 iconSize: 16,
                 opacity: PROJECT_DIR !== null ? 255 : 128,
                 pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
@@ -57,11 +58,11 @@ export class HotReloadButton extends DevToolButton {
     }
 
     protected _startIconAnimation() {
-        const runner = new IntervalRunner(10, () => {
+        const runner = new IntervalRunner(201, () => {
             //@ts-ignore
             this.icon.ease({
-                rotationAngleZ: (this.icon.rotationAngleZ + 7) % 360,
-                duration: 10,
+                opacity: this.icon.opacity == 128 ? 255 : 128,
+                duration: 200,
                 mode: Clutter.AnimationMode.LINEAR,
             });
         });
@@ -69,7 +70,7 @@ export class HotReloadButton extends DevToolButton {
 
         return () => {
             runner.stop();
-            this.icon.rotationAngleZ = 0;
+            this.icon.opacity = 255;
         };
     }
 

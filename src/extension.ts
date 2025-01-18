@@ -12,9 +12,10 @@ import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {FloatingScreenRotateButtonFeature} from "$src/features/screenRotateUtils/floatingScreenRotateButtonFeature.ts";
 import {Delay} from "$src/utils/delay.ts";
-import {devMode} from "$src/config.ts";
+import {assetsGResourceFile, devMode} from "$src/config.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {settings} from "$src/settings.ts";
+import Gio from "gi://Gio";
 
 
 export default class GnomeTouchExtension extends Extension {
@@ -36,6 +37,13 @@ export default class GnomeTouchExtension extends Extension {
 
         // This is the root patch manager of which all other patch managers are descendents:
         this.pm = new PatchManager("root");
+
+        // Load assets:
+        this.pm.patch(() => {
+            const assets = Gio.resource_load(this.dir.get_child(assetsGResourceFile).get_path()!);
+            Gio.resources_register(assets);
+            return () => Gio.resources_unregister(assets);
+        });
 
         // Initialize settings:
         this.pm.patch(() => {

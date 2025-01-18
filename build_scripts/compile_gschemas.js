@@ -1,8 +1,6 @@
-import {exec} from "child_process";
-import util from "node:util";
+import {execSync} from "child_process";
 import path from "path";
 
-util.promisify(exec);
 
 export default function compileGSchemas({ schemasDir }) {
     return {
@@ -11,10 +9,13 @@ export default function compileGSchemas({ schemasDir }) {
             const pth = path.resolve(build.initialOptions.outdir || '.', schemasDir);
 
             build.onEnd(async () => {
-                const {stdout, stderr} = await exec(`glib-compile-schemas "${pth}"`);
-                const err = stderr.read();
-                if (err) {
-                    throw Error(`Compiling the schemas failed: ${err}`)
+                try {
+                    execSync(`glib-compile-schemas "${pth}"`);
+                } catch (e) {
+                    throw Error(
+                        `Compiling gschemas in ${schemasDir} failed with exit code ${e.status}: ` +
+                        `${e.stderr?.toString() ?? e.stdout?.toString()}`
+                    )
                 }
             })
         }

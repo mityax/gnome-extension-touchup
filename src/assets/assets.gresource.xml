@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<gresources>
+    <!-- Icons -->
+    <gresource prefix="/org/gnome/shell/extensions/gnometouch/icons/scalable/actions/">
+        <file preprocess="xml-stripblanks" alias="camera-flash-symbolic.svg">icons/camera-flash-symbolic.svg</file>
+    </gresource>
+</gresources>

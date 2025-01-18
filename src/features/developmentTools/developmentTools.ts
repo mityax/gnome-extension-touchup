@@ -46,7 +46,7 @@ export class DevelopmentTools extends ExtensionFeature {
             }),
             new Widgets.Bin({width: 15}),
             new RestartButton(),
-            new Widgets.Bin({width: 15}),
+            new Widgets.Bin({width: 10}),
             new HotReloadButton(this.extension.metadata.uuid),
         ];
     }

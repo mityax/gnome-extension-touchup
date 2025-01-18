@@ -10,6 +10,7 @@ import disallowImportsPlugin from "./build_scripts/disallow_imports.js";
 import move from "./build_scripts/move.js";
 import createZip from "./build_scripts/create_zip.js";
 import compileGSchemas from "./build_scripts/compile_gschemas.js";
+import compileGResources from "./build_scripts/compile_gresources.js";
 
 
 /**
@@ -74,6 +75,12 @@ const BUILD_OPTIONS = {
         }),
         compileGSchemas({
             schemasDir: 'schemas',
+        }),
+
+        // Compile gresources:
+        compileGResources({
+            inputFile: 'src/assets/assets.gresource.xml',
+            outputFile: 'assets.gresource'
         }),
 
         // Ensure that no disallowed modules are imported in either extension.js or prefs.js as per the review
