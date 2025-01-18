@@ -10,7 +10,11 @@ type Connectable = {connect: (s: string, h: AnyFunc) => any, disconnect: (id: nu
  * Base class for each feature of this extension.
  */
 export default abstract class ExtensionFeature {
-    protected constructor(protected pm: PatchManager) {}
+    protected readonly pm: PatchManager;
+
+    protected constructor(patchManager: PatchManager) {
+        this.pm = patchManager;
+    }
 
     destroy() {
         this.pm.destroy();

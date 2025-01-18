@@ -38,12 +38,9 @@ export class PatchManager {
     patch(func: PatchFunc, debugName?: string): Patch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
-        this._patches.push(new Patch({
-            enable: func,
-            debugName,
-        }));
-        this._patches.at(-1)!.enable();
-        return this._patches.at(-1)!;
+        const patch = this.registerPatch(func, debugName);
+        patch.enable();
+        return patch;
     }
 
     /**
@@ -233,10 +230,10 @@ export class PatchManager {
     /**
      * Create a descendent [PatchManager].
      *
-     * This child [PatchManager] will react to any call to [clear], [disable] and [enable]
+     * This child [PatchManager] will react to any call to [destroy], [disable] and [enable]
      * on any parent [PatchManager] and will forward those calls to its own descendents, should
-     * it be forked again. This allows for a nice, tree-like structure and a consistent interface
-     * managing patches.
+     * it be forked again. This allows for a nice, tree structure and a consistent interface
+     * for managing patches.
      * @param debugName An optional label used for debug log messages
      */
     fork(debugName?: string): PatchManager {

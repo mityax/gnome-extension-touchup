@@ -65,7 +65,9 @@ export class Delay {
     /**
      * Get a list of all pending delays.
      *
-     * Only use this if you who know what you're doing.
+     * This function is only intended to be used to clean up pending [Delay]s when
+     * the extension is being disabled; thus do not use it anywhere outside
+     * [GnomeTouchExtension.disable()].
      */
     public static getAllPendingDelays(): CancellablePromise<boolean>[] {
         return [...this.pendingDelays];

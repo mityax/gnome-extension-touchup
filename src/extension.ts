@@ -89,9 +89,51 @@ export default class GnomeTouchExtension extends Extension {
         }
     }
 
+
+    private defineFeatures() {
+        this.defineFeature(
+            () => new NavigationBarFeature(this.pm!.fork('navigation-bar-feature')),
+            (f) => this.navigationBar = f,
+            settings.navigationBar.enabled,
+        );
+
+        this.defineFeature(
+            () => new OskKeyPopupsFeature(this.pm!.fork('osk-key-popup-feature')),
+            (f) => this.oskKeyPopups = f,
+            settings.oskKeyPopups.enabled,
+        );
+
+        this.defineFeature(
+            () => new FloatingScreenRotateButtonFeature(this.pm!.fork('floating-screen-rotate-button-feature')),
+            (f) => this.floatingScreenRotateButtonFeature = f,
+            settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
+        );
+
+        this.defineFeature(
+            () => new NotificationGesturesFeature(this.pm!.fork('notification-gestures-feature')),
+            (f) => this.notificationGestures = f,
+            settings.notificationGestures.enabled,
+        );
+
+        this.defineFeature(
+            () => new VirtualTouchpadFeature(this.pm!.fork('virtual-touchpad-feature')),
+            (f) => this.virtualTouchpad = f,
+            settings.virtualTouchpad.enabled,
+        );
+    }
+
     /**
-     * Create a patch using the given function that is synced with the given [BoolSetting],
-     * i.e. enabled and disabled automatically depending on the settings value.
+     * A utility method to define [ExtensionFeature]s that are automatically enabled/disabled
+     * depending on the given [setting] and are mapped to a class attribute using [assign].
+     *
+     * Note that the [assign] callback can (and will upon feature or extension disabling) be
+     * called with `undefined' as its value; this is intended behavior and the callback should
+     * unset the reference it assigned before in this case.
+     *
+     * All features are created in a patch and are therefore automatically disabled and set to
+     * `undefined` when the extension is disabled.
+     *
+     * For example usages see [defineFeatures] above.
      */
     private defineFeature<T extends ExtensionFeature>(
         create: () => T,
@@ -131,37 +173,5 @@ export default class GnomeTouchExtension extends Extension {
 
         this.pm?.destroy();
         this.pm = undefined;
-    }
-
-    private defineFeatures() {
-        this.defineFeature(
-            () => new NavigationBarFeature(this.pm!.fork('navigation-bar-feature')),
-            (f) => this.navigationBar = f,
-            settings.navigationBar.enabled,
-        );
-
-        this.defineFeature(
-            () => new OskKeyPopupsFeature(this.pm!.fork('osk-key-popup-feature')),
-            (f) => this.oskKeyPopups = f,
-            settings.oskKeyPopups.enabled,
-        );
-
-        this.defineFeature(
-            () => new FloatingScreenRotateButtonFeature(this.pm!.fork('floating-screen-rotate-button-feature')),
-            (f) => this.floatingScreenRotateButtonFeature = f,
-            settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
-        );
-
-        this.defineFeature(
-            () => new NotificationGesturesFeature(this.pm!.fork('notification-gestures-feature')),
-            (f) => this.notificationGestures = f,
-            settings.notificationGestures.enabled,
-        );
-
-        this.defineFeature(
-            () => new VirtualTouchpadFeature(this.pm!.fork('virtual-touchpad-feature')),
-            (f) => this.virtualTouchpad = f,
-            settings.virtualTouchpad.enabled,
-        );
     }
 }
