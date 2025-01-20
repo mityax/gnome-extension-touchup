@@ -166,8 +166,8 @@ export class DisplayConfigState {
         });
     }
 
-    get builtinMonitor(): Monitor | null {
-        return this.monitors.find((monitor) => monitor.isBuiltin) || null;
+    get builtinMonitor(): Monitor {
+        return this.monitors.find((monitor) => monitor.isBuiltin) ?? this.monitors[0];
     }
 
     getMonitor(connector: string): Monitor | null {

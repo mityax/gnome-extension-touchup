@@ -116,8 +116,14 @@ export default class NavigationBarFeature extends ExtensionFeature {
         debugLog("Updated style classes: ", Main.uiGroup.style_class);
     }
 
+    /**
+     * Remove any style class from Main.uiGroup that was added by [updateGlobalStyleClasses]
+     */
     private removeGlobalStyleClasses() {
-        Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar--[^ ]+/g, '');
+        Main.uiGroup.styleClass = (Main.uiGroup.styleClass as string)
+            .split(/\s+/)
+            .filter(c => !c.startsWith('gnometouch-navbar--'))
+            .join(' ')
     }
 
     destroy() {

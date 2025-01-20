@@ -8,6 +8,7 @@ import {debugLog} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem.ts";
 import {css} from "$src/utils/ui/css.ts";
+import {DisplayConfigState} from "$src/utils/monitorDBusUtils.ts";
 import ActorAlign = Clutter.ActorAlign;
 
 
@@ -30,16 +31,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             style: css({
                 backgroundColor: 'black',
             }),
-            constraints: [
-                new Clutter.BindConstraint({
-                    source: Main.uiGroup,
-                    coordinate: Clutter.BindCoordinate.ALL,
-                }),
-                new MonitorConstraint({
-                    workArea: true,
-                    primary: true,  // TODO: show on touch-enabled monitor instead of primary one
-                }),
-            ],
+            constraints: [],
             onTouchEvent: (_, e) => {
                 debugLog("Virtual touchpad touch event: ", e);
             },
@@ -63,8 +55,11 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         });
         DEBUG: this.actor.opacity = 0.7 * 255;  // a little transparency in debug mode to see the logs below ;)
 
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.updateMonitor());
+        void this.updateMonitor();
+
         this.pm.patch(() => {
-            Main.layoutManager.addChrome(this.actor, {
+            Main.layoutManager.addTopChrome(this.actor, {
                 affectsStruts: false,
                 trackFullscreen: false,
                 affectsInputRegion: true,
@@ -108,5 +103,25 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
     setCanOpen(canOpen: boolean) {
         this.openButton.visible = canOpen;
         if (!canOpen) this.close();
+    }
+
+    async getTouchMonitor(): Promise<number> {
+        //const devices = Clutter.get_default_backend().get_default_seat().list_devices();
+        //const device = devices.find(d => d.deviceType == Clutter.InputDeviceType.TOUCHSCREEN_DEVICE);
+        //debugLog("Touch device dimensions:", device?.get_dimensions());
+
+        // FIXME: Find a way to get the touch-enabled monitor instead of builtin monitor
+
+        const state = await DisplayConfigState.getCurrent();
+        return state.monitors.findIndex(m => m.isBuiltin) ?? global.display.get_primary_monitor();
+    }
+
+    private async updateMonitor() {
+        const index = await this.getTouchMonitor();
+        this.actor.remove_constraint_by_name('monitor');
+        this.actor.add_constraint_with_name('monitor', new MonitorConstraint({
+            workArea: true,
+            index,
+        }));
     }
 }

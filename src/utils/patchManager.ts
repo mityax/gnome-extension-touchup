@@ -52,7 +52,7 @@ export class PatchManager {
 
         this._patches.push(new Patch({
             enable: func,
-            debugName,
+            debugName: this._generatePatchDebugName(debugName),
         }));
         return this._patches.at(-1)!;
     }
@@ -61,13 +61,13 @@ export class PatchManager {
      * Automatically destroy any object with a [destroy] method when the [PatchManager] is
      * disabled or destroyed.
      */
-    autoDestroy<T extends Clutter.Actor>(instance: T) {
+    autoDestroy<T extends Clutter.Actor>(instance: T, debugName?: string) {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
         this.patch(() => {
             let ref = new Ref(instance);
             return () => ref.current?.destroy();
-        });
+        }, debugName ?? `autoDestroy:${instance.constructor.name}`);
         return instance;
     }
 
@@ -103,7 +103,7 @@ export class PatchManager {
                     instance, s, handler,
                     `${debugName}#signal(${instance.constructor.name}:${signalId})`
                 )),
-                debugName,
+                debugName: this._generatePatchDebugName(debugName),
             });
         } else {
             return this.patch(() => {
@@ -140,7 +140,7 @@ export class PatchManager {
                     prototype, m, method,
                     `${debugName}#method(${prototype.constructor.name}:${m})`
                 )),
-                debugName,
+                debugName: this._generatePatchDebugName(debugName),
             });
         } else {
             return this.patch(() => {
@@ -177,7 +177,7 @@ export class PatchManager {
                     prototype, m, method,
                     `${debugName}#append-to-method(${prototype.constructor.name}:${m})`
                 )),
-                debugName,
+                debugName: this._generatePatchDebugName(debugName),
             });
         } else {
             return this.patchMethod(prototype, methodName, function(this: UnknownClass, orig, ...args) {
@@ -272,6 +272,11 @@ export class PatchManager {
         instance._parent = this;
         this._children.push(instance);
         return instance;
+    }
+
+    private _patchNameCounter = 0;
+    private _generatePatchDebugName(debugName: string | undefined): string {
+        return `${this.debugName}:${debugName ?? `#${this._patchNameCounter++}`}`;
     }
 }
 

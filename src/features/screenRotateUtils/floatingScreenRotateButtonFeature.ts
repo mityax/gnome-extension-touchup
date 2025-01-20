@@ -1,11 +1,7 @@
 import Meta from "gi://Meta";
 import Gio from "gi://Gio";
 import ExtensionFeature from "../../utils/extensionFeature";
-import {
-    DisplayConfigState,
-    LogicalMonitorTransform,
-    setMonitorTransform,
-} from "$src/features/screenRotateUtils/monitorDBusUtils.ts";
+import {DisplayConfigState, LogicalMonitorTransform, setMonitorTransform,} from "$src/utils/monitorDBusUtils.ts";
 import {Widgets} from "$src/utils/ui/widgets.ts";
 import {clamp} from "$src/utils/utils.ts";
 import St from "gi://St";

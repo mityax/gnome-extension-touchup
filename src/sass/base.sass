@@ -1,21 +1,22 @@
 @use 'sass:color'
 
 
-.gnometouch-navbar-visible
-    &--gestures
-        $height: 20px
+.gnometouch-navbar--visible
+    &.gnometouch-navbar
+        &--gestures
+            $height: 20px
 
-        #dashtodockContainer #dash
-            padding-bottom: $height !important
-        #keyboard
-            padding-bottom: $height !important
+            #dashtodockContainer #dash
+                padding-bottom: $height !important
+            #keyboard
+                padding-bottom: $height !important
 
-    &--buttons
-        $height: 41px
-        #dashtodockContainer #dash
-            padding-bottom: $height !important
-        #keyboard
-            padding-bottom: $height !important
+        &--buttons
+            $height: 41px
+            #dashtodockContainer #dash
+                padding-bottom: $height !important
+            #keyboard
+                padding-bottom: $height !important
 
 
 // The dark color of the gnome shell theme

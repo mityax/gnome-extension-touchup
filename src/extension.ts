@@ -49,7 +49,7 @@ export default class GnomeTouchExtension extends Extension {
         })
 
         DEBUG: if (devMode) this.pm!.patch(() => {
-            this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools-feature'), this);
+            this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools'), this);
             return () => {
                 this.developmentTools?.destroy();
                 this.developmentTools = undefined;
@@ -83,31 +83,36 @@ export default class GnomeTouchExtension extends Extension {
 
     private defineFeatures() {
         this.defineFeature(
-            () => new NavigationBarFeature(this.pm!.fork('navigation-bar-feature')),
+            'navigation-bar',
+            (pm) => new NavigationBarFeature(pm),
             (f) => this.navigationBar = f,
             settings.navigationBar.enabled,
         );
 
         this.defineFeature(
-            () => new OskKeyPopupsFeature(this.pm!.fork('osk-key-popup-feature')),
+            'osk-key-popups',
+            (pm) => new OskKeyPopupsFeature(pm),
             (f) => this.oskKeyPopups = f,
             settings.oskKeyPopups.enabled,
         );
 
         this.defineFeature(
-            () => new FloatingScreenRotateButtonFeature(this.pm!.fork('floating-screen-rotate-button-feature')),
+            'floating-screen-rotate-button',
+            (pm) => new FloatingScreenRotateButtonFeature(pm),
             (f) => this.floatingScreenRotateButtonFeature = f,
             settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
         );
 
         this.defineFeature(
-            () => new NotificationGesturesFeature(this.pm!.fork('notification-gestures-feature')),
+            'notification-gestures',
+            (pm) => new NotificationGesturesFeature(pm),
             (f) => this.notificationGestures = f,
             settings.notificationGestures.enabled,
         );
 
         BETA: this.defineFeature(
-            () => new VirtualTouchpadFeature(this.pm!.fork('virtual-touchpad-feature')),
+            'virtual-touchpad',
+            (pm) => new VirtualTouchpadFeature(pm),
             (f) => this.virtualTouchpad = f,
             settings.virtualTouchpad.enabled,
         );
@@ -127,13 +132,14 @@ export default class GnomeTouchExtension extends Extension {
      * For example usages see [defineFeatures] above.
      */
     private defineFeature<T extends ExtensionFeature>(
-        create: () => T,
+        featureName: string,
+        create: (pm: PatchManager) => T,
         assign: (feature?: T) => void,
         setting: BoolSetting,
     ) {
         let p = this.pm!.registerPatch(() => {
             // Create the feature and call `assign` to allow the callee to create references:
-            let feature: T | undefined = create();
+            let feature: T | undefined = create(this.pm!.fork(featureName));
             assign(feature);
 
             // Destroy the feature and call assign with `undefined` to remove all references:
@@ -142,7 +148,7 @@ export default class GnomeTouchExtension extends Extension {
                 feature = undefined;
                 assign(feature);
             }
-        }, `enable-extension-feature(setting: ${setting.key})`);
+        }, `enable-extension-feature(${featureName})`);
 
         // Enable the feature initially if setting is set to true:
         if (setting.get()) p.enable();
