@@ -39,9 +39,11 @@ export default class NavigationBarFeature extends ExtensionFeature {
 
         this.removeOskActionPatch = this.pm.patch(() => {
             let oskAction = global.stage.get_action('osk')!;
-            global.stage.remove_action(oskAction);
+            if (oskAction) global.stage.remove_action(oskAction);
 
-            return () => global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, oskAction);
+            return () => {
+                if (oskAction) global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, oskAction)
+            };
         });
 
         this.setMode(settings.navigationBar.mode.get());  // builds the appropriate navigation bar
@@ -109,13 +111,13 @@ export default class NavigationBarFeature extends ExtensionFeature {
      */
     private updateGlobalStyleClasses() {
         this.removeGlobalStyleClasses();
-        Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible--${this.mode}`);
-        Main.uiGroup.add_style_class_name(`gnometouch-navbar-visible`);
+        Main.uiGroup.add_style_class_name(`gnometouch-navbar--${this.mode}`);
+        Main.uiGroup.add_style_class_name(`gnometouch-navbar--visible`);
         debugLog("Updated style classes: ", Main.uiGroup.style_class);
     }
 
     private removeGlobalStyleClasses() {
-        Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar-visible(-\w+)?/g, '');
+        Main.uiGroup.style_class = Main.uiGroup.style_class.replace(/\s*gnometouch-navbar--[^ ]+/g, '');
     }
 
     destroy() {

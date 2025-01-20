@@ -60,11 +60,13 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 padding: '15px',
                 borderRadius: '10px',
             }),
-            constraints: new Clutter.BindConstraint({
-                source: bgManager._container,
-                coordinate: Clutter.BindCoordinate.POSITION,
-                offset: Main.panel.height + 25
-            }),
+            constraints: [
+                new Clutter.BindConstraint({
+                    source: bgManager._container,
+                    coordinate: Clutter.BindCoordinate.POSITION,
+                    offset: Main.panel.height + 25
+                }),
+            ],
         });
         bgManager._container.add_child(display);
 

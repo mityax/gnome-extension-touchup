@@ -62,6 +62,8 @@ export class PatchManager {
      * disabled or destroyed.
      */
     autoDestroy<T extends Clutter.Actor>(instance: T) {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         this.patch(() => {
             let ref = new Ref(instance);
             return () => ref.current?.destroy();
@@ -74,6 +76,8 @@ export class PatchManager {
      * is disabled or destroyed.
      */
     connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string) {
+        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
+
         this.patch(() => {
             const signalId = instance.connect(signal, handler);
             return () => instance.disconnect(signalId);
@@ -134,7 +138,7 @@ export class PatchManager {
             return new MultiPatch({
                 patches: methodName.map(m => this.patchMethod(
                     prototype, m, method,
-                    `${debugName}#method(${prototype.constructor.name}:${methodName})`
+                    `${debugName}#method(${prototype.constructor.name}:${m})`
                 )),
                 debugName,
             });
@@ -142,7 +146,7 @@ export class PatchManager {
             return this.patch(() => {
                 this._injectionManager.overrideMethod(prototype, methodName, (orig: (...args: any) => any) => {
                     return function (this: UnknownClass, ...args: any[]) {
-                        method.call(this, orig.bind(this), ...args);
+                        return method.call(this, orig.bind(this), ...args);
                     }
                 });
                 return () => this._injectionManager.restoreMethod(prototype, methodName);
@@ -171,14 +175,15 @@ export class PatchManager {
             return new MultiPatch({
                 patches: methodName.map(m => this.appendToMethod(
                     prototype, m, method,
-                    `${debugName}#append-to-method(${prototype.constructor.name}:${methodName})`
+                    `${debugName}#append-to-method(${prototype.constructor.name}:${m})`
                 )),
                 debugName,
             });
         } else {
             return this.patchMethod(prototype, methodName, function(this: UnknownClass, orig, ...args) {
-                orig.call(this, ...args);
+                const res = orig.call(this, ...args);
                 method.call(this, ...args);
+                return res;
             }, debugName);
         }
     }
@@ -190,29 +195,51 @@ export class PatchManager {
      * This function should only be called if the [PatchManager] is not going to be used anymore.
      */
     destroy() {
-        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot destroy again.`);
+        if (this._isDestroyed) return;
 
         debugLog(`Destroying PatchManager ${this.debugName ?? ''}`.trim());
 
-        this._children.forEach(c => c.destroy());
-        this._patches.forEach(p => p.disable());
+        // Remove this PM from its parent:
+        if (this._parent?._children.includes(this)) {
+            this._parent?._children.splice(this._parent!._children.indexOf(this), 1);
+        }
 
-        this._parent!._children = this._parent!._children.filter(c => c != this);
-        this._children = [];
+        // Destroy all descendent PMs, in reverse order - i.e. those descendents that where
+        // created first will be destroyed last.
+        //
+        // Note: We use a while loop here to avoid destroying PMs again that have been destroyed
+        // manually by the user during this process.
+        while (this._children.length > 0) {
+            this._children.pop()!.destroy();
+        }
+
+        // Undo all patches from this PM, in reverse order - i.e. those descendents that where
+        // created first will be destroyed last, to create an "encapsulation" effect:
+        // If patch A depends on another patch B that was made before it, patch B's `disable`
+        // function might still need patch A, but patch A will not need patch B, since it was
+        // already made before patch B even existed. Thus, we do it this way:
+        //      create A -> create B -> disable B -> disable A
+        // => All patches encapsulate those that are made after them.
+        this._patches.toReversed().forEach(p => p.disable());
         this._patches = [];
-        DEBUG: this._isDestroyed = true;
+
+        this._isDestroyed = true;
     }
 
     /**
      * Undo all patches made so far, but keep them in store for a potential call to [enable]
      */
     disable() {
-        DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot disable anymore.`);
+        DEBUG: assert(!this._isDestroyed, {
+            isWarning: true,
+            message: `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot disable anymore.`,
+        });
+        if (this._isDestroyed) return;
 
         debugLog(`Disabling PatchManager ${this.debugName ?? ''}`.trim());
 
-        this._children.forEach(c => c.disable());
-        this._patches.forEach(p => p.disable());
+        this._children.toReversed().forEach(c => c.disable());
+        this._patches.toReversed().forEach(p => p.disable());
     }
 
     /**

@@ -24,7 +24,13 @@ export class DevelopmentTools extends ExtensionFeature {
     constructor(pm: PatchManager, extension: GnomeTouchExtension) {
         super(pm);
         this.extension = extension;
-        this.enable();
+        this._setupDevToolBar();
+        this._setupLiveReload();
+
+        const self = this;
+        this.pm.patchMethod(Clutter.Seat.prototype, 'get_touch_mode', function (this: Clutter.Seat, originalMethod) {
+            return self._enforceTouchMode || originalMethod();
+        });
     }
 
     private buildToolbar() {
@@ -53,11 +59,6 @@ export class DevelopmentTools extends ExtensionFeature {
 
     get enforceTouchMode(): boolean {
         return this._enforceTouchMode;
-    }
-
-    enable() {
-        this._setupDevToolBar();
-        this._setupLiveReload();
     }
 
     private _setupDevToolBar() {

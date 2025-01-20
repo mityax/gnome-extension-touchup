@@ -26,7 +26,9 @@ const metadata = JSON.parse(fs.readFileSync(join(rootDir, "src/metadata.json")).
 // Clear up/remove previous build:
 if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });
 
-const DEBUG = !process.argv.includes('--release');
+// Whether to strip debugging code out of the build or keep it:
+const IS_DEBUG_MODE = !process.argv.includes('--release');
+
 
 const BUILD_OPTIONS = {
     sourceRoot: rootDir,
@@ -37,8 +39,11 @@ const BUILD_OPTIONS = {
         "src/sass/stylesheet-light.sass",
         "src/sass/stylesheet-dark.sass",
     ],
-    dropLabels: DEBUG ? [] : ['DEBUG'],
-    pure: DEBUG ? [] : ['debugLog'],  // FIXME: this is apparently ignored by esbuild (?)
+    dropLabels: [
+        IS_DEBUG_MODE ? null : 'DEBUG',
+        IS_DEBUG_MODE ? null : 'BETA',
+    ].filter(e=>e),
+    pure: IS_DEBUG_MODE ? [] : ['debugLog'],  // FIXME: this is apparently ignored by esbuild (?)
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
@@ -103,7 +108,7 @@ const BUILD_OPTIONS = {
 
 
 async function build() {
-    console.log(`Building Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+    console.log(`Building Gnome Touch extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
 
     await esbuild.build(BUILD_OPTIONS)
         .then(() => console.log(`✅ Build completed.\n`))
@@ -120,7 +125,7 @@ async function build() {
 }
 
 async function watch() {
-    console.log(`Serving Gnome Touch extension in ${DEBUG ? 'debug' : 'release'} mode...`);
+    console.log(`Serving Gnome Touch extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
 
     // Log a success/error message on each rebuild:
     let buildCounter = 0;

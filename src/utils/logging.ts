@@ -99,8 +99,16 @@ export function removeLogCallback(id: number) {
  *
  * This is a no-op in release builds.
  */
-export function assert(condition: boolean, message?: string) {
+export function assert(condition: boolean, message?: string | {isWarning: boolean, message: string}) {
     DEBUG: if (!condition) {
-        throw message ?? "Assertion error";
+        if (!message || typeof message === 'string') {
+            throw new Error(message ?? "Assertion error");
+        } else if (typeof message === 'object') {
+            if (message.isWarning) {
+                debugLog("WARNING:", message.message);
+            } else {
+                throw new Error(message.message);
+            }
+        }
     }
 }

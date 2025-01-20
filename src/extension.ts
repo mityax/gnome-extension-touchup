@@ -1,10 +1,8 @@
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
 import Clutter from "gi://Clutter";
-import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
 import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature.ts";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
@@ -25,7 +23,6 @@ export default class GnomeTouchExtension extends Extension {
     oskKeyPopups?: OskKeyPopupsFeature;
     floatingScreenRotateButtonFeature?: FloatingScreenRotateButtonFeature;
     virtualTouchpad?: VirtualTouchpadFeature;
-    virtualTouchpadOpenButton?: VirtualTouchpadQuickSettingsItem;
     notificationGestures?: NotificationGesturesFeature;
     developmentTools?: DevelopmentTools;
 
@@ -62,25 +59,15 @@ export default class GnomeTouchExtension extends Extension {
         // This is the entry point for all features of this extension:
         this.defineFeatures();
 
-        // TODO: make this part of [VirtualTouchpadFeature]:
-        // Add virtual touchpad open button to panel:
-        this.pm.patch(() => {
-            this.virtualTouchpadOpenButton = new VirtualTouchpadQuickSettingsItem(() => this.virtualTouchpad?.toggle());
-            Main.panel.statusArea.quickSettings._system._systemItem.child.insert_child_at_index(
-                this.virtualTouchpadOpenButton,
-                2,  // add after battery indicator and spacer
-            );
-            return () => this.virtualTouchpadOpenButton?.destroy();
-        });
-
-        // React to touch-mode changes:
+        // Sync ui on touch-mode and monitor changes:
         this.pm.connectTo(Clutter.get_default_backend().get_default_seat(), 'notify::touch-mode', () => this.syncUI());
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.syncUI());
 
         this.syncUI();
     }
 
     syncUI() {
-        let touchMode = Clutter.get_default_backend().get_default_seat().touchMode;
+        let touchMode = Clutter.get_default_backend().get_default_seat().get_touch_mode();
 
         DEBUG: if (this.developmentTools?.enforceTouchMode) touchMode = true;
 
@@ -90,11 +77,7 @@ export default class GnomeTouchExtension extends Extension {
             this.navigationBar?.hide();
         }
 
-        if (touchMode) {
-            this.virtualTouchpadOpenButton?.show();
-        } else {
-            this.virtualTouchpadOpenButton?.hide();
-        }
+        this.virtualTouchpad?.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
     }
 
 
@@ -123,7 +106,7 @@ export default class GnomeTouchExtension extends Extension {
             settings.notificationGestures.enabled,
         );
 
-        this.defineFeature(
+        BETA: this.defineFeature(
             () => new VirtualTouchpadFeature(this.pm!.fork('virtual-touchpad-feature')),
             (f) => this.virtualTouchpad = f,
             settings.virtualTouchpad.enabled,

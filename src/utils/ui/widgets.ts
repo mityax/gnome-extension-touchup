@@ -67,11 +67,14 @@ export namespace Widgets {
     type UiProps<T extends St.Widget> = {
         ref?: Ref<T>,
         onCreated?: (widget: T) => void,
+        constraints?: Clutter.Constraint[],
     } & Partial<SignalPropsForWidget<T>>;
+
+    type ConstructorPropsFor<W extends St.Widget, ConstructorProps> = Override<Partial<ConstructorProps>, UiProps<W>>;
 
     function filterConfig<T extends St.Widget>(config: UiProps<T>, filterOut?: (string | RegExp)[]): any {
         filterOut ??= [
-            'ref', 'children', 'child', 'onCreated', /^(on|notify)[A-Z]/,
+            'ref', 'children', 'child', 'onCreated', 'constraints', /^(on|notify)[A-Z]/,
         ];
         return filterObject(
             config,
@@ -86,6 +89,8 @@ export namespace Widgets {
 
     function initWidget<T extends St.Widget>(w: T, props: UiProps<T>) {
         if (props.ref) props.ref.set(w);
+
+        props.constraints?.forEach(c => w.add_constraint(c));
 
         // Automatically connect signals from the constructor (e.g. `onClicked` or `notifySize`):
         for (const [key, value] of Object.entries(props)) {
@@ -104,7 +109,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.Button.ConstructorProps> & UiProps<Button> & {onLongPress?: (source: Button) => void}) {
+        constructor(config: ConstructorPropsFor<Button, St.Button.ConstructorProps> & {onLongPress?: (source: Button) => void}) {
             super(filterConfig(config));
             initWidget(this, filterConfig(config, config.onLongPress ? ['onLongPress', 'onClicked'] : []))
             if (config.onLongPress) {
@@ -148,7 +153,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.Icon.ConstructorProps> & UiProps<Icon>) {
+        constructor(config: ConstructorPropsFor<Icon, St.Icon.ConstructorProps>) {
             super(filterConfig(config));
             initWidget(this, config);
         }
@@ -159,7 +164,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.Label.ConstructorProps> & UiProps<Label>) {
+        constructor(config: ConstructorPropsFor<Label, St.Label.ConstructorProps>) {
             super(filterConfig(config));
             initWidget(this, config);
         }
@@ -170,7 +175,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.Bin.ConstructorProps> & UiProps<Bin>) {
+        constructor(config: ConstructorPropsFor<Bin, St.Bin.ConstructorProps>) {
             super(filterConfig(config));
             initWidget(this, config);
             if (config.child) this.set_child(config.child);
@@ -182,7 +187,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<St.BoxLayout.ConstructorProps> & UiProps<Box> & { children?: St.Widget[] }) {
+        constructor(config: ConstructorPropsFor<Box, St.BoxLayout.ConstructorProps> & { children?: St.Widget[] }) {
             super(filterConfig(config));
             initWidget(this, config);
             config.children?.forEach(c => this.add_child(c));
@@ -194,7 +199,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<Omit<St.BoxLayout.ConstructorProps, 'vertical'>> & UiProps<Row> & {
+        constructor(config: Partial<Omit<ConstructorPropsFor<Row, St.BoxLayout.ConstructorProps>, 'vertical'>> & {
             children?: St.Widget[]
         }) {
             super({
@@ -212,7 +217,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<Omit<St.BoxLayout.ConstructorProps, 'vertical'>> & UiProps<Column> & {
+        constructor(config: Partial<Omit<ConstructorPropsFor<Column, St.BoxLayout.ConstructorProps>, 'vertical'>> & {
             children?: St.Widget[]
         }) {
             super({
@@ -229,7 +234,7 @@ export namespace Widgets {
             GObject.registerClass(this);
         }
 
-        constructor(config: Partial<Omit<St.ScrollView.ConstructorProps, 'child'>> & UiProps<St.ScrollView> & {
+        constructor(config: Partial<Omit<ConstructorPropsFor<ScrollView, St.ScrollView.ConstructorProps>, 'child'>> & {
             child?: St.Widget
         }) {
             super({
@@ -254,3 +259,6 @@ export namespace Widgets {
 type SignalPropsForWidget<T> = SignalPropsFromClasses<
     [T, St.Widget, Clutter.Actor, GObject.InitiallyUnowned]
 > & NotifySignalProps<T>;
+
+
+type Override<What, With> = Omit<What, keyof With> & With

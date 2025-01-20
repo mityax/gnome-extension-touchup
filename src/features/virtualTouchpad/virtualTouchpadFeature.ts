@@ -4,35 +4,51 @@ import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
 import {Widgets} from "$src/utils/ui/widgets";
-import {randomChoice} from "$src/utils/utils";
 import {debugLog} from "$src/utils/logging";
-import Cogl from "gi://Cogl";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
+import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem.ts";
+import {css} from "$src/utils/ui/css.ts";
 import ActorAlign = Clutter.ActorAlign;
-import EventPhase = Clutter.EventPhase;
 
 
 export class VirtualTouchpadFeature extends ExtensionFeature {
     public static readonly PATCH_SCOPE: unique symbol = Symbol('virtual-touchpad');
     private readonly actor: St.Widget;
+    private readonly openButton: VirtualTouchpadQuickSettingsItem;
 
     constructor(pm: PatchManager) {
         super(pm);
 
         const buttonRef = new Widgets.Ref<Widgets.Button>();
+
         this.actor = new Widgets.Bin({
             name: 'gnometouch-virtual-touchpad',
             visible: false,
             reactive: true,
             trackHover: true,
             canFocus: true,
-            backgroundColor: Cogl.Color.from_string('black')[1],
-            constraints: new Clutter.BindConstraint({
-                source: Main.uiGroup,
-                coordinate: Clutter.BindCoordinate.ALL,
+            style: css({
+                backgroundColor: 'black',
             }),
+            constraints: [
+                new Clutter.BindConstraint({
+                    source: Main.uiGroup,
+                    coordinate: Clutter.BindCoordinate.ALL,
+                }),
+                new MonitorConstraint({
+                    workArea: true,
+                    primary: true,  // TODO: show on touch-enabled monitor instead of primary one
+                }),
+            ],
+            onTouchEvent: (_, e) => {
+                debugLog("Virtual touchpad touch event: ", e);
+            },
             child: new Widgets.Button({
-                child: new Widgets.Icon({iconName: 'edit-delete-symbolic', style: 'color: white;'}),
+                child: new Widgets.Icon({
+                    iconName: 'edit-delete-symbolic',
+                    iconSize: 25,
+                    style: css({ color: 'white' }),
+                }),
                 ref: buttonRef,
                 reactive: true,
                 trackHover: true,
@@ -40,29 +56,12 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 xAlign: ActorAlign.END,
                 yAlign: ActorAlign.START,
                 onClicked: () => {
-                    debugLog('Clicked!!!');
+                    debugLog('Virtual Touchpad Close Button Clicked');
                     this.close();
                 },
             }),
         });
-        this.actor.add_constraint(new MonitorConstraint({
-            workArea: true,
-            primary: true,  // TODO: show on touch-enabled monitor instead of primary one
-        }));
-
-        /*let st = new TouchSwipeGesture();
-        this.actor.add_action_full('test', EventPhase.BUBBLE, st);
-        st.connect('end', () => {
-            debugLog("Swept!");
-        })*/
-        let ac = new Clutter.TapAction({});
-        this.actor.add_action_full('test', EventPhase.CAPTURE, ac);
-        ac.connect('tap', () => {
-            debugLog('Tap action activated');
-            this.actor.backgroundColor = Cogl.Color.from_string(randomChoice([
-                "red", 'blue', 'green', 'purple', 'yellow', 'orange', 'black', 'white'
-            ]))[1];
-        })
+        DEBUG: this.actor.opacity = 0.7 * 255;  // a little transparency in debug mode to see the logs below ;)
 
         this.pm.patch(() => {
             Main.layoutManager.addChrome(this.actor, {
@@ -70,8 +69,17 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 trackFullscreen: false,
                 affectsInputRegion: true,
             });
-
             return () => Main.layoutManager.removeChrome(this.actor);
+        });
+
+        // Add virtual touchpad open button to panel:
+        this.openButton = new VirtualTouchpadQuickSettingsItem(() => this.toggle());
+        this.pm.patch(() => {
+            Main.panel.statusArea.quickSettings._system._systemItem.child.insert_child_at_index(
+                this.openButton,
+                2,  // add after battery indicator and spacer
+            );
+            return () => this.openButton?.destroy();
         });
     }
 
@@ -89,5 +97,16 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         } else {
             this.actor.show();
         }
+    }
+
+    /**
+     * Set whether the virtual touchpad can be opened at the moment.
+     *
+     * This effectively updates the visibility of the open button in the quick settings
+     * menu and, if [canOpen] is `false`, closes the touchpad if it is open.
+     */
+    setCanOpen(canOpen: boolean) {
+        this.openButton.visible = canOpen;
+        if (!canOpen) this.close();
     }
 }
