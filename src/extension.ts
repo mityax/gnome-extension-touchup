@@ -28,7 +28,7 @@ export default class GnomeTouchExtension extends Extension {
 
     enable() {
         debugLog("*************************************************")
-        debugLog(`          Starting Gnome Touch v. ${this.metadata.version}          `)
+        debugLog(`          StartingGnome Touch v. ${this.metadata.version}          `)
         debugLog("*************************************************")
         debugLog()
 
@@ -40,13 +40,13 @@ export default class GnomeTouchExtension extends Extension {
             const assets = Gio.resource_load(this.dir.get_child(assetsGResourceFile).get_path()!);
             Gio.resources_register(assets);
             return () => Gio.resources_unregister(assets);
-        });
+        }, 'load-and-register-assets');
 
         // Initialize settings:
         this.pm.patch(() => {
             initSettings(this.getSettings());
             return () => uninitSettings();
-        })
+        }, 'init-settings')
 
         DEBUG: if (devMode) this.pm!.patch(() => {
             this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools'), this);
@@ -54,7 +54,7 @@ export default class GnomeTouchExtension extends Extension {
                 this.developmentTools?.destroy();
                 this.developmentTools = undefined;
             }
-        });
+        }, 'enable-feature(development-tools)');
 
         // This is the entry point for all features of this extension:
         this.defineFeatures();
@@ -148,7 +148,7 @@ export default class GnomeTouchExtension extends Extension {
                 feature = undefined;
                 assign(feature);
             }
-        }, `enable-extension-feature(${featureName})`);
+        }, `enable-feature(${featureName})`);
 
         // Enable the feature initially if setting is set to true:
         if (setting.get()) p.enable();
@@ -165,10 +165,14 @@ export default class GnomeTouchExtension extends Extension {
     }
 
     disable() {
+        // Cancel any pending delays:
         debugLog(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
         Delay.getAllPendingDelays().forEach(d => d.cancel());
 
+        // Destroy the root PatchManager and with that all its descendents:
         this.pm?.destroy();
         this.pm = undefined;
+
+        debugLog("GnomeTouch extension successfully unloaded.")
     }
 }

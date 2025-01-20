@@ -294,14 +294,14 @@ export class Patch {
 
     disable(force: boolean = false) {
         if (!force && !this.isEnabled) return;
-        debugLog(` - Undoing patch ${this.debugName}`);
+        debugLog(` - Disabling patch ${this.debugName}`);
         this._disableCallback?.call(this);
         this._isEnabled = false;
     }
 
     enable(force: boolean = false) {
         if (!force && this.isEnabled) return;
-        debugLog(` - Applying patch ${this.debugName}`);
+        debugLog(` - Enabling patch ${this.debugName}`);
         this._disableCallback = this._enableCallback();
         this._isEnabled = true;
     }
