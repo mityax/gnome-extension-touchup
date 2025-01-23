@@ -13,6 +13,7 @@ import Cogl from "gi://Cogl";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
 import Ref = Widgets.Ref;
+import ActorAlign = Clutter.ActorAlign;
 
 
 export class DevelopmentLogDisplayButton extends DevToolToggleButton {
@@ -78,7 +79,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
             const a = display.get_vadjustment();
             if (a.value + a.pageSize >= a.upper - 25 * scaleFactor) {
-                Delay.ms(25).then(() => {
+                Delay.ms(100).then(() => {
                     if (this.logDisplays.includes(display)) a.set_value(a.upper);
                 });
             }
@@ -89,16 +90,8 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             }
 
             // Add the log message:
-            col.current?.add_child(new Widgets.Label({
-                text: t,
-                onCreated: (l) => {
-                    l.clutterText.lineWrap = true;
-                    l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
-                    l.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
-                    l.clutterText.selectable = true;
-                    l.clutterText.reactive = true;
-                    l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
-                },
+            col.current?.add_child(new Widgets.Row({
+                xAlign: ActorAlign.FILL,
                 style: css({
                     backgroundColor: "rgba(255,255,255,0.2)",
                     borderRadius: "7px",
@@ -106,7 +99,26 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                     marginTop: "7px",
                     fontFamily: "monospace",
                     fontSize: '9pt',
-                })
+                }),
+                children: [
+                    new Widgets.Label({
+                        xExpand: true,
+                        text: t,
+                        onCreated: (l) => {
+                            l.clutterText.lineWrap = true;
+                            l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
+                            l.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
+                            l.clutterText.selectable = true;
+                            l.clutterText.reactive = true;
+                            l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
+                        },
+                    }),
+                    new Widgets.Label({
+                        text: new Date().toLocaleTimeString(),
+                        style: css({ fontSize: '7pt' }),
+                        xAlign: ActorAlign.END,
+                    }),
+                ],
             }));
         });
         this.logDisplays.push(display);

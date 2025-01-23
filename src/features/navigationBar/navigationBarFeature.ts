@@ -5,7 +5,7 @@ import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings.ts";
 import Clutter from "gi://Clutter";
 import Signal from "$src/utils/signal";
-import {debugLog, log} from "$src/utils/logging";
+import {log} from "$src/utils/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {Patch, PatchManager} from "$src/utils/patchManager.ts";
 
@@ -113,7 +113,6 @@ export default class NavigationBarFeature extends ExtensionFeature {
         this.removeGlobalStyleClasses();
         Main.uiGroup.add_style_class_name(`gnometouch-navbar--${this.mode}`);
         Main.uiGroup.add_style_class_name(`gnometouch-navbar--visible`);
-        debugLog("Updated style classes: ", Main.uiGroup.style_class);
     }
 
     /**

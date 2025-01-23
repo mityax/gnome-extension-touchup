@@ -7,6 +7,7 @@ import {settings} from "$src/settings.ts";
 import {log} from "$src/utils/logging.ts";
 import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils.ts";
 import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
+import {SettingsType} from "$src/features/preferences/backend.ts";
 import ActorAlign = Clutter.ActorAlign;
 
 
@@ -55,7 +56,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         }
     }
 
-    private _buildButton(buttonType: 'keyboard' | 'workspace-previous' | 'workspace-next' | 'overview' | 'apps' | 'back' | 'spacer'): St.Widget {
+    private _buildButton(buttonType: SettingsType<typeof settings.navigationBar.buttonsLeft>[0]): St.Widget {
         switch (buttonType) {
             case "keyboard":
                 return new Widgets.Button({
@@ -113,6 +114,10 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 return new Widgets.Bin({ width: 20 });
             default:
                 log(`Unknown button for ButtonNavigationBar: ${buttonType}`);
+
+                // If typescript complains here, that means a button is missing above:
+                assertExhaustive(buttonType);
+
                 return new St.Bin({});  // fallback to not crash on invalid settings
         }
     }
@@ -122,3 +127,9 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         super.destroy();
     }
 }
+
+
+/**
+ * Helper to make typescript statically check whether a switch is exhaustive or not.
+ */
+function assertExhaustive(p: never) {}
