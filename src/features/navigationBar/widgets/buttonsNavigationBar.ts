@@ -2,17 +2,16 @@ import BaseNavigationBar from "./baseNavigationBar";
 import St from "gi://St";
 import {Widgets} from "$src/utils/ui/widgets";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import Graphene from "gi://Graphene";
 import Clutter from "gi://Clutter";
-import Meta from "gi://Meta";
 import {settings} from "$src/settings.ts";
-import {debugLog, log} from "$src/utils/logging.ts";
+import {log} from "$src/utils/logging.ts";
 import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils.ts";
+import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
 import ActorAlign = Clutter.ActorAlign;
 
 
 export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout> {
-    private _virtualKeyboardDevice: Clutter.VirtualInputDevice;
+    private readonly _virtualKeyboardDevice: Clutter.VirtualInputDevice;
 
     constructor() {
         super({ reserveSpace: true });
@@ -63,16 +62,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                     name: 'gnometouch-navbar__osk-button',
                     styleClass: 'gnometouch-navbar__button',
                     iconName: 'input-keyboard-symbolic',
-                    onClicked: () => {
-                        try {
-                            debugLog("keyboard: ", Main.keyboard);
-                            // FIXME: "Couldn't open keyboard:  Error (TypeError: this.keyboardMonitor is undefined): this.keyboardMonitor is undefined"
-                            // This doesn't help: Main.overview.keyboardIndex = this.monitor.index;
-                            Main.keyboard?.open(this.monitor.index);
-                        } catch (e) {
-                            debugLog(`Couldn't open keyboard: `, e);
-                        }
-                    },
+                    onClicked: () => Main.keyboard.open(this.monitor.index),
                 });
             case "workspace-previous":
                 return new Widgets.Button({
@@ -92,41 +82,35 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 return new Widgets.Button({
                     name: 'gnometouch-navbar__overview-button',
                     styleClass: 'gnometouch-navbar__button',
-                    iconName: 'media-playback-stop',    // TODO: replace with a proper icon
+                    child: new Widgets.Icon({
+                        gicon: new AssetIcon('box-outline-symbolic'),
+                    }),
                     onClicked: () => Main.overview.toggle(),
                 });
             case "apps":
                 return new Widgets.Button({
                     name: 'gnometouch-navbar__apps-button',
                     styleClass: 'gnometouch-navbar__button',
-                    iconName: 'view-grid-symbolic',
+                    child: new Widgets.Icon({
+                        gicon: new AssetIcon('grid-large-symbolic'),
+                    }),
                     onClicked: () => Main.overview.dash.showAppsButton.checked = !Main.overview.dash.showAppsButton.checked,
                 });
             case "back":
                 return new Widgets.Button({
                     name: 'gnometouch-navbar__back-button',
                     styleClass: 'gnometouch-navbar__button',
-                    iconName: 'media-playback-start-symbolic',  // TODO: replace with a proper icon
-                    scaleX: -1,  // flip the icon (ugly)
-                    pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-                    onClicked: () => {
-                        debugLog("Clicked!");
-                        navigateBack({
-                            virtualKeyboardDevice: this._virtualKeyboardDevice,
-                        });
-                    },
-                    onLongPress: () => {
-                        debugLog("Long pressed!");
-                        navigateBack({
-                            virtualKeyboardDevice: this._virtualKeyboardDevice,
-                            greedyMode: true,
-                        });
-                    },
+                    child: new Widgets.Icon({
+                        gicon: new AssetIcon('arrow2-left-symbolic'),
+                    }),
+                    onClicked: () => navigateBack({ virtualKeyboardDevice: this._virtualKeyboardDevice }),
+                    onLongPress: () => navigateBack({
+                        virtualKeyboardDevice: this._virtualKeyboardDevice,
+                        greedyMode: true,
+                    }),
                 });
             case "spacer":
-                return new Widgets.Bin({
-                    width: 15,
-                });
+                return new Widgets.Bin({ width: 20 });
             default:
                 log(`Unknown button for ButtonNavigationBar: ${buttonType}`);
                 return new St.Bin({});  // fallback to not crash on invalid settings

@@ -17,20 +17,30 @@ import {CancellablePromise, Delay} from "$src/utils/delay.ts";
 import {PatchManager} from "$src/utils/patchManager.ts";
 
 
+type _PersistedState = {
+    enforceTouchMode: boolean,
+    showLogDisplays: boolean,
+};
+
+
 export class DevelopmentTools extends ExtensionFeature {
-    private _enforceTouchMode = false;
     private extension: GnomeTouchExtension;
+
+    // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
+    // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
+    get _persistedState(): _PersistedState {
+        // @ts-ignore
+        return window._gnomeTouchPersistedState ??= {
+            enforceTouchMode: false,
+            showLogDisplays: true,
+        };
+    }
 
     constructor(pm: PatchManager, extension: GnomeTouchExtension) {
         super(pm);
         this.extension = extension;
         this._setupDevToolBar();
         this._setupLiveReload();
-
-        const self = this;
-        this.pm.patchMethod(Clutter.Seat.prototype, 'get_touch_mode', function (this: Clutter.Seat, originalMethod) {
-            return self._enforceTouchMode || originalMethod();
-        });
     }
 
     private buildToolbar() {
@@ -40,13 +50,17 @@ export class DevelopmentTools extends ExtensionFeature {
                 yAlign: Clutter.ActorAlign.CENTER,
             }),
             new Widgets.Bin({width: 25}),
-            new DevelopmentLogDisplayButton(),
+            new DevelopmentLogDisplayButton({
+                initialValue: this._persistedState.showLogDisplays,
+                onPressed: (v) => this._persistedState.showLogDisplays = v,
+            }),
             new Widgets.Bin({width: 10}),
             new DevToolToggleButton({
                 label: 'Enforce touch-mode',
                 icon: 'phone-symbolic',
+                initialValue: this._persistedState.enforceTouchMode,
                 onPressed: (v) => {
-                    this._enforceTouchMode = v;
+                    this._persistedState.enforceTouchMode = v;
                     this.extension.syncUI();
                 }
             }),
@@ -58,7 +72,7 @@ export class DevelopmentTools extends ExtensionFeature {
     }
 
     get enforceTouchMode(): boolean {
-        return this._enforceTouchMode;
+        return this._persistedState.enforceTouchMode;
     }
 
     private _setupDevToolBar() {
@@ -95,7 +109,7 @@ export class DevelopmentTools extends ExtensionFeature {
             source.on('change', debounce((data) => {
                 _hotReloadExtension(this.extension.metadata.uuid, {
                     baseUri: `file://${baseDir}`,
-                    // Data is a JSON-string containing info about changed files, e.g.:
+                    // `data` is a JSON-string containing info about changed files, e.g.:
                     //   {"added":[],"removed":[],"updated":["/extension.js"]}
                     // We're lazy here and just check whether '.js"' is present in that string:
                     stylesheetsOnly: !/\.js"/.test(data),

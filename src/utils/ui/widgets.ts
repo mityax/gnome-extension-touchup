@@ -66,7 +66,16 @@ export namespace Widgets {
 
     type UiProps<T extends St.Widget> = {
         ref?: Ref<T>,
-        onCreated?: (widget: T) => void,
+        /**
+         * The [onCreated] callback is called immediately and synchronously when the widget instance has been created –
+         * it is called _during_ the class constructor. This callback allows you to do any arbitrary thing with a widget
+         * somewhere in a widget tree without needing to create/maintain a [Ref].
+         *
+         * You can optionally return another callback from this callback which will then be called when the widget
+         * is destroyed. This is basically equivalent to passing an [onDestroy] callback but you can use state from
+         * within the [onCreated] callback.
+         */
+        onCreated?: (widget: T) => ((() => void) | void),
         constraints?: Clutter.Constraint[],
     } & Partial<SignalPropsForWidget<T>>;
 
@@ -101,7 +110,8 @@ export namespace Widgets {
             }
         }
 
-        props.onCreated?.(w)
+        const onCreatedRes = props.onCreated?.(w);
+        if (onCreatedRes) w.connect('destroy', onCreatedRes);
     }
 
     export class Button extends St.Button {
@@ -115,16 +125,20 @@ export namespace Widgets {
             if (config.onLongPress) {
                 this._setupLongPress(config.onLongPress, config.onClicked as any);
             }
+            if (config.child) this.child = config.child;
         }
 
         // A simple long press implementation, that is triggered after holding the button for 500ms
-        // and cancelled when moving up earlier or when moving the finger too much. Only reacts
-        // to touch events.
+        // and cancelled when moving up earlier or when moving the finger too much.
         private _setupLongPress(onLongPress: (source: Button) => void, onClicked?: (source: Button) => void) {
+            const pressEvents = [Clutter.EventType.TOUCH_BEGIN, Clutter.EventType.BUTTON_PRESS, Clutter.EventType.PAD_BUTTON_PRESS];
+            const releaseEvents = [Clutter.EventType.TOUCH_END, Clutter.EventType.BUTTON_RELEASE, Clutter.EventType.PAD_BUTTON_RELEASE];
+            const cancelEvents = [Clutter.EventType.TOUCH_CANCEL, Clutter.EventType.LEAVE];
+
             let downAt: {t: number, x: number, y: number} | undefined;
 
-            this.connect('touch-event', (_, evt: Clutter.Event) => {
-                if (evt.type() == Clutter.EventType.TOUCH_BEGIN) {
+            const handleEvent = (_: any, evt: Clutter.Event) => {
+                if (pressEvents.includes(evt.type())) {
                     let thisDownAt = downAt = {t: evt.get_time(), x: evt.get_coords()[0], y: evt.get_coords()[1]};
                     Delay.ms(500).then(() => {
                         if (this.pressed && downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
@@ -133,10 +147,10 @@ export namespace Widgets {
                             downAt = undefined;
                         }
                     })
-                } else if (evt.type() == Clutter.EventType.TOUCH_END && downAt) {
+                } else if (releaseEvents.includes(evt.type()) && downAt) {
                     if (evt.get_time() - downAt.t < 500) onClicked?.(this);  // Normal click detected!
                     downAt = undefined;
-                } else if (evt.type() == Clutter.EventType.TOUCH_CANCEL) {
+                } else if (cancelEvents.includes(evt.type())) {
                     downAt = undefined;  // Click/long press cancelled
                 } else if (evt.type() == Clutter.EventType.TOUCH_UPDATE && downAt) {
                     let dist = Math.sqrt((evt.get_coords()[0] - downAt.x)**2 + (evt.get_coords()[1] - downAt.y)**2)
@@ -144,7 +158,12 @@ export namespace Widgets {
                         downAt = undefined;  // Long press cancelled, finger moved too much
                     }
                 }
-            });
+            };
+
+            this.connect('touch-event', handleEvent);
+            this.connect('button-press-event', handleEvent);
+            this.connect('button-release-event', handleEvent);
+            this.connect('leave-event', handleEvent);
         }
     }
 

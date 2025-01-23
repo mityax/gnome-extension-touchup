@@ -85,9 +85,9 @@ export class DevToolToggleButton extends DevToolButton {
         GObject.registerClass(this);
     }
 
-    private _value: boolean = false;
+    declare private _value: boolean;
 
-    constructor(props: Omit<DevToolButtonConstructorProps, 'onPressed'> & {onPressed: (value: boolean) => void}) {
+    constructor(props: Omit<DevToolButtonConstructorProps, 'onPressed'> & {initialValue?: boolean, onPressed: (value: boolean) => void}) {
         super({
             icon: props.icon,
             label: props.label,
@@ -96,6 +96,7 @@ export class DevToolToggleButton extends DevToolButton {
                 props.onPressed(this.value);
             }
         });
+        this.value = props.initialValue ?? false;
     }
 
     get value(): boolean {

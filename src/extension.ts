@@ -77,6 +77,7 @@ export default class GnomeTouchExtension extends Extension {
             this.navigationBar?.hide();
         }
 
+        // TODO: uncomment:
         this.virtualTouchpad?.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
     }
 

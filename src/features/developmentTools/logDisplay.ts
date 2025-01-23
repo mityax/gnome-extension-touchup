@@ -26,16 +26,20 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     private readonly logAddedCallbacks: ((text: string) => void)[] = [];
     private readonly logCallbackId: number;
 
-    constructor() {
+    constructor(props?: {initialValue?: boolean, onPressed?: (value: boolean) => void}) {
         super({
             label: 'Show log display',
             icon: 'format-justify-left-symbolic',
-            onPressed: (value) => this._onPressed(value),
+            onPressed: (value) => {
+                this._onPressed(value);
+                props?.onPressed?.(value);
+            },
         });
-        this.value = true;
+        this.value = props?.initialValue ?? true;
 
         //@ts-ignore
         Main.layoutManager._bgManagers.forEach(this._addLogDisplay.bind(this));
+        this._onPressed(props?.initialValue ?? true);  // update initial visibility
 
         this.logCallbackId = addLogCallback((t) => {
             this.logAddedCallbacks.forEach((c) => c(t))
