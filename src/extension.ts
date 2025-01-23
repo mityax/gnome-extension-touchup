@@ -146,7 +146,7 @@ export default class GnomeTouchExtension extends Extension {
             return () => {
                 feature?.destroy();
                 feature = undefined;
-                assign(feature);
+                assign(undefined);
             }
         }, `enable-feature(${featureName})`);
 
