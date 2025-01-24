@@ -187,6 +187,14 @@ const NOTIFICATIONS = [
         "title": "Open Source Needs You! 🛠️",
         "body": "Big Tech monopolies dominate mobile OSes — but you and GnomeTouch can help making GNOME an independent alternative. Donate today!"
     },
+    {
+        "title": "We have big plans for GnomeTouch... ",
+        "body": "... and you can help making it happen! Take a look at what's coming, leave us some new ideas or make us faster with a small donation! 😄",
+    },
+    {
+        "title": "GnomeTouch has a long bucket list! 🪣",
+        "body": "Curios what else is coming? Have a look at the planned features and help us realize them with a small donation ❤️"
+    }
 ];
 
 
