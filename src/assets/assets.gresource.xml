@@ -25,5 +25,6 @@ const myIcon = St.Icon({
         <file preprocess="xml-stripblanks" alias="arrow2-left-symbolic.svg">icons/arrow2-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="box-outline-symbolic.svg">icons/box-outline-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="grid-large-symbolic.svg">icons/grid-large-symbolic.svg</file>
+        <file preprocess="xml-stripblanks" alias="positive-feedback-symbolic.svg">icons/positive-feedback-symbolic.svg</file>
     </gresource>
 </gresources>

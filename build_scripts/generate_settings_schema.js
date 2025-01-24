@@ -70,6 +70,10 @@ function generateXMLForSetting(node, sourceFile, source) {
     const settingName = node.initializer.arguments[0]?.getText(sourceFile)
         .replace(/['"]/g, "");
 
+    if (!/[a-z0-9]+(-[a-z0-9]+)*/.test(settingName)) {
+        throw new Error(`Invalid setting name: "${settingName}": Should be lower-camel-case a string of nonzero length.`)
+    }
+
     let gtype, defaultValue = '', additionalXml = '', summary = '';
 
     // Extract documentation comments (summary)
@@ -100,6 +104,9 @@ function generateXMLForSetting(node, sourceFile, source) {
             const max = node.initializer.arguments[3]?.getText(sourceFile) || '1';
             additionalXml = `<range min="${min}" max="${max}"/>`;
         }
+    } else if (settingType === 'StringSetting') {
+        gtype = 's';
+        defaultValue = node.initializer.arguments[1]?.getText(sourceFile) || '""';
     } else if (settingType === "StringListSetting") {
         gtype = 's';
         // We use JSON.stringify to easily escape quotes in the code and automatically add surrounding quotes, i.e.

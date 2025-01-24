@@ -1,5 +1,4 @@
 import Clutter from "gi://Clutter";
-import {log} from "$src/utils/logging";
 
 
 /**
@@ -80,10 +79,4 @@ export function filterObject<T extends object>(
     ) as Partial<T>
 }
 
-
-export async function measureTime(label: string, fn: () => Promise<any> | any) {
-    let start = Date.now();
-    await fn();
-    log(`Operation \`${label}\`: ${(Date.now() - start).toFixed(1)}ms`)
-}
 

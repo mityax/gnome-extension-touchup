@@ -89,6 +89,15 @@ export class IntSetting extends Setting<number> {
     }
 }
 
+export class StringSetting extends Setting<string> {
+    get(): string {
+        return gioSettings!.get_string(this.key);
+    }
+    set(value: string): void {
+        gioSettings!.set_string(this.key, value);
+    }
+}
+
 export class StringListSetting<T extends string> extends Setting<T[]>{
     get(): T[] {
         let res: any;

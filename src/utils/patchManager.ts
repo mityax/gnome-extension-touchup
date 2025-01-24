@@ -75,10 +75,10 @@ export class PatchManager {
      * Connect to a signal from any GObject/widget and automatically disconnect when the [PatchManager]
      * is disabled or destroyed.
      */
-    connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string) {
+    connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string): Patch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
-        this.patch(() => {
+        return this.patch(() => {
             const signalId = instance.connect(signal, handler);
             return () => instance.disconnect(signalId);
         }, debugName ?? `connectTo(${instance.constructor.name}:${signal})`);

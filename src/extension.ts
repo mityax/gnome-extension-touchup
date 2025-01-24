@@ -14,17 +14,21 @@ import {assetsGResourceFile, devMode} from "$src/config.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {settings} from "$src/settings.ts";
 import Gio from "gi://Gio";
+import DonationsFeature from "$src/features/donations/donationsFeature.ts";
 
 
 export default class GnomeTouchExtension extends Extension {
+    static instance?: GnomeTouchExtension;
+
     pm?: PatchManager;
 
+    developmentTools?: DevelopmentTools;
     navigationBar?: NavigationBarFeature;
     oskKeyPopups?: OskKeyPopupsFeature;
-    floatingScreenRotateButtonFeature?: FloatingScreenRotateButtonFeature;
+    floatingScreenRotateButton?: FloatingScreenRotateButtonFeature;
     virtualTouchpad?: VirtualTouchpadFeature;
     notificationGestures?: NotificationGesturesFeature;
-    developmentTools?: DevelopmentTools;
+    donations?: DonationsFeature;
 
     enable() {
         debugLog("*************************************************")
@@ -47,6 +51,8 @@ export default class GnomeTouchExtension extends Extension {
             initSettings(this.getSettings());
             return () => uninitSettings();
         }, 'init-settings')
+
+        GnomeTouchExtension.instance = this;
 
         DEBUG: if (devMode) this.pm!.patch(() => {
             this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools'), this);
@@ -85,42 +91,48 @@ export default class GnomeTouchExtension extends Extension {
     private defineFeatures() {
         this.defineFeature(
             'navigation-bar',
-            (pm) => new NavigationBarFeature(pm),
-            (f) => this.navigationBar = f,
+            pm => new NavigationBarFeature(pm),
+            f => this.navigationBar = f,
             settings.navigationBar.enabled,
         );
 
         this.defineFeature(
             'osk-key-popups',
-            (pm) => new OskKeyPopupsFeature(pm),
-            (f) => this.oskKeyPopups = f,
+            pm => new OskKeyPopupsFeature(pm),
+            f => this.oskKeyPopups = f,
             settings.oskKeyPopups.enabled,
         );
 
         this.defineFeature(
             'floating-screen-rotate-button',
-            (pm) => new FloatingScreenRotateButtonFeature(pm),
-            (f) => this.floatingScreenRotateButtonFeature = f,
+            pm => new FloatingScreenRotateButtonFeature(pm),
+            f => this.floatingScreenRotateButton = f,
             settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
         );
 
         this.defineFeature(
             'notification-gestures',
-            (pm) => new NotificationGesturesFeature(pm),
-            (f) => this.notificationGestures = f,
+            pm => new NotificationGesturesFeature(pm),
+            f => this.notificationGestures = f,
             settings.notificationGestures.enabled,
         );
 
         BETA: this.defineFeature(
             'virtual-touchpad',
-            (pm) => new VirtualTouchpadFeature(pm),
-            (f) => this.virtualTouchpad = f,
+            pm => new VirtualTouchpadFeature(pm),
+            f => this.virtualTouchpad = f,
             settings.virtualTouchpad.enabled,
         );
+
+        this.defineFeature(
+            'donations',
+            pm => new DonationsFeature(pm),
+            f => this.donations = f,
+        )
     }
 
     /**
-     * A utility method to define [ExtensionFeature]s that are automatically enabled/disabled
+     * A utility method to define [ExtensionFeature]s that are optionally automatically enabled/disabled
      * depending on the given [setting] and are mapped to a class attribute using [assign].
      *
      * Note that the [assign] callback can (and will upon feature or extension disabling) be
@@ -136,7 +148,7 @@ export default class GnomeTouchExtension extends Extension {
         featureName: string,
         create: (pm: PatchManager) => T,
         assign: (feature?: T) => void,
-        setting: BoolSetting,
+        setting?: BoolSetting,
     ) {
         let p = this.pm!.registerPatch(() => {
             // Create the feature and call `assign` to allow the callee to create references:
@@ -151,18 +163,22 @@ export default class GnomeTouchExtension extends Extension {
             }
         }, `enable-feature(${featureName})`);
 
-        // Enable the feature initially if setting is set to true:
-        if (setting.get()) p.enable();
+        if (setting) {
+            // Enable the feature initially if setting is set to true:
+            if (setting.get()) p.enable();
 
-        // Connect to setting changes:
-        this.pm!.connectTo(setting, 'changed', value => {
-            if (value) {
-                p.enable();
-                this.syncUI();
-            } else {
-                p.disable();
-            }
-        });
+            // Connect to setting changes:
+            this.pm!.connectTo(setting, 'changed', value => {
+                if (value) {
+                    p.enable();
+                    this.syncUI();
+                } else {
+                    p.disable();
+                }
+            });
+        } else {
+            p.enable();
+        }
     }
 
     disable() {
@@ -173,6 +189,8 @@ export default class GnomeTouchExtension extends Extension {
         // Destroy the root PatchManager and with that all its descendents:
         this.pm?.destroy();
         this.pm = undefined;
+
+        GnomeTouchExtension.instance = undefined;
 
         debugLog("GnomeTouch extension successfully unloaded.")
     }

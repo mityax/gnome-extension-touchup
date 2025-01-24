@@ -1,4 +1,4 @@
-import {BoolSetting, EnumSetting, IntSetting, StringListSetting} from "./features/preferences/backend";
+import {BoolSetting, EnumSetting, IntSetting, StringListSetting, StringSetting} from "./features/preferences/backend";
 
 
 // NOTE: the doc comments in the following structure will be automatically included in the GSettings schema
@@ -106,6 +106,10 @@ export const settings = {
          * Whether to enable the virtual touchpad feature or not.
          */
         enabled: new BoolSetting('virtual-touchpad-enabled', true),
+    },
+
+    donations: {
+        installationData: new StringSetting('donations-installation-data', "{}"),
     }
 }
 

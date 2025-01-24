@@ -114,7 +114,7 @@ const BUILD_OPTIONS = {
                     'in-place, which allows for a good overview and mitigates the risk of forgetting to clean something\n' +
                     'up/to unapply a patch.\n\n' +
                     'Next, it\'s probably best to start with the main [GnomeTouchExtension] class since this is where\n' +
-                    'the root PatchManager is defined – all other [PatchManagers] are children of this [PatchManager]\n' +
+                    'the root PatchManager is defined – all other [PatchManager]s are children of this [PatchManager]\n' +
                     'and are automatically destroyed/unapplied when the root [PatchManager] is.',
                 style: 'block',
                 indent: 2,

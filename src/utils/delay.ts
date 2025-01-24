@@ -62,6 +62,18 @@ export class Delay {
         return promise;
     }
 
+    static s(seconds: number, onCancel: 'throw' | 'resolve' | 'nothing' = 'nothing') {
+        return Delay.ms(seconds * 1000, onCancel);
+    }
+
+    static min(minutes: number, onCancel: 'throw' | 'resolve' | 'nothing' = 'nothing') {
+        return Delay.ms(minutes * 60 * 1000, onCancel);
+    }
+
+    static h(hours: number, onCancel: 'throw' | 'resolve' | 'nothing' = 'nothing') {
+        return Delay.ms(hours * 60 * 60 * 1000, onCancel);
+    }
+
     /**
      * Get a list of all pending delays.
      *
