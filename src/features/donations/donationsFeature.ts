@@ -75,7 +75,7 @@ export default class DonationsFeature extends ExtensionFeature {
      * Show a system notification asking the user to donate.
      */
     private async showDonationNotification(data?: InstallationData): Promise<void> {
-        const n = randomChoice(NOTIFICATIONS);
+        const n = randomChoice(NOTIFICATION_VARIANTS);
         const notification = new MessageTray.Notification({
             source: this.getNotificationSource(),
             title: n.title,
@@ -150,7 +150,7 @@ export default class DonationsFeature extends ExtensionFeature {
 }
 
 
-const NOTIFICATIONS = [
+const NOTIFICATION_VARIANTS = [
     {
         "title": "Is GnomeTouch helpful for you? 🌟",
         "body": "Support its development by making a donation. Every contribution helps! 💖"
