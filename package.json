@@ -21,6 +21,7 @@
     "dev-tty:verbose": "dbus-run-session $(pwd)/run.sh --tty --build --vebose",
     "watch-tty": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty; pkill --signal SIGINT -P $pid",
     "watch-tty:verbose": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty --verbose; pkill --signal SIGINT -P $pid",
+    "prefs": "npm run enable && gnome-extensions prefs gnometouch@mityax.github.com",
     "logs": "journalctl -f -n 20 | grep gnometouch",
     "logs:file": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE",
     "lint": "tsc --noEmit"
@@ -37,6 +38,7 @@
     "@girs/gobject-2.0": "^2.78.0-3.3.0",
     "@girs/graphene-1.0": "^1.0.0-4.0.0-beta.9",
     "@girs/gtk-4.0": "^4.15.5-4.0.0-beta.16",
+    "@girs/gdk-4.0": "^4.0.0-4.0.0-beta.19",
     "@girs/pango-1.0": "^1.54.0-4.0.0-beta.11",
     "@girs/st-15": "^15.0.0-4.0.0-beta.16",
     "@girs/soup-3.0": "^3.6.0-4.0.0-beta.19",

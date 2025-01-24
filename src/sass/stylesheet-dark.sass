@@ -1,1 +1,77 @@
-@import "base"
+@use 'sass:color'
+
+
+.gnometouch-navbar--visible
+    &.gnometouch-navbar
+        &--gestures
+            $height: 20px
+
+            #dashtodockContainer #dash
+                padding-bottom: $height !important
+            #keyboard
+                padding-bottom: $height !important
+
+        &--buttons
+            $height: 41px
+            #dashtodockContainer #dash
+                padding-bottom: $height !important
+            #keyboard
+                padding-bottom: $height !important
+
+
+// The dark color of the gnome shell theme
+$dark-theme-color: desaturate(#191919, 100%)
+// The light color of the gnome shell theme
+$light-theme-color: desaturate(#f6f5f4, 100%)
+
+
+.gnometouch-navbar
+    $bar: &
+    $pill: #{$bar}__pill
+    $buttons: #{$bar}__button
+
+    transition: background-color
+    transition-duration: 0.5s
+
+
+    // By default, the navbar has a solid, opaque background color (which adjusts to the gnome
+    // shell theme brightness):
+    background-color: $dark-theme-color
+
+    #{$pill}
+        transition: background-color
+        transition-duration: 0.5s
+        background-color: $light-theme-color
+        border-radius: 20px
+
+    #{$buttons}
+        color: $light-theme-color
+        border-radius: 10px
+        width: 20px
+        height: 20px
+        padding: 10px
+        margin: 4px 12px 4px 12px
+        transition: background-color
+        transition-duration: 250ms
+
+        &:hover
+            background-color: color.change($light-theme-color, $alpha: 0.2)
+
+    // Navbar with a transparent background. The pill color by default adjusts to the
+    // shell theme brightness, but can be explicitly set using the 'gnometouch-navbar__pill--dark'
+    // or 'gnometouch-navbar__pill--light' classes:
+    &--transparent
+        background-color: rgba(0,0,0,0)
+
+        #{$pill}
+            background-color: $light-theme-color
+
+            &--dark
+                background-color: $dark-theme-color !important
+
+
+.gnometouch-floating-screen-rotation-button
+    border-radius: 50px
+    padding: 12px
+    background-color: $dark-theme-color
+    box-shadow: rgba(0, 0, 0, 0.2) 0 0 15px

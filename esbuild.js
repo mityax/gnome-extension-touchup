@@ -39,6 +39,8 @@ const BUILD_OPTIONS = {
         "src/prefs.ts",
         "src/sass/stylesheet-light.sass",
         "src/sass/stylesheet-dark.sass",
+        "src/sass/prefs-light.sass",
+        "src/sass/prefs-dark.sass",
     ],
     dropLabels: [
         IS_DEBUG_MODE ? null : 'DEBUG',
