@@ -6,5 +6,10 @@
     "uuid": "gnometouch@mityax.github.com",
     "shell-version": ["47"],
     "gettext-domain": "gnometouch",
-    "settings-schema": "org.gnome.shell.extensions.gnometouch"
+    "settings-schema": "org.gnome.shell.extensions.gnometouch",
+    "donations": {
+        "buymeacoffee": "mityax",
+        "patreon": "mityax",
+        "kofi": "mityax"
+    }
 }
