@@ -28,14 +28,14 @@ export default class GnomeTouchPreferences extends ExtensionPreferences {
 
         pages.forEach(p => window.add(p));
 
-        switch (settings.initialPreferencesPage.get()) {
-            case "donations":
-                window.visiblePageName = 'donations';
+        const initialPage = settings.initialPreferencesPage.get();
+        if (pages.some(p => p.name == initialPage)) {
+            window.visiblePageName = initialPage;
         }
         settings.initialPreferencesPage.set('default');  // reset initial page
     }
 
-    loadCss() {
+    private loadCss() {
         const display = Gdk.Display.get_default()!
         const settings = Gtk.Settings.get_for_display(display);
 
