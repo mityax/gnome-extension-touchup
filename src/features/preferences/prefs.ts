@@ -6,6 +6,7 @@ import {ExtensionPreferences} from "resource:///org/gnome/Shell/Extensions/js/ex
 import {DonationsPage} from "$src/features/preferences/pages/donationsPage.ts";
 import Gtk from "gi://Gtk";
 import Gdk from "@girs/gdk-4.0";
+import {settings} from "$src/settings.ts";
 
 
 export default class GnomeTouchPreferences extends ExtensionPreferences {
@@ -19,9 +20,19 @@ export default class GnomeTouchPreferences extends ExtensionPreferences {
         this.loadCss();
         Gtk.Settings.get_default()?.connect('notify::gtk-application-prefer-dark-theme', () => this.loadCss())
 
-        window.add(new NavigationBarPage());
-        window.add(new OskKeyPopupPage());
-        window.add(new DonationsPage());
+        const pages = [
+            new NavigationBarPage(),
+            new OskKeyPopupPage(),
+            new DonationsPage()
+        ];
+
+        pages.forEach(p => window.add(p));
+
+        switch (settings.initialPreferencesPage.get()) {
+            case "donations":
+                window.visiblePageName = 'donations';
+        }
+        settings.initialPreferencesPage.set('default');  // reset initial page
     }
 
     loadCss() {

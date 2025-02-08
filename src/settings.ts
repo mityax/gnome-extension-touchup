@@ -110,6 +110,11 @@ export const settings = {
 
     donations: {
         installationData: new StringSetting('donations-installation-data', "{}"),
-    }
+    },
+
+    /**
+     * The initial page to show when the extension preferences are opened the next time.
+     */
+    initialPreferencesPage: new EnumSetting<'donations' | 'default'>('preferences-initial-page', 'default'),
 }
 

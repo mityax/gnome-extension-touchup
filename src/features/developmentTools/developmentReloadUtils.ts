@@ -53,14 +53,15 @@ export async function _hotReloadExtension(extensionUuid: string, config?: { base
     // is what allows us to re-import the extension while bypassing the module cache:
     const origGetChildFn = extObj.dir.get_child;
     extObj.dir.get_child = (name: string) => {
-        let res: Gio.File = origGetChildFn.call(extObj.dir, name);
+        let res = origGetChildFn.call(extObj.dir, name);
 
         if (config?.baseUri) {
             res.get_uri = () => `${config?.baseUri}/${name}?cache_buster=${reloadId}`;
             if (name.endsWith(".css")) {
+                // @ts-ignore
                 res = Gio.File.new_for_uri(res.get_uri());
             }
-        } else if (name === "extension.js") {
+        } else {
             const origUri = res.get_uri();
             res.get_uri = () => `${origUri}?cache_buster=${reloadId}`;
         }

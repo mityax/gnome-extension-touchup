@@ -50,6 +50,7 @@ const BUILD_OPTIONS = {
     target: "firefox128", // Spider Monkey 128  (find out current one using `gjs --jsversion`)
     format: "esm",
     bundle: true,
+    splitting: true,
     treeShaking: false,  // tree-shaking appears to wrongly remove the `repr` function from utils/logging.ts in release builds and doesn't add much benefit
     plugins: [
         GjsPlugin({}),
@@ -94,12 +95,18 @@ const BUILD_OPTIONS = {
         // Ensure that no disallowed modules are imported in either extension.js or prefs.js as per the review
         // guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
         disallowImportsPlugin({
-            outputFileName: 'extension.js',
+            filePattern: 'extension.js',
             blacklist: ['gi://Gdk', 'gi://Gtk', 'gi://Adw'],
         }),
         disallowImportsPlugin({
-            outputFileName: 'prefs.js',
+            filePattern: 'prefs.js',
             blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
+        }),
+        disallowImportsPlugin({
+            // These files are created by esbuild to contain functionality imported in both, extension.js and
+            // prefs.js - therefore, they cannot contain any import disallowed anywhere:
+            filePattern: 'chunk-*.js',
+            blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell', 'gi://Gdk', 'gi://Gtk', 'gi://Adw'],
         }),
 
         // Add reviewer comment to top of extension.js:

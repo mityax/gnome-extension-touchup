@@ -11,6 +11,7 @@ export class OskKeyPopupPage extends Adw.PreferencesPage {
 
     constructor() {
         super({
+            name: 'osk-key-popups',
             title: "OSK Key Popups",
             icon_name: "input-keyboard-symbolic",
         });

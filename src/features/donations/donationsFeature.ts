@@ -9,6 +9,8 @@ import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
 import {NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings.ts";
+import GnomeTouchExtension from "$src/extension.ts";
+import St from "gi://St";
 
 
 type InstallationData = {
@@ -72,10 +74,11 @@ export default class DonationsFeature extends ExtensionFeature {
     }
 
     /**
-     * Show a system notification asking the user to donate.
+     * Show a panel notification asking the user to donate.
      */
     private async showDonationNotification(data?: InstallationData): Promise<void> {
         const n = randomChoice(NOTIFICATION_VARIANTS);
+
         const notification = new MessageTray.Notification({
             source: this.getNotificationSource(),
             title: n.title,
@@ -84,7 +87,9 @@ export default class DonationsFeature extends ExtensionFeature {
             urgency: MessageTray.Urgency.NORMAL,
         });
         notification.addAction("Learn more", () => {
-            debugLog("learn more"); // TODO: implement
+            if (!GnomeTouchExtension.instance) return;
+            settings.initialPreferencesPage.set('donations');
+            GnomeTouchExtension.instance!.openPreferences();
         });
         notification.addAction("Don't ask again", async () => {
             await this._writeInstallationData({
@@ -96,7 +101,8 @@ export default class DonationsFeature extends ExtensionFeature {
             // Nothing to do here; the notification will be shown again
             // after [NOTIFICATION_INTERVAL] has passed.
         });
-        MessageTray.getSystemSource().addNotification(notification);
+
+        this.notificationSource?.addNotification(notification);
 
         await this._writeInstallationData({
             ...(data ?? await this._readInstallationData()),
@@ -128,7 +134,7 @@ export default class DonationsFeature extends ExtensionFeature {
         }
     }
 
-    getNotificationSource(): MessageTray.Source | null {
+    private getNotificationSource(): MessageTray.Source | null {
         if (!this.notificationSource) {
             this.notificationSource = new MessageTray.Source({
                 title: 'GnomeTouch',
@@ -146,6 +152,10 @@ export default class DonationsFeature extends ExtensionFeature {
         }
 
         return this.notificationSource ?? null;
+    }
+
+    private showToast(text: string, actions: St.Widget[]) {
+
     }
 }
 

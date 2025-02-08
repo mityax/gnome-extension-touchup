@@ -11,6 +11,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
 
     constructor() {
         super({
+            name: 'navigation-bar',
             title: "Navigation Bar",
             icon_name: "computer-apple-ipad-symbolic",
         });

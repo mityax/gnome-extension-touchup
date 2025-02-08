@@ -48,7 +48,7 @@ export abstract class Setting<T> {
 }
 
 
-export class EnumSetting<T> extends Setting<T> {
+export class EnumSetting<T extends string> extends Setting<T> {
     get(): T {
         return gioSettings!.get_string(this.key)! as T;
     }
