@@ -25,12 +25,10 @@ type InstallationData = {
 export default class DonationsFeature extends ExtensionFeature {
     // Time to wait before showing a donation; this is to not show the donation immediately upon login because
     // the user at that point probably is busy, and we don't want to uselessly annoy them:
-    // TODO: change back to 20 mins:
-    private static NOTIFICATION_DELAY: number = 3;  // in minutes
+    private static NOTIFICATION_DELAY: number = 20;  // in minutes
 
     // Time between donation prompt notifications:
-    // TODO: change back to 90 days:
-    private static NOTIFICATION_INTERVAL: number = 2 * 24 * 60 * 60 * 1000;  // in ms; 90 days (~ quarter of a year)
+    private static NOTIFICATION_INTERVAL: number = 90 * 24 * 60 * 60 * 1000;  // in ms; 90 days (~ quarter of a year)
 
     private notificationSource?: MessageTray.Source;
 
