@@ -61,7 +61,7 @@ export class DonationsPage extends Adw.PreferencesPage {
             label:
                 'Mobile platforms are dominated by big tech oligarchs, and Gnome itself is tough to use on touch ' +
                 'devices in everyday life. Gnome Touch helps improve Gnome’s usability on touchscreen devices and ' +
-                'makes it a viable, free alternative: tablet users are no longer forced to sacrifice user experience' +
+                'makes it a viable, free alternative: tablet users are no longer forced to sacrifice user experience ' +
                 'for freedom, control and privacy.\n\nBy donating, you’re supporting a project that helps users regain ' +
                 'control over their own devices and gives them another option than profit-driven ecosystems. ' +
                 'Every contribution – be it code, monetary, suggestions or feedback – helps keep open software ' +

@@ -10,10 +10,9 @@ import {NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings.ts";
 import GnomeTouchExtension from "$src/extension.ts";
-import St from "gi://St";
 import {Widgets} from "$src/utils/ui/widgets.ts";
 import {css} from "$src/utils/ui/css.ts";
-import Clutter from "@girs/clutter-15";
+import showToast from "$src/utils/ui/toast.ts";
 
 
 type InstallationData = {
@@ -97,7 +96,7 @@ export default class DonationsFeature extends ExtensionFeature {
         notification.addAction("Not now", async () => {
             // Nothing to do here; the notification will be shown again after [NOTIFICATION_INTERVAL] has passed.
 
-            this.showToast("No problem – you'll receive a notification in a few months again!", [
+            showToast("No problem – you'll receive a notification in a few months again!", [
                 new Widgets.Button({
                     label: 'Never ask again',
                     styleClass: 'button',
@@ -108,7 +107,7 @@ export default class DonationsFeature extends ExtensionFeature {
                 }),
                 new Widgets.Button({
                     iconName: 'window-close-symbolic',
-                    style: css({ backgroundColor: 'transparent', height: '10px' }),
+                    style: css({ height: '10px' }),
                 }),
             ]);
         });
@@ -163,43 +162,6 @@ export default class DonationsFeature extends ExtensionFeature {
         }
 
         return this.notificationSource ?? null;
-    }
-
-    private showToast(text: string, actions: St.Button[]) {
-        const toast = new Widgets.Row({
-            style: css({
-                background: 'rgba(32,32,32,0.8)',
-                borderRadius: '50px',
-                padding: '15px',
-                fontSize: '90%',
-                fontWeight: 'normal',
-            }),
-            reactive: true,
-            trackHover: true,
-            children: [
-                new Widgets.Label({ text, style: css({ fontWeight: 'bold' }), yAlign: Clutter.ActorAlign.CENTER }),
-                new Widgets.Bin({ width: actions.length > 0 ? 45 : 0 }),
-                ...actions,
-            ],
-        });
-        toast.x = global.screenWidth / 2 - toast.width / 2;
-        toast.y = global.screenHeight;
-        global.stage.add_child(toast);
-
-        // Animate in:
-        // @ts-ignore
-        toast.ease({
-            y: global.screenHeight - toast.height - 100,
-            duration: 300,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-        });
-
-        // Use a Ref to not destroy twice:
-        const ref = new Widgets.Ref(toast);
-
-        // Close the toast when any action is invoked or delay is up:
-        actions.forEach(a => a.connect('clicked', () => ref.current?.destroy()));
-        Delay.ms(3500, 'resolve').then(() => ref.current?.destroy());
     }
 }
 
