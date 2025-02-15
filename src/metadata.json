@@ -8,8 +8,8 @@
     "gettext-domain": "gnometouch",
     "settings-schema": "org.gnome.shell.extensions.gnometouch",
     "donations": {
-        "buymeacoffee": "mityax",
+        "kofi": "mityax",
         "patreon": "mityax",
-        "kofi": "mityax"
+        "buymeacoffee": "mityax"
     }
 }

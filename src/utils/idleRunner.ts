@@ -12,6 +12,19 @@ export class IdleRunner {
     }
 
     /**
+     * An idle runner that is automatically stopped after the callback has been called once.
+     *
+     * Note that `start` still needs to be called to start the idle runner. If start is called multiple
+     * times, the callback will run once per invocation.
+     */
+    static once(cb: () => void, priority: number = GLib.PRIORITY_DEFAULT_IDLE): IdleRunner {
+        return new IdleRunner((stop) => {
+            cb();
+            stop();
+        }, priority);
+    }
+
+    /**
      * Start the idle runner if it is not running already.
      */
     start() {

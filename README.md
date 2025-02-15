@@ -1,10 +1,12 @@
 
 # Gnome Touch
 
-An extension for Gnome Shell that provides a better user 
-experience for devices with a touchscreen.
+An extension for Gnome Shell that enhances the user experience for devices with a
+touchscreen – primarily tested and focused on tablets.
 
-### Features &amp; Implementation Status
+
+### Roadmap &amp; Implementation Status
+
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
    - [x] Buttons mode

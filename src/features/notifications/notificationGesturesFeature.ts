@@ -16,8 +16,6 @@ import Ref = Widgets.Ref;
 
 
 export class NotificationGesturesFeature extends ExtensionFeature {
-    static readonly PATCH_SCOPE: unique symbol = Symbol('notification-gestures');
-
     private unpatchOnTrayClose: Patch[] = [];
 
     constructor(pm: PatchManager) {

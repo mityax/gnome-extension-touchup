@@ -121,11 +121,6 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 return new St.Bin({});  // fallback to not crash on invalid settings
         }
     }
-
-    destroy() {
-        this._virtualKeyboardDevice.run_dispose();
-        super.destroy();
-    }
 }
 
 
