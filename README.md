@@ -34,7 +34,7 @@ plan but more as an idea of the direction Gnome Touch is heading.
    - [ ] Single-finger swipe up/down outside a window to app list/close overview
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
-- [ ] Option to display individual windows instead of workspaces when navigation
+- [ ] Option to display individual windows instead of workspaces when navigating
   using gesture navigation bar
 
 In case you'd like to suggest a feature or work on one yourself, please
@@ -50,8 +50,9 @@ facilitates a dual usage of devices such as tablets with removable keyboards or
 convertibles, without the need to manually switch between login sessions or to
 compromise on awkward user interfaces. Elements of the interface that are useful
 in both, touch and non-touch mode (e.g. notification swipe gestures) will always
-be active, while elements that are useless or annoying when having a keyboard at
-hand (e.g. the gesture navigation bar) will only be active in touch mode.
+be active, while elements that are useless or annoying when having a keyboard
+and touchpad at hand (e.g. the gesture navigation bar) will only be active in
+touch mode.
 
 This also means that users can just use their well-known and stable Gnome
 Shell (with their favorite extensions) and can add the additional touch

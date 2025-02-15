@@ -142,6 +142,10 @@ documentation in the source code for each utility.
      someDebugOnlyAction(i);
    }
    ```
+ - **Beta-only code** – there's also a `BETA` label, which works similarly 
+   to the `DEBUG` label but is intended for code that should ultimately be 
+   included in release builds but is not yet ready for it; use this to mask 
+   work-in-progress features until they are ready to be released.
  - **Others** – there are many more utils in `src/utils` (especially 
    in `utils.ts`), which may be helpful for you.
 
