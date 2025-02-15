@@ -4,6 +4,11 @@
 An extension for Gnome Shell that enhances the user experience for devices with a
 touchscreen – primarily focused (and tested) on tablets.
 
+Gnome Touch aims to provide an intuitive, configurable, clean and 
+seamless interface. However, please be aware that this is not always 
+possible nor easy since Gnome extension development does not come without 
+challenges or limits and has a steep learning curve.
+
 ### Roadmap &amp; Implementation Status
 
 This is a rough overview over this extension's implemented features and goals
