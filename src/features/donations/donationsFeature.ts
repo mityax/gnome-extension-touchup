@@ -6,7 +6,7 @@ import {debugLog} from "$src/utils/logging";
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import {randomChoice} from "$src/utils/utils.ts";
 import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
-import {NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
+import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings.ts";
 import GnomeTouchExtension from "$src/extension.ts";
@@ -86,14 +86,9 @@ export default class DonationsFeature extends ExtensionFeature {
             gicon: new AssetIcon('positive-feedback-symbolic'),
             urgency: MessageTray.Urgency.NORMAL,
         });
-        notification.addAction("Learn more", () => {
-            if (!GnomeTouchExtension.instance) return;
-            settings.initialPreferencesPage.set('donations');
-            GnomeTouchExtension.instance!.openPreferences();
-        });
+        notification.connect('activated', () => this.openDonationPage());
+        notification.addAction("Learn more", () => this.openDonationPage());
         notification.addAction("Not now", async () => {
-            // Nothing to do here; the notification will be shown again after [NOTIFICATION_INTERVAL] has passed.
-
             showToast("No problem – you'll receive a notification in a few months again!", [
                 new Widgets.Button({
                     label: 'Never ask again',
@@ -116,6 +111,12 @@ export default class DonationsFeature extends ExtensionFeature {
             ...(data ?? await this._readInstallationData()),
             promptedForDonationAt: Date.now(),
         });
+    }
+
+    private openDonationPage() {
+        if (!GnomeTouchExtension.instance) return;
+        settings.initialPreferencesPage.set('donations');
+        GnomeTouchExtension.instance!.openPreferences();
     }
 
     private async _readInstallationData(): Promise<InstallationData> {
@@ -152,11 +153,15 @@ export default class DonationsFeature extends ExtensionFeature {
                 policy: new NotificationGenericPolicy(),
             });
 
-            // Reset the notification source if it's destroyed
-            this.notificationSource.connect('destroy', _source => {
-                this.notificationSource = undefined;
+            this.pm.patch(() => {
+                Main.messageTray.add(this.notificationSource!);
+
+                // Destroy the notification source when the extension is disabled:
+                return () => this.notificationSource?.destroy(NotificationDestroyedReason.SOURCE_CLOSED);
             });
-            Main.messageTray.add(this.notificationSource);
+
+            // Reset the notification source if it's destroyed
+            this.notificationSource.connect('destroy', _source => this.notificationSource = undefined);
         }
 
         return this.notificationSource ?? null;

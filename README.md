@@ -19,6 +19,7 @@ plan but more as an idea of the direction Gnome Touch is heading.
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
    - [x] Buttons mode
+   - [ ] Invisible gestures mode
  - [ ] Edge swipe actions (left/right edge: back, top/bottom edge:
        show panel and navigation bar)
  - [x] Touch gestures for Gnome Shell notifications
