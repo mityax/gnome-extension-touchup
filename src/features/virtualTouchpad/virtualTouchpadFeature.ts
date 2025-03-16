@@ -9,13 +9,18 @@ import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem.ts";
 import {css} from "$src/utils/ui/css.ts";
 import {DisplayConfigState} from "$src/utils/monitorDBusUtils.ts";
-import ActorAlign = Clutter.ActorAlign;
+import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay.ts";
+import Mtk from "gi://Mtk";
+import {clamp} from "$src/utils/utils.ts";
 
 
 export class VirtualTouchpadFeature extends ExtensionFeature {
-    public static readonly PATCH_SCOPE: unique symbol = Symbol('virtual-touchpad');
     private readonly actor: St.Widget;
     private readonly openButton: VirtualTouchpadQuickSettingsItem;
+    private _virtualInputDevice: Clutter.VirtualInputDevice;
+    private _cursorOverlay?: CursorOverlay;
+    private monitorIndex: number = 0;
+
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -32,9 +37,6 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 backgroundColor: 'black',
             }),
             constraints: [],
-            onTouchEvent: (_, e) => {
-                debugLog("Virtual touchpad touch event: ", e);
-            },
             child: new Widgets.Button({
                 child: new Widgets.Icon({
                     iconName: 'edit-delete-symbolic',
@@ -45,8 +47,8 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 reactive: true,
                 trackHover: true,
                 canFocus: true,
-                xAlign: ActorAlign.END,
-                yAlign: ActorAlign.START,
+                x: 25,
+                y: 25,
                 onClicked: () => {
                     debugLog('Virtual Touchpad Close Button Clicked');
                     this.close();
@@ -54,6 +56,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             }),
         });
         DEBUG: this.actor.opacity = 0.7 * 255;  // a little transparency in debug mode to see the logs below ;)
+        this._setupGestureTracker();
 
         this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.updateMonitor());
         void this.updateMonitor();
@@ -76,21 +79,28 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             );
             return () => this.openButton?.destroy();
         });
+
+        this._virtualInputDevice = Clutter.get_default_backend().get_default_seat()
+            .create_virtual_device(Clutter.InputDeviceType.TOUCHPAD_DEVICE);
     }
 
     open() {
         this.actor.show();
+        this._placeCursorOnOtherMonitor();
+        this._cursorOverlay = new CursorOverlay(this.pm.fork('cursor-overlay'));
     }
 
     close() {
         this.actor.hide();
+        this._cursorOverlay?.destroy();
+        this._cursorOverlay = undefined;
     }
 
     toggle() {
         if (this.actor.visible) {
-            this.actor.hide();
+            this.close();
         } else {
-            this.actor.show();
+            this.open();
         }
     }
 
@@ -117,11 +127,105 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
     }
 
     private async updateMonitor() {
-        const index = await this.getTouchMonitor();
+        this.monitorIndex = await this.getTouchMonitor();
         this.actor.remove_constraint_by_name('monitor');
         this.actor.add_constraint_with_name('monitor', new MonitorConstraint({
             workArea: true,
-            index,
+            index: this.monitorIndex,
         }));
+    }
+
+    private _setupGestureTracker() {
+        // TODO: implement multi-finger gestures
+
+        /*const recognizer = new GestureRecognizer2D();
+        let lastEvent: Clutter.Event | null;
+
+        this.actor.connect("touch-event", (_, e: Clutter.Event) => {
+            recognizer.pushEvent(e);
+
+            if (recognizer.isDuringGesture && lastEvent) {
+                const [dx, dy] = this._clampMovementToMonitor(
+                    e.get_coords()[0] - lastEvent.get_coords()[0],
+                    e.get_coords()[1] - lastEvent.get_coords()[1],
+                );
+                this._virtualInputDevice.notify_absolute_motion(e.get_time_us(), dx, dy);
+            }
+            if (recognizer.gestureHasJustFinished && recognizer.isTap()) {
+                this._virtualInputDevice.notify_button(e.get_time_us(), 1, Clutter.ButtonState.PRESSED);
+                this._virtualInputDevice.notify_button(e.get_time_us(), 1, Clutter.ButtonState.RELEASED);
+            }
+            lastEvent = recognizer.gestureHasJustFinished ? null : e;
+        });*/
+
+        const rotate = new Clutter.RotateAction({nTouchPoints: 2});
+        this.actor.add_action(rotate);
+        rotate.connect("rotate", (_source, actor, angle) => {
+            debugLog("Rotate: ", angle);
+        });
+
+        const zoom = new Clutter.ZoomAction({nTouchPoints: 2});
+        this.actor.add_action(zoom);
+        zoom.connect("zoom", (_source, actor, focal_point, factor) => {
+            debugLog("Zoom: ", factor);
+        });
+
+        /*const swipe = new Clutter.SwipeAction({nTouchPoints: 2});
+        this.actor.add_action(swipe);
+        swipe.connect("swipe", (_source, actor, direction) => {
+            debugLog("Swipe: ", direction);
+        });
+
+        const tap = new Clutter.TapAction({nTouchPoints: 1});
+        this.actor.add_action(tap);
+        tap.connect("tap", (_source, actor) => {
+            debugLog("Tap!");
+        });*/
+    }
+
+    destroy() {
+        this._cursorOverlay?.destroy();
+        super.destroy();
+    }
+
+    /**
+     * Prevents the cursor from moving over the monitor where the VirtualTouchpad is open by
+     * adjusting [dx] and [dy] in such a way that the cursor can only move until the edge of
+     * the VirtualTouchpad's monitor.
+     *
+     * IMPORTANT: This function returns absolute coordinates!
+     */
+    private _clampMovementToMonitor(dx: any, dy: any): [number, number] {
+        const [oldX, oldY, _] = global.get_pointer();
+        let [newX, newY] = [oldX + dx, oldY + dy];
+        let newMonitor = global.display.get_monitor_index_for_rect(new Mtk.Rectangle({
+            x: newX, y: newY, width: 0, height: 0,
+        }));
+        if (newMonitor === this.monitorIndex) {
+            // TODO: rethink this part
+            const oldMonitor = global.display.get_monitor_index_for_rect(new Mtk.Rectangle({
+                x: oldX, y: oldY, width: 0, height: 0,
+            }));
+            const oldMonitorRect = global.display.get_monitor_geometry(oldMonitor);
+            newX = clamp(newX, oldMonitorRect.x + 2, oldMonitorRect.x + oldMonitorRect.width);
+            newY = clamp(newY, oldMonitorRect.y + 2, oldMonitorRect.y + oldMonitorRect.height);
+            return [newX, newY];
+        } else {
+            return [newX, newY];
+        }
+    }
+
+    /**
+     * Places the cursor in the center of the next best monitor that is not the one
+     * this VirtualTouchpad is on.
+     */
+    private _placeCursorOnOtherMonitor() {
+        let idx = (this.monitorIndex + 1) % global.display.get_n_monitors();
+        let geometry = global.display.get_monitor_geometry(idx);
+        this._virtualInputDevice.notify_absolute_motion(
+            global.get_current_time(),
+            geometry.x + geometry.width / 2,
+            geometry.y + geometry.height / 2,
+        );
     }
 }
