@@ -30,17 +30,44 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 new Widgets.Row({
                     xExpand: false,
                     children: settings.navigationBar.buttonsLeft.get().map(b => this._buildButton(b as any)),
+                    onCreated: (row) => {
+                        const id = settings.navigationBar.buttonsLeft.connect("changed", newValue => {
+                            row.destroy_all_children();
+                            for (let b of settings.navigationBar.buttonsLeft.get()) {
+                                row.add_child(this._buildButton(b as any));
+                            }
+                        });
+                        return () => settings.navigationBar.buttonsLeft.disconnect(id);
+                    }
                 }),
                 // Center:
                 new Widgets.Row({
                     xExpand: true,
                     xAlign: ActorAlign.CENTER,
                     children: settings.navigationBar.buttonsMiddle.get().map(b => this._buildButton(b as any)),
+                    onCreated: (row) => {
+                        const id = settings.navigationBar.buttonsMiddle.connect("changed", newValue => {
+                            row.destroy_all_children();
+                            for (let b of settings.navigationBar.buttonsMiddle.get()) {
+                                row.add_child(this._buildButton(b as any));
+                            }
+                        });
+                        return () => settings.navigationBar.buttonsMiddle.disconnect(id);
+                    },
                 }),
                 // Right side:
                 new Widgets.Row({
                     xExpand: false,
                     children: settings.navigationBar.buttonsRight.get().map(b => this._buildButton(b as any)),
+                    onCreated: (row) => {
+                        const id = settings.navigationBar.buttonsRight.connect("changed", newValue => {
+                            row.destroy_all_children();
+                            for (let b of settings.navigationBar.buttonsRight.get()) {
+                                row.add_child(this._buildButton(b as any));
+                            }
+                        });
+                        return () => settings.navigationBar.buttonsRight.disconnect(id);
+                    },
                 }),
             ]
         });

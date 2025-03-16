@@ -2,6 +2,13 @@ import Adw from "gi://Adw";
 import GObject from "gi://GObject";
 import {settings} from "$src/settings.ts";
 import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils.ts";
+import Gtk from "gi://Gtk";
+import Gdk from "@girs/gdk-4.0";
+import {SettingsType} from "$src/features/preferences/backend.ts";
+import Gio from "gi://Gio";
+import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
+import {debounce} from "$src/utils/debounce.ts";
+import PropagationPhase = Gtk.PropagationPhase;
 
 
 export class NavigationBarPage extends Adw.PreferencesPage {
@@ -51,18 +58,203 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             onCreated: (group) => {
                 const id = settings.navigationBar.mode.connect("changed", (mode) => group.visible = mode === 'gestures');
                 group.connect('destroy', () => settings.navigationBar.mode.disconnect(id));
+                group.visible = settings.navigationBar.mode.get() === 'gestures'
             },
         }));
 
-        // TODO: implement configurable layouts
-        /*
-        type navbarButtonsGroupButtons = SettingsType<typeof settings.navigationBar.buttonsLeft>;
-
-        buttonBarGroup.add(buildToggleButtonRow<[navbarButtonsGroupButtons, navbarButtonsGroupButtons, navbarButtonsGroupButtons]>({
-            title: "Navigation Bar Mode",
-            subtitle: "Choose which kind of navigation experience you prefer",
-            setting: 
+        this.add(buildPreferencesGroup({
+            title: 'Buttons Navigation Bar',
+            children: [
+                this.buildButtonsRow(),
+            ],
+            // Only show this group when mode is set to "buttons":
+            onCreated: (group) => {
+                const id = settings.navigationBar.mode.connect("changed", (mode) => group.visible = mode === 'buttons');
+                group.connect('destroy', () => settings.navigationBar.mode.disconnect(id));
+                group.visible = settings.navigationBar.mode.get() === 'buttons';
+            },
         }));
-        */
+    }
+
+    private buildButtonsRow() {
+        type OptionId = SettingsType<typeof settings.navigationBar.buttonsLeft>[0];
+        type Option = {id: OptionId, icon: Gio.Icon};
+
+        // TODO: Add some typescript logic to assert exhaustiveness:
+        const allButtons: Option[] = [
+            { id: 'keyboard' as OptionId,           icon: Gio.ThemedIcon.new('input-keyboard-symbolic') },
+            { id: 'workspace-previous' as OptionId, icon: Gio.ThemedIcon.new('go-previous-symbolic') },
+            { id: 'workspace-next' as OptionId,     icon: Gio.ThemedIcon.new('go-next-symbolic') },
+            { id: 'overview' as OptionId,           icon: new AssetIcon('box-outline-symbolic') },
+            { id: 'apps' as OptionId,               icon: new AssetIcon('grid-large-symbolic') },
+            { id: 'back' as OptionId,               icon: new AssetIcon('arrow2-left-symbolic') },
+            { id: 'spacer' as OptionId,             icon: Gio.ThemedIcon.new('content-loading-symbolic') },
+        ];
+
+        const box = new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL,
+            spacing: 10
+        });
+
+        const leftButtonsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 10,
+            hexpand: true,
+            halign: Gtk.Align.START,
+            cssClasses: ['navigation-bar-page__drop-target'],
+        });
+        createDropTarget(leftButtonsBox);
+
+        const middleButtonsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 10,
+            hexpand: true,
+            halign: Gtk.Align.CENTER,
+            cssClasses: ['navigation-bar-page__drop-target'],
+        });
+        createDropTarget(middleButtonsBox);
+
+        const rightButtonsBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 10,
+            hexpand: true,
+            halign: Gtk.Align.END,
+            cssClasses: ['navigation-bar-page__drop-target'],
+        });
+        createDropTarget(rightButtonsBox);
+
+        const unusedBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 10,
+            hexpand: true,
+            cssClasses: ['navigation-bar-page__drop-target', 'navigation-bar-page__drop-target--unused']
+        });
+        createDropTarget(unusedBox);
+
+        const navbarBox = new Gtk.Box({
+            orientation: Gtk.Orientation.HORIZONTAL,
+            spacing: 5,
+        })
+
+        navbarBox.append(leftButtonsBox);
+        navbarBox.append(middleButtonsBox);
+        navbarBox.append(rightButtonsBox);
+
+        box.append(new Gtk.Label({
+            label: "Navigation Bar Layout",
+            halign: Gtk.Align.START,
+        }));
+        box.append(new Gtk.Label({
+            label: "Configure your navigation bar layout by dragging buttons into the left, middle or right box.",
+            halign: Gtk.Align.START,
+            cssClasses: ['subtitle']
+        }));
+        box.append(navbarBox);
+        box.append(new Gtk.Label({
+            label: "Place buttons you don't want to use in the navigation bar in this box:",
+            halign: Gtk.Align.START,
+            cssClasses: ['subtitle']
+        }));
+        box.append(unusedBox);
+
+        function createDragSource(parent: Gtk.Box, o: Option) {
+            const dragSource = new Gtk.DragSource({
+                actions: Gdk.DragAction.MOVE,
+                content: Gdk.ContentProvider.new_for_value(o.id),
+                propagationPhase: PropagationPhase.CAPTURE,
+            });
+            const but = new Gtk.Box({
+                cssClasses: ['navigation-bar-page__drop-target__item'],
+                tooltipText: o.id,
+            });
+            // @ts-ignore
+            but._optionId = o.id;
+            but.append(new Gtk.Image({ gicon: o.icon }))
+            dragSource.connect('drag-end', (_source, drag, delete_data) => {
+                if (delete_data && !(o.id === 'spacer' && parent === unusedBox)) parent.remove(but);
+                return true;
+            });
+            but.add_controller(dragSource);
+
+            // We need to mark the child as a drop target too, such that others can be dropped on top of it. The
+            // dropping logic is still handled by the outer drop zone though:
+            but.add_controller(new Gtk.DropTarget());
+
+            return but;
+        }
+
+        function createDropTarget(parent: Gtk.Box) {
+            const target = new Gtk.DropTarget({
+                actions: Gdk.DragAction.MOVE,
+                formats: Gdk.ContentFormats.new_for_gtype(GObject.TYPE_STRING),
+                preload: true,
+                propagationPhase: PropagationPhase.CAPTURE,
+            });
+            parent.add_controller(target);
+
+            target.connect('accept', (_source, drop) => true);
+            target.connect('drop', (_source, value: OptionId, x, y) => {
+                if (!(value === 'spacer' && parent === unusedBox)) {
+                    let prevChild = null;
+                    for (let child = parent.get_first_child(); !!child; child = child?.get_next_sibling() ?? null) {
+                        if (x >= child.get_allocation().x + child.get_allocated_width() / 2) {
+                            prevChild = child;
+                        }
+                    }
+                    parent.insert_child_after(createDragSource(parent, allButtons.find(b => b.id === value)!), prevChild);
+                }
+                onChanged();
+                return true;
+            });
+            return target;
+        }
+
+        for (let o of settings.navigationBar.buttonsLeft.get()) {
+            leftButtonsBox.append(createDragSource(leftButtonsBox, allButtons.find(b => b.id === o)!));
+        }
+        for (let o of settings.navigationBar.buttonsMiddle.get()) {
+            middleButtonsBox.append(createDragSource(middleButtonsBox, allButtons.find(b => b.id === o)!));
+        }
+        for (let o of settings.navigationBar.buttonsRight.get()) {
+            rightButtonsBox.append(createDragSource(rightButtonsBox, allButtons.find(b => b.id === o)!));
+        }
+
+        const usedButtons = [
+            ...settings.navigationBar.buttonsLeft.get(),
+            ...settings.navigationBar.buttonsMiddle.get(),
+            ...settings.navigationBar.buttonsRight.get()
+        ]
+        for (let o of allButtons.filter(b => !usedButtons.includes(b.id) || b.id === 'spacer')) {
+            unusedBox.append(createDragSource(unusedBox, o));
+        }
+
+        const onChanged = debounce(() => {
+            const leftButtons = [],
+                  middleButtons = [],
+                  rightButtons = [];
+
+            for (let child = leftButtonsBox.get_first_child(); !!child; child = child?.get_next_sibling()) {
+                // @ts-ignore
+                leftButtons.push(child._optionId);
+            }
+            for (let child = middleButtonsBox.get_first_child(); !!child; child = child?.get_next_sibling()) {
+                // @ts-ignore
+                middleButtons.push(child._optionId);
+            }
+            for (let child = rightButtonsBox.get_first_child(); !!child; child = child?.get_next_sibling()) {
+                // @ts-ignore
+                rightButtons.push(child._optionId);
+            }
+
+            settings.navigationBar.buttonsLeft.set(leftButtons);
+            settings.navigationBar.buttonsMiddle.set(middleButtons);
+            settings.navigationBar.buttonsRight.set(rightButtons);
+        }, 250);
+
+        return new Adw.PreferencesRow({
+            title: "Navigation Bar Buttons",
+            child: box,
+            cssClasses: ['navigation-bar-page__buttons-bar-layout']
+        });
     }
 }

@@ -14,6 +14,25 @@
 .padding-normal
     padding: 15px
 
+.navigation-bar-page
+    &__buttons-bar-layout
+        padding: 10px 12px
+
+    &__drop-target
+        border-radius: 10px
+        background: unquote("alpha(var(--window-fg-color), 0.07)")
+        padding: 5px
+        min-height: 2.1em
+        min-width: 6em
+
+        &__item
+            transition: margin-left 0.3s
+            background: lightgrey
+            border-radius: 10px
+            padding: 10px
+
+            &--going-to-insert-before
+                margin-left: 24px
 
 .donations-page
     &__donation-option

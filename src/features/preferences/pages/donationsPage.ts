@@ -28,7 +28,7 @@ export class DonationsPage extends Adw.PreferencesPage {
         }));
         this.add(buildPreferencesGroup({
             title: 'Support by Donation',
-            description: 'Choose a platform below to make a donation',
+            description: 'Choose a platform below to make a donation – even a a dollar a month helps!',
             children: [
                 this.buildDonateOptions(),
             ],
@@ -50,7 +50,7 @@ export class DonationsPage extends Adw.PreferencesPage {
             cssClasses: ['title-2'],
             halign: Gtk.Align.START,
             label: randomChoice([
-                'Our Mission', 'Why should I donate?', 'What we believe in'
+                'The Mission', 'Why should I donate?', 'What we believe in'
             ]),
         }));
 

@@ -7,6 +7,9 @@ import {DonationsPage} from "$src/features/preferences/pages/donationsPage.ts";
 import Gtk from "gi://Gtk";
 import Gdk from "@girs/gdk-4.0";
 import {settings} from "$src/settings.ts";
+import {MiscPage} from "$src/features/preferences/pages/miscPage.ts";
+import Gio from "gi://Gio";
+import {assetsGResourceFile} from "$src/config.ts";
 
 
 export default class GnomeTouchPreferences extends ExtensionPreferences {
@@ -14,8 +17,8 @@ export default class GnomeTouchPreferences extends ExtensionPreferences {
         // @ts-ignore
         initSettings(this.getSettings());
 
-        // const assets = Gio.resource_load(this.dir.get_child(assetsGResourceFile).get_path()!);
-        // Gio.resources_register(assets);
+        const assets = Gio.resource_load(this.dir.get_child(assetsGResourceFile).get_path()!);
+        Gio.resources_register(assets);
 
         this.loadCss();
         Gtk.Settings.get_default()?.connect('notify::gtk-application-prefer-dark-theme', () => this.loadCss())
@@ -23,7 +26,8 @@ export default class GnomeTouchPreferences extends ExtensionPreferences {
         const pages = [
             new NavigationBarPage(),
             new OskKeyPopupPage(),
-            new DonationsPage()
+            new MiscPage(),
+            new DonationsPage(),
         ];
 
         pages.forEach(p => window.add(p));
@@ -33,6 +37,8 @@ export default class GnomeTouchPreferences extends ExtensionPreferences {
             window.visiblePageName = initialPage;
         }
         settings.initialPreferencesPage.set('default');  // reset initial page
+
+        window.searchEnabled = true;
     }
 
     private loadCss() {
