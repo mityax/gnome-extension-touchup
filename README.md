@@ -16,7 +16,7 @@ This is a rough overview over this extension's implemented features and goals
 new ideas or unforeseen complications – so please don't take this as a fixed 
 plan but more as an idea of the direction Gnome Touch is heading. Also, I have
 limited time to work on this project, so please don't expect new features 
-very frequently – you can help speed up progress by donating.
+very frequently – you can help speed up progress by [donating](#support).
 
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
