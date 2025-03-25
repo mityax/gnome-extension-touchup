@@ -80,15 +80,20 @@ Should you want to contribute, which I'd greatly appreciate, please first
 have a look at [CONTRIBUTING.md](./CONTRIBUTING.md). This is especially
 important if you plan to contribute more than just a simple typo- or bugfix.
 
-## Donating
+## Support
 
 Your support fuels this work and helps Gnome Touch to make Gnome an 
-alternative to corporate Touch operating systems. It'll also allow me to 
+alternative to corporate touch operating systems. It'll also allow me to 
 allocate more time to this project, thereby making progress faster. Even a 
 dollar a month helps!
 
-<a href='https://ko-fi.com/Q5Q41A9U4G' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Recommended! Most payment methods, one-time or recurring donations, no sign up required.
+To donate, choose a platform below:
 
-<a href='https://patreon.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Many payment methods, best for a recurring donation.
+<a href='https://ko-fi.com/Q5Q41A9U4G' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a><br />
+<i>Recommended! Most payment methods, one-time or recurring donations, no sign up required.</i>
 
-<a href='https://buymeacoffee.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Donate by card, no sign up required.
+<a href='https://patreon.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a><br />
+<i>Many payment methods, best for a recurring donation.</i>
+
+<a href='https://buymeacoffee.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a><br />
+<i>Donate by card, no sign up required.</i>
