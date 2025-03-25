@@ -12,9 +12,11 @@ challenges or limits and has a steep learning curve.
 ### Roadmap &amp; Implementation Status
 
 This is a rough overview over this extension's implemented features and goals
-(in no particular order). It's a lot, and it's ever-changing, mostly due to 
+(in no particular order). It's a lot, and it's changing, mostly due to 
 new ideas or unforeseen complications – so please don't take this as a fixed 
-plan but more as an idea of the direction Gnome Touch is heading.
+plan but more as an idea of the direction Gnome Touch is heading. Also, I have
+limited time to work on this project, so please don't expect new features 
+very frequently – you can help speed up progress by donating.
 
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
@@ -78,3 +80,15 @@ Should you want to contribute, which I'd greatly appreciate, please first
 have a look at [CONTRIBUTING.md](./CONTRIBUTING.md). This is especially
 important if you plan to contribute more than just a simple typo- or bugfix.
 
+## Donating
+
+Your support fuels this work and helps Gnome Touch to make Gnome an 
+alternative to corporate Touch operating systems. It'll also allow me to 
+allocate more time to this project, thereby making progress faster. Even a 
+dollar a month helps!
+
+<a href='https://ko-fi.com/Q5Q41A9U4G' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Recommended! Most payment methods, one-time or recurring donations, no sign up required.
+
+<a href='https://patreon.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Many payment methods, best for a recurring donation.
+
+<a href='https://buymeacoffee.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a> – Donate by card, no sign up required.

@@ -28,7 +28,7 @@ export class DonationsPage extends Adw.PreferencesPage {
         }));
         this.add(buildPreferencesGroup({
             title: 'Support by Donation',
-            description: 'Choose a platform below to make a donation – even a a dollar a month helps!',
+            description: 'Choose a platform below to make a donation – even a dollar a month helps!',
             children: [
                 this.buildDonateOptions(),
             ],
