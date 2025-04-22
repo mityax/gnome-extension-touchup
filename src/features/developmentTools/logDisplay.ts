@@ -8,7 +8,7 @@ import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import {Delay} from "$src/utils/delay.ts";
-import Pango from "@girs/pango-1.0";
+import Pango from "gi://Pango";
 import Cogl from "gi://Cogl";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;

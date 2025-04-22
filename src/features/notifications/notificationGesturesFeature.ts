@@ -2,13 +2,16 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {MessageListSection} from "resource:///org/gnome/shell/ui/messageList.js";
-import {NotificationMessage, NotificationSection} from "resource:///org/gnome/shell/ui/calendar.js";
-import {MessageTray} from "resource:///org/gnome/shell/ui/messageTray.js";
+import {
+    MessageView,
+    NotificationMessage,
+    NotificationMessageGroup
+} from "resource:///org/gnome/shell/ui/messageList.js";
+import {CalendarMessageList} from "resource:///org/gnome/shell/ui/calendar.js";
+import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 import {Patch, PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
-import {debugLog} from "$src/utils/logging";
 import {findActorBy} from "$src/utils/utils";
 import {Widgets} from "$src/utils/ui/widgets.ts";
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
@@ -17,45 +20,53 @@ import Ref = Widgets.Ref;
 
 export class NotificationGesturesFeature extends ExtensionFeature {
     private unpatchOnTrayClose: Patch[] = [];
+    private calendarMessageList: (CalendarMessageList & { _messageView: MessageView }) | null;
 
     constructor(pm: PatchManager) {
         super(pm);
         const self = this;
 
-        // Setup listeners for existing notifications in the panel:
-        const messageListSection = findActorBy(global.stage, a => a.constructor.name == 'NotificationSection') as (NotificationSection & {_list: St.BoxLayout}) | null;
-        messageListSection?._list.get_children().forEach(container => {
-            if (container.get_child_at_index(0)) {
-                self.patchNotification(container.get_child_at_index(0) as NotificationMessage, false);
+        // Setup listeners for existing notifications and notification groups in the panel:
+        this.calendarMessageList = findActorBy(global.stage, a => a.constructor.name == 'CalendarMessageList') as any;
+
+        // Note: [MessageView.messages] actually contains the [NotificationMessageGroup]s
+        this.calendarMessageList?._messageView.messages.forEach(notificationGroup => {
+            // Patch each notification inside the group:
+            for (let child of notificationGroup.get_children()) {
+                // each notification is wrapped in a [St.Bin], thus we use `.get_first_child()` on it:
+                if (child.get_first_child() != null) {
+                    self.patchNotification(child.get_first_child() as NotificationMessage, false);
+                }
             }
         });
 
-        // New message added to message list section in popup:
-        this.pm.appendToMethod(MessageListSection.prototype, 'addMessageAtIndex',
-            function(this: MessageListSection, message: NotificationMessage, idx: number, animate: boolean) {
-                debugLog("New message in MessageListSection");
-                self.patchNotification(message, false);
+        // New message added to a [NotificationMessageGroup]:
+        this.pm.appendToMethod(NotificationMessageGroup.prototype, '_addNotification',
+            function(
+                this: NotificationMessageGroup & {_notificationToMessage: Map<MessageTray.Notification, NotificationMessage>},
+                notification: MessageTray.Notification
+            ) {
+                self.patchNotification(this._notificationToMessage.get(notification)!, false);
             },
         );
 
         // New message added to message tray:
-        this.pm.appendToMethod(MessageTray.prototype, '_showNotification',
-            function(this: MessageTray & {_banner: NotificationMessage}) {
-                debugLog("New message in MessageTray");
+        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_showNotification',
+            function(this: MessageTray.MessageTray & {_banner: NotificationMessage}) {
                 self.unpatchOnTrayClose.push(self.patchNotification(this._banner, true));
             },
         );
 
         // When the notification tray banner is closed, un-patch the message and container
         // to avoid double callback invocations:
-        this.pm.appendToMethod(MessageTray.prototype, '_hideNotification', function () {
+        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_hideNotification', function () {
             self.unpatchOnTrayClose.forEach(p => p.disable())
             self.unpatchOnTrayClose = [];
         })
 
         // Path the message tray `_updateState` function such that it does not expand the banner on hover:
-        this.pm.patchMethod(MessageTray.prototype, '_updateState',
-            function(this: MessageTray & {_banner: NotificationMessage}, orig) {
+        this.pm.patchMethod(MessageTray.MessageTray.prototype, '_updateState',
+            function(this: MessageTray.MessageTray & {_banner: NotificationMessage}, orig) {
                 // we achieve this by making it seem to the function that the banner is already expanded:
                 const originalValue = this._banner?.expanded;
                 if (this._banner) this._banner.expanded = true;
@@ -77,53 +88,81 @@ export class NotificationGesturesFeature extends ExtensionFeature {
             container.reactive = true;
             container.trackHover = true;
 
+            const notificationGroup = container.get_parent() as NotificationMessageGroup;
+
             // Track and recognize touch and mouse events:
-            const recognizer = new GestureRecognizer2D();
-
-            const onEvent = (_: Clutter.Actor, e: Clutter.Event) => {
-                recognizer.pushEvent(e);
-
-                if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
-                    e.type() == Clutter.EventType.BUTTON_PRESS) {
-                    updateHover();
-                }
-
-                if (recognizer.isDuringGesture) {
-                    if (recognizer.primaryMove?.swipeAxis == 'horizontal') {
-                        message.translationX = recognizer.totalMotionDelta.x;
-                    } else if (recognizer.primaryMove?.swipeAxis == 'vertical' && isTray) {
-                        message.translationY = Math.min(recognizer.totalMotionDelta.y, 0);
-                    }
-                }
-
-                if (recognizer.gestureHasJustFinished) {
-                    this._onGestureFinished(message, recognizer, isTray);
-                    updateHover();
-                }
-            }
-
-            const updateHover = () => {
-                if (container.hover || recognizer.isDuringGesture) {
+            const gestureHelper = new SwipeGesturesHelper({
+                actor: container,
+                onHover: (isTouch) => {
                     message.add_style_pseudo_class('hover');
 
                     // Expand the message when hovering with the pointer:
-                    if (isTray && !recognizer.isTouchGesture && !message.expanded) {
+                    if (isTray && !isTouch && !message.expanded) {
                         message.expand(true);
                     }
-                } else {
-                    message.remove_style_pseudo_class('hover');
-                }
-            }
+                },
+                onHoverEnd: () => message.remove_style_pseudo_class('hover'),
+                onMoveHorizontally: (x) => {
+                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
+                    actor.translationX = x;
+                },
+                onMoveVertically: (y, rel_y) => {
+                    if (isTray) {
+                        message.translationY = Math.min(y, 0);
+                    } else if (gestureHelper.recognizer.primaryPattern?.type !== 'hold') {
+                        // Scroll the message list, if possible:
+                        if (this.canScrollNotificationList()) {
+                            this.scrollNotificationList(rel_y);
+                        }
+                    }
+                },
+                onEaseBackPosition: () => {
+                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
+                    gestureHelper.easeBackPositionOf(actor);
+                },
+                onActivate: () =>
+                    // @ts-ignore
+                    message.notification.activate(),
+                onExpand: () => {
+                    if (this.canScrollNotificationList('up') && gestureHelper.recognizer.primaryPattern?.type !== 'hold')
+                        return;
 
-            // Setup event handlers:
-            let signalIds = [
-                container.connect('touch-event', onEvent),
-                container.connect('button-press-event', onEvent),
-                container.connect('button-release-event', onEvent),
-                container.connect('notify::hover', updateHover),
-            ];
+                    if (!message.expanded) {
+                        message.expand(true);
+                    }
+                },
+                onCollapse: () => {
+                    if (isTray) {
+                        // @ts-ignore
+                        message.ease({
+                            y: -message.height,
+                            rotationZ: 90,
+                            duration: 100,
+                            mode: Clutter.AnimationMode.EASE_OUT,
+                            // @ts-ignore
+                            onComplete: () => Main.messageTray._hideNotification(false),
+                        });
+                        return { easeBackPosition: false };
+                    } else if (message.expanded) {
+                        if (this.canScrollNotificationList('down') && gestureHelper.recognizer.primaryPattern?.type !== 'hold')
+                            return;
 
-            message.connect('destroy', () => undo());
+                        message.unexpand(true);
+                    }
+                },
+                onClose: (swipeDirection) => {
+                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
+
+                    //@ts-ignore
+                    actor.ease({
+                        translationX: swipeDirection == 'right' ? message.width : -message.width,
+                        opacity: 0,
+                        duration: 150,
+                        mode: Clutter.AnimationMode.EASE_OUT,
+                        onComplete: () => message.emit("close"),
+                    });
+                },
+            });
 
             // Use [Ref]s for the cleanup in order to skip cleanup on already
             // destroyed actors easily:
@@ -133,7 +172,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
             const undo = () => {
                 // Undo all the changes:
                 containerRef.apply(c => {
-                    signalIds.forEach(id => c.disconnect(id));
+                    gestureHelper.destroy();
                     c.reactive = false;
                     c.trackHover = false
                 });
@@ -143,69 +182,190 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 });
             };
 
+            message.connect('destroy', () => undo());
+
             return undo;
         });
     }
 
-    private _onGestureFinished(message: NotificationMessage, recognizer: GestureRecognizer2D, isTray: boolean) {
-        debugLog("Gesture: ", recognizer.toString());
+    private canScrollNotificationList(direction: 'up' | 'down' | null = null): boolean {
+        if (!this.calendarMessageList!._scrollView.get_vscrollbar_visible()) return false;
 
-        if (recognizer.isTap() || !recognizer.isTouchGesture) {
-            //@ts-ignore
-            message.notification.activate();
-        } else {
-            const lastPattern = recognizer.secondaryMove;
+        const vadj = this.calendarMessageList?._scrollView?.get_vadjustment();
+        switch (direction) {
+            case 'up':
+                return !!vadj && vadj.value > 0;
+            case 'down':
+                return !!vadj && vadj.value < vadj.upper - this.calendarMessageList!._scrollView.contentBox.get_height();
+        }
 
-            let shouldEaseBack = true;
+        return true;
+    }
 
-            if (lastPattern != null) {
-                switch (lastPattern.swipeDirection) {
-                    case 'up':
-                        if (isTray) {
-                            // @ts-ignore
-                            message.ease({
-                                y: -message.height,
-                                rotationZ: 90,
-                                duration: 100,
-                                mode: Clutter.AnimationMode.EASE_OUT,
-                                // @ts-ignore
-                                onComplete: () => Main.messageTray._hideNotification(false)
-                            });
-                            shouldEaseBack = false;
-                        } else if (message.expanded) {
-                            message.unexpand(true);
-                        }
-                        break;
-                    case 'down':
-                        if (!message.expanded) {
-                            message.expand(true);
-                        }
-                        break;
-                    default:
-                        if (lastPattern.swipeDirection == 'right' && recognizer.totalMotionDelta.x > 0 ||
-                            lastPattern.swipeDirection == 'left' && recognizer.totalMotionDelta.x < 0) {
-                            //@ts-ignore
-                            message.ease({
-                                translationX: lastPattern.swipeDirection == 'right' ? message.width : -message.width,
-                                opacity: 0,
-                                duration: 200,
-                                mode: Clutter.AnimationMode.EASE_OUT,
-                                onComplete: () => message.emit("close"),
-                            })
-                            shouldEaseBack = false;
-                        }
-                }
-
-                if (shouldEaseBack) {
-                    //@ts-ignore
-                    message.ease({
-                        translationX: 0,
-                        translationY: 0,
-                        duration: 200,
-                        mode: Clutter.AnimationMode.EASE_OUT_BACK,
-                    })
-                }
-            }
+    private scrollNotificationList(delta: number) {
+        const vadj = this.calendarMessageList?._scrollView?.get_vadjustment();
+        if (vadj) {
+            vadj.value -= delta;
         }
     }
 }
+
+
+/**
+ * A helper to handle the abstractable parts of notification gestures, i.e. connecting to raw events of
+ * an arbitrary [Clutter.Actor] and translating them into actor position translations (move to follow the
+ * users' finger) and, upon gesture finishing, user intents (activate, close, expand, collapse, ...)
+ */
+class SwipeGesturesHelper {
+    // Mid-gesture callbacks:
+    private readonly onHover?: (isTouch: boolean) => void;
+    private readonly onHoverEnd?: () => void;
+    private readonly onMoveHorizontally?: ((abs_x: number, rel_x: number) => void);
+    private readonly onMoveVertically?: ((abs_y: number, rel_y: number) => void);
+
+    // Gesture finished callbacks:
+    private readonly onActivate?: () => SwipeGesturesHelperCallbackFinishedResult;
+    private readonly onClose?: (swipeDirection: 'left' | 'right') => SwipeGesturesHelperCallbackFinishedResult;
+    private readonly onExpand?: () => SwipeGesturesHelperCallbackFinishedResult;
+    private readonly onCollapse?: () => SwipeGesturesHelperCallbackFinishedResult;
+    private readonly onEaseBackPosition?: () => void;
+
+    private readonly actor: Clutter.Actor;
+    readonly recognizer: GestureRecognizer2D;
+    private _signalIds: number[];
+
+    constructor(props: {
+        actor: Clutter.Actor | St.Widget,
+
+        // Mid-gesture callbacks:
+        onHover?: (isTouch: boolean) => void,
+        onHoverEnd?: () => void,
+        onMoveHorizontally?: (abs_x: number, rel_x: number) => void,
+        onMoveVertically?: (abs_y: number, rel_y: number) => void,
+
+        // Gesture finished callbacks:
+        onActivate?: () => SwipeGesturesHelperCallbackFinishedResult,
+        onClose?: (swipeDirection: 'left' | 'right') => SwipeGesturesHelperCallbackFinishedResult,
+        onExpand?: () => SwipeGesturesHelperCallbackFinishedResult,
+        onCollapse?: () => SwipeGesturesHelperCallbackFinishedResult,
+        onEaseBackPosition?: () => void,
+    }) {
+        this.actor = props.actor;
+        this.onActivate = props.onActivate;
+        this.onHover = props.onHover;
+        this.onHoverEnd = props.onHoverEnd;
+        this.onClose = props.onClose;
+        this.onExpand = props.onExpand;
+        this.onCollapse = props.onCollapse;
+        this.onMoveHorizontally = props.onMoveHorizontally;
+        this.onMoveVertically = props.onMoveVertically;
+        this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
+
+        // Track and recognize touch and mouse events:
+        this.recognizer = new GestureRecognizer2D();
+
+        // Setup event handlers:
+        this._signalIds = [
+            this.actor.connect('touch-event', this._onEvent.bind(this)),
+            this.actor.connect('button-press-event', this._onEvent.bind(this)),
+            this.actor.connect('button-release-event', this._onEvent.bind(this)),
+            this.actor.connect('notify::hover', this._updateHover.bind(this)),
+        ];
+
+        // To not disconnect after destruction, clear [_signalIds] when the actor is destroyed:
+        this.actor.connect('destroy', () => this._signalIds = []);
+    }
+
+    private _onEvent(_: Clutter.Actor, e: Clutter.Event) {
+        const prevDeltaX = this.recognizer.totalMotionDelta.x;
+        const prevDeltaY = this.recognizer.totalMotionDelta.y;
+
+        this.recognizer.pushEvent(e);
+
+        if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
+            e.type() == Clutter.EventType.BUTTON_PRESS) {
+            this._updateHover();
+        }
+
+        if (this.recognizer.isDuringGesture) {
+            if (this.recognizer.primaryMove?.swipeAxis == 'horizontal') {
+                this.onMoveHorizontally?.(this.recognizer.totalMotionDelta.x, this.recognizer.totalMotionDelta.x - prevDeltaX);
+            } else if (this.recognizer.primaryMove?.swipeAxis == 'vertical') {
+                this.onMoveVertically?.(this.recognizer.totalMotionDelta.y, this.recognizer.totalMotionDelta.y - prevDeltaY)
+            }
+        }
+
+        if (this.recognizer.gestureHasJustFinished) {
+            this._onGestureFinished();
+            this._updateHover();
+        }
+    }
+
+    private _updateHover() {
+        if (this.recognizer.isDuringGesture || (this.actor instanceof St.Widget && this.actor.hover)) {
+            this.onHover?.(this.recognizer.isTouchGesture);
+        } else {
+            this.onHoverEnd?.();
+        }
+    }
+
+    destroy() {
+        for (let signalId of this._signalIds) {
+            this.actor.disconnect(signalId);
+        }
+    }
+
+    private _onGestureFinished() {
+        let defaultShouldEaseBack = false;
+        let res: SwipeGesturesHelperCallbackFinishedResult = undefined;
+
+        if (this.recognizer.isTap() || !this.recognizer.isTouchGesture) {
+            res = this.onActivate?.();
+        } else if (this.recognizer.secondaryMove != null) {
+            switch (this.recognizer.secondaryMove.swipeDirection) {
+                case 'up':
+                    res = this.onCollapse?.();
+                    defaultShouldEaseBack = true;
+                    break;
+                case 'down':
+                    res = this.onExpand?.();
+                    defaultShouldEaseBack = true;
+                    break;
+                default:
+                    if (this.recognizer.secondaryMove.swipeDirection == 'right' && this.recognizer.totalMotionDelta.x > 0 ||
+                        this.recognizer.secondaryMove.swipeDirection == 'left' && this.recognizer.totalMotionDelta.x < 0) {
+                        res = this.onClose?.(this.recognizer.secondaryMove.swipeDirection);
+                    } else {
+                        defaultShouldEaseBack = true;
+                    }
+            }
+        }
+
+        if (res?.easeBackPosition || (defaultShouldEaseBack && res?.easeBackPosition != false)) {
+            this.onEaseBackPosition?.();
+        }
+    }
+
+    private _defaultOnEaseBackPosition() {
+        this.easeBackPositionOf(this.actor);
+    }
+
+    public easeBackPositionOf(actor: Clutter.Actor) {
+        // @ts-ignore
+        actor.ease({
+            translationX: 0,
+            translationY: 0,
+            duration: 200,
+            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+        });
+    }
+}
+
+type SwipeGesturesHelperCallbackFinishedResult = {
+    /**
+     * Can be true, undefined or false, depending on which the "onEaseBackPosition" callback is invoked after this
+     * callback.
+     */
+    easeBackPosition?: boolean
+} | void;
+

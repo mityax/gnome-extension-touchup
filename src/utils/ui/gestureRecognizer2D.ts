@@ -212,6 +212,13 @@ export class GestureRecognizer2D {
     }
 
     /**
+     * The first pattern recorded so far.
+     */
+    get primaryPattern(): Pattern | null {
+        return this.recordedPatterns.at(0) ?? null;
+    }
+
+    /**
      * The pattern of the first stroke, i.e. the first `SwipePattern`. This
      * can already be retrieved for incomplete strokes, but it's properties
      * might change.

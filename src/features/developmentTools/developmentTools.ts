@@ -15,6 +15,8 @@ import {_hotReloadExtension} from "$src/features/developmentTools/developmentRel
 import ExtensionFeature from "$src/utils/extensionFeature.ts";
 import {PatchManager} from "$src/utils/patchManager.ts";
 import {debounce} from "$src/utils/debounce.ts";
+import Cogl from "gi://Cogl";
+import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton.ts";
 
 
 type _PersistedState = {
@@ -68,6 +70,10 @@ export class DevelopmentTools extends ExtensionFeature {
             new RestartButton(),
             new Widgets.Bin({width: 10}),
             new HotReloadButton(this.extension.metadata.uuid),
+            new Widgets.Bin({width: 10}),
+            new Widgets.Bin({width: 1, backgroundColor: Cogl.Color.from_string('grey')[1]}),
+            new Widgets.Bin({width: 10}),
+            new SendTestNotificationsButton(),
         ];
     }
 

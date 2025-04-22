@@ -4,7 +4,7 @@
     "url": "https://github.com/mityax/gnome-touch",
     "version": "1.0.0",
     "uuid": "gnometouch@mityax.github.com",
-    "shell-version": ["47"],
+    "shell-version": ["48"],
     "gettext-domain": "gnometouch",
     "settings-schema": "org.gnome.shell.extensions.gnometouch",
     "donations": {

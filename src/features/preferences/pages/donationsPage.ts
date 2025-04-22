@@ -4,7 +4,7 @@ import Gtk from "gi://Gtk";
 import {buildPreferencesGroup} from "$src/features/preferences/uiUtils.ts";
 import {randomChoice} from "$src/utils/utils.ts";
 import Gio from "gi://Gio";
-import Pango from "@girs/pango-1.0";
+import Pango from "gi://Pango";
 import {donationPlatforms, feedbackPlatforms} from "$src/config.ts";
 
 

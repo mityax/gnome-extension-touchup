@@ -3,7 +3,7 @@ import GObject from "gi://GObject";
 import {settings} from "$src/settings.ts";
 import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils.ts";
 import Gtk from "gi://Gtk";
-import Gdk from "@girs/gdk-4.0";
+import Gdk from "gi://Gdk";
 import {SettingsType} from "$src/features/preferences/backend.ts";
 import Gio from "gi://Gio";
 import {AssetIcon} from "$src/utils/ui/assetIcon.ts";

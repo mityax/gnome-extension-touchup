@@ -5,7 +5,7 @@ import {OskKeyPopupPage} from "$src/features/preferences/pages/oskKeyPopupPage";
 import {ExtensionPreferences} from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 import {DonationsPage} from "$src/features/preferences/pages/donationsPage.ts";
 import Gtk from "gi://Gtk";
-import Gdk from "@girs/gdk-4.0";
+import Gdk from "gi://Gdk";
 import {settings} from "$src/settings.ts";
 import {MiscPage} from "$src/features/preferences/pages/miscPage.ts";
 import Gio from "gi://Gio";
