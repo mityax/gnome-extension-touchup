@@ -1,5 +1,5 @@
 
-# Gnome Touch
+# Gnome Touch [Beta]
 
 An extension for Gnome Shell that enhances the user experience for devices with a
 touchscreen – primarily focused (and tested) on tablets.
@@ -44,6 +44,9 @@ very frequently – you can help speed up progress by [donating](#support).
  - [ ] Voice input in onscreen keyboard
 - [ ] Option to display individual windows instead of workspaces when navigating
   using gesture navigation bar
+
+Each of these features can be enabled/disabled individually and most can be 
+further customized in the extension settings.
 
 In case you'd like to suggest a feature or work on one yourself, please
 don't hesitate
