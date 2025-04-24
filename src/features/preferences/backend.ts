@@ -102,12 +102,15 @@ export class StringListSetting<T extends string> extends Setting<T[]>{
     get(): T[] {
         let res: any;
         gioSettings!.get_mapped(this.key, value => {
-            if (value === null) res = [];
-            try {
-                res = JSON.parse(value.get_string()[0]);
-                this._validateValue(res);
-            } catch (e) {
-                return false;
+            if (value === null) {
+                res = [];
+            } else {
+                try {
+                    res = JSON.parse(value.get_string()[0]);
+                    this._validateValue(res);
+                } catch (e) {
+                    return false;
+                }
             }
             return true;
         });

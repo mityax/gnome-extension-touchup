@@ -30,7 +30,7 @@ export class SendTestNotificationsButton extends DevToolButton {
     private async _onPressed() {
         const notification = new Notification({
             source: this.getNotificationSource(),
-            title: randomChoice(["A test!", "Test Notification", "Just a Test"]),
+            title: randomChoice(["A test!", "Test Notification", "Just a Test", "A Quick Test"]),
             body: randomChoice([
                 "This is a notification to test something in GnomeTouch.",
                 "This notification to test something in GnomeTouch has an expandable body text. It has been " +

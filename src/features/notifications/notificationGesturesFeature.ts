@@ -93,6 +93,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
             // Track and recognize touch and mouse events:
             const gestureHelper = new SwipeGesturesHelper({
                 actor: container,
+                scrollView: !isTray ? this.calendarMessageList?._scrollView : undefined,
                 onHover: (isTouch) => {
                     message.add_style_pseudo_class('hover');
 
@@ -106,16 +107,12 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                     const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
                     actor.translationX = x;
                 },
-                onMoveVertically: (y, rel_y) => {
+                onMoveVertically: (y) => {
                     if (isTray) {
                         message.translationY = Math.min(y, 0);
-                    } else if (gestureHelper.recognizer.primaryPattern?.type !== 'hold') {
-                        // Scroll the message list, if possible:
-                        if (this.canScrollNotificationList()) {
-                            this.scrollNotificationList(rel_y);
-                        }
                     }
                 },
+                onScrollScrollView: (deltaY) => this.scrollNotificationList(deltaY),
                 onEaseBackPosition: () => {
                     const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
                     gestureHelper.easeBackPositionOf(actor);
@@ -124,9 +121,6 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                     // @ts-ignore
                     message.notification.activate(),
                 onExpand: () => {
-                    if (this.canScrollNotificationList('up') && gestureHelper.recognizer.primaryPattern?.type !== 'hold')
-                        return;
-
                     if (!message.expanded) {
                         message.expand(true);
                     }
@@ -144,16 +138,13 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                         });
                         return { easeBackPosition: false };
                     } else if (message.expanded) {
-                        if (this.canScrollNotificationList('down') && gestureHelper.recognizer.primaryPattern?.type !== 'hold')
-                            return;
-
                         message.unexpand(true);
                     }
                 },
                 onClose: (swipeDirection) => {
                     const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
 
-                    //@ts-ignore
+                    // @ts-ignore
                     actor.ease({
                         translationX: swipeDirection == 'right' ? message.width : -message.width,
                         opacity: 0,
@@ -188,20 +179,6 @@ export class NotificationGesturesFeature extends ExtensionFeature {
         });
     }
 
-    private canScrollNotificationList(direction: 'up' | 'down' | null = null): boolean {
-        if (!this.calendarMessageList!._scrollView.get_vscrollbar_visible()) return false;
-
-        const vadj = this.calendarMessageList?._scrollView?.get_vadjustment();
-        switch (direction) {
-            case 'up':
-                return !!vadj && vadj.value > 0;
-            case 'down':
-                return !!vadj && vadj.value < vadj.upper - this.calendarMessageList!._scrollView.contentBox.get_height();
-        }
-
-        return true;
-    }
-
     private scrollNotificationList(delta: number) {
         const vadj = this.calendarMessageList?._scrollView?.get_vadjustment();
         if (vadj) {
@@ -220,8 +197,9 @@ class SwipeGesturesHelper {
     // Mid-gesture callbacks:
     private readonly onHover?: (isTouch: boolean) => void;
     private readonly onHoverEnd?: () => void;
-    private readonly onMoveHorizontally?: ((abs_x: number, rel_x: number) => void);
-    private readonly onMoveVertically?: ((abs_y: number, rel_y: number) => void);
+    private readonly onMoveHorizontally?: (x: number) => void;
+    private readonly onMoveVertically?: (y: number) => void;
+    private readonly onScrollScrollView?: (deltaY: number) => void;
 
     // Gesture finished callbacks:
     private readonly onActivate?: () => SwipeGesturesHelperCallbackFinishedResult;
@@ -231,17 +209,27 @@ class SwipeGesturesHelper {
     private readonly onEaseBackPosition?: () => void;
 
     private readonly actor: Clutter.Actor;
+    private readonly scrollView?: St.ScrollView;
     readonly recognizer: GestureRecognizer2D;
     private _signalIds: number[];
 
+    /**
+     * Whether the gesture currently being performed is a scroll gesture. This is set to `true` when the
+     * [onScrollScrollView] callback has been called at least once during the current gesture.
+     */
+    private isScrollGesture: boolean = false;
+
+
     constructor(props: {
         actor: Clutter.Actor | St.Widget,
+        scrollView?: St.ScrollView,
 
         // Mid-gesture callbacks:
         onHover?: (isTouch: boolean) => void,
         onHoverEnd?: () => void,
-        onMoveHorizontally?: (abs_x: number, rel_x: number) => void,
-        onMoveVertically?: (abs_y: number, rel_y: number) => void,
+        onMoveHorizontally?: (x: number) => void,
+        onMoveVertically?: (y: number) => void,
+        onScrollScrollView?: (deltaY: number) => void,
 
         // Gesture finished callbacks:
         onActivate?: () => SwipeGesturesHelperCallbackFinishedResult,
@@ -251,14 +239,18 @@ class SwipeGesturesHelper {
         onEaseBackPosition?: () => void,
     }) {
         this.actor = props.actor;
-        this.onActivate = props.onActivate;
+        this.scrollView = props.scrollView;
+
         this.onHover = props.onHover;
         this.onHoverEnd = props.onHoverEnd;
+        this.onMoveHorizontally = props.onMoveHorizontally;
+        this.onMoveVertically = props.onMoveVertically;
+        this.onScrollScrollView = props.onScrollScrollView;
+
+        this.onActivate = props.onActivate;
         this.onClose = props.onClose;
         this.onExpand = props.onExpand;
         this.onCollapse = props.onCollapse;
-        this.onMoveHorizontally = props.onMoveHorizontally;
-        this.onMoveVertically = props.onMoveVertically;
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
         // Track and recognize touch and mouse events:
@@ -277,7 +269,6 @@ class SwipeGesturesHelper {
     }
 
     private _onEvent(_: Clutter.Actor, e: Clutter.Event) {
-        const prevDeltaX = this.recognizer.totalMotionDelta.x;
         const prevDeltaY = this.recognizer.totalMotionDelta.y;
 
         this.recognizer.pushEvent(e);
@@ -289,15 +280,25 @@ class SwipeGesturesHelper {
 
         if (this.recognizer.isDuringGesture) {
             if (this.recognizer.primaryMove?.swipeAxis == 'horizontal') {
-                this.onMoveHorizontally?.(this.recognizer.totalMotionDelta.x, this.recognizer.totalMotionDelta.x - prevDeltaX);
+                this.onMoveHorizontally?.(this.recognizer.totalMotionDelta.x);
             } else if (this.recognizer.primaryMove?.swipeAxis == 'vertical') {
-                this.onMoveVertically?.(this.recognizer.totalMotionDelta.y, this.recognizer.totalMotionDelta.y - prevDeltaY)
+                // Scroll the message list, if possible:
+                const dy = this.recognizer.totalMotionDelta.y - prevDeltaY;
+                if (!this.gestureStartedWithLongPress && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
+                    this.onScrollScrollView?.(dy);
+                    if (this.recognizer.isCertainlyMovement) {
+                        this.isScrollGesture = true;
+                    }
+                } else {
+                    this.onMoveVertically?.(this.recognizer.totalMotionDelta.y)
+                }
             }
         }
 
         if (this.recognizer.gestureHasJustFinished) {
             this._onGestureFinished();
             this._updateHover();
+            this.isScrollGesture = false;
         }
     }
 
@@ -319,15 +320,19 @@ class SwipeGesturesHelper {
         let defaultShouldEaseBack = false;
         let res: SwipeGesturesHelperCallbackFinishedResult = undefined;
 
-        if (this.recognizer.isTap() || !this.recognizer.isTouchGesture) {
+        if (this.recognizer.wasTap() || !this.recognizer.isTouchGesture) {
             res = this.onActivate?.();
         } else if (this.recognizer.secondaryMove != null) {
             switch (this.recognizer.secondaryMove.swipeDirection) {
                 case 'up':
+                    if (this.isScrollGesture)
+                        break;
                     res = this.onCollapse?.();
                     defaultShouldEaseBack = true;
                     break;
                 case 'down':
+                    if (this.isScrollGesture)
+                        break;
                     res = this.onExpand?.();
                     defaultShouldEaseBack = true;
                     break;
@@ -344,6 +349,24 @@ class SwipeGesturesHelper {
         if (res?.easeBackPosition || (defaultShouldEaseBack && res?.easeBackPosition != false)) {
             this.onEaseBackPosition?.();
         }
+    }
+
+    private get gestureStartedWithLongPress () {
+        return this.recognizer.primaryPattern?.type === 'hold'
+    };
+
+    private canScrollScrollView(direction: 'up' | 'down' | null = null): boolean {
+        if (!this.scrollView?.get_vscrollbar_visible()) return false;
+
+        const vadj = this.scrollView.get_vadjustment();
+        switch (direction) {
+            case 'up':
+                return !!vadj && vadj.value > 0;
+            case 'down':
+                return !!vadj && vadj.value < vadj.upper - this.scrollView.contentBox.get_height();
+        }
+
+        return true;
     }
 
     private _defaultOnEaseBackPosition() {

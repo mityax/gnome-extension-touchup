@@ -99,7 +99,8 @@ export class CancellablePromise<T> extends Promise<T> {
     }
 
     /**
-     * Returns true if the promise was cancelled successfully, false if it already ran.
+     * Returns true if the promise was cancelled successfully, false if it was already
+     * resolved/rejected before.
      */
     cancel(): boolean {
         return this._onCancel();

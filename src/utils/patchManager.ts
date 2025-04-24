@@ -129,9 +129,9 @@ export class PatchManager {
      *               syntax to retrieve the correct value for `this`.
      * @param debugName A name for this patch for debug log messages
      */
-    patchMethod(prototype: object, methodName: string, method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch
-    patchMethod(prototype: object, methodName: string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): MultiPatch
-    patchMethod(prototype: object, methodName: string | string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch | MultiPatch {
+    patchMethod<T extends UnknownClass>(prototype: T, methodName: string, method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch
+    patchMethod<T extends UnknownClass>(prototype: T, methodName: string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): MultiPatch
+    patchMethod<T extends UnknownClass>(prototype: T, methodName: string | string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch | MultiPatch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
         if (Array.isArray(methodName)) {

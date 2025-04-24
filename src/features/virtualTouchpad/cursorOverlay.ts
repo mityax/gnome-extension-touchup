@@ -6,7 +6,6 @@
 
 
 import Clutter from 'gi://Clutter';
-import Meta from 'gi://Meta';
 import Mtk from 'gi://Mtk';
 import St from "gi://St";
 import {IdleRunner} from "../../utils/idleRunner";
@@ -20,7 +19,7 @@ export class CursorOverlay {
     private static readonly MIN_WATCHER_INTERVAL = 1;
 
     private readonly widget: St.Widget;
-    private shellTracker = Meta.CursorTracker.get_for_display(global.display);
+    private shellTracker = global.backend.get_cursor_tracker();
     private pm: PatchManager;
 
 

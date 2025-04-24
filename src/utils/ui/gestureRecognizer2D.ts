@@ -62,9 +62,6 @@ export type Pattern = SwipePattern | HoldPattern;
  *     }
  * });
  * ```
- *
- * This class can be used in UI frameworks to enhance interactivity by detecting user gestures
- * and responding accordingly.
  */
 export class GestureRecognizer2D {
     /**
@@ -158,7 +155,7 @@ export class GestureRecognizer2D {
      *
      * Should only be called after a gesture is complete.
      */
-    isTap(allowLongTap = false) {
+    wasTap(allowLongTap = false) {
         assert(!this.isDuringGesture, "You should call `isTap` only when a gesture is completed, not during a gesture.");
 
         return (
@@ -174,7 +171,8 @@ export class GestureRecognizer2D {
 
             // If requested, also let long taps pass:
             || (
-                allowLongTap && this.isLongTap()
+                allowLongTap
+                && this.wasLongTap()
             )
         );
     }
@@ -184,7 +182,7 @@ export class GestureRecognizer2D {
      *
      * Should only be called after a gesture is complete.
      */
-    isLongTap(minDuration?: number) {
+    wasLongTap(minDuration?: number) {
         assert(!this.isDuringGesture, "You should call `isLongTap` only when a gesture is completed, not during a gesture.");
 
         return (
@@ -256,6 +254,15 @@ export class GestureRecognizer2D {
             default:
                 return false;
         }
+    }
+
+    /**
+     * Get whether the currently performed gesture is already certain to not be
+     * a tap or long tap.
+     */
+    get isCertainlyMovement() {
+        const d = Math.sqrt(this.totalMotionDelta.x**2 + this.totalMotionDelta.y**2);
+        return d >= GestureRecognizer2D.MIN_SWIPE_DISTANCE * this.scaleFactor;
     }
 
     /**
@@ -464,7 +471,7 @@ export class GestureRecognizer2D {
 
         return `<${this.constructor.name} ` +
                `(gesture ${this.isDuringGesture ? 'ongoing' : 'completed'}` +
-                  `${this.isLongTap() ? ', is-long-tap' : this.isTap() ? ', is-tap' : ''}) ` +
+                  `${this.wasLongTap() ? ', is-long-tap' : this.wasTap() ? ', is-tap' : ''}) ` +
                `patterns: [ ${s.join(' • ')} ]>`;
     }
 }

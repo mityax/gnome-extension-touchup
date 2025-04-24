@@ -6,6 +6,41 @@ import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props
 import {Delay} from "$src/utils/delay.ts";
 
 
+/**
+ * The [Widgets] namespace provides subclasses for most St.Widgets, that offer an easier, briefer and more elegant
+ * way to create complex user interfaces - in a nested declarative way:
+ *
+ * ```
+ * const myWidget = new Widgets.Column({
+ *   children: [
+ *     new Widgets.Label("Hello World"),
+ *     new Widgets.Bin({height: 10}),   // some spacing
+ *     new Widgets.Button({
+ *       label: "Clicke me please!",
+ *
+ *       // Use the [css] helper function to elegantly define inline styles:
+ *       style: css({
+ *         color: 'red',
+ *         borderRadius: '10px',
+ *       }),
+ *
+ *       // All widget events are translated to callback properties automatically:
+ *       onClick: () => debugLog("I've been clicked!")
+ *     }),
+ *     new Widgets.Icon({
+ *       iconName: 'emblem-ok-symbolic',
+ *
+ *       // There are some special callbacks:
+ *       onCreated: (icon) => icon.ease({ scale: 1.5 })
+ *     }),
+ *   ],
+ * });
+ * ```
+ *
+ * Keep in mind that while this structure is nested and looks a lot like typical declarative
+ * frameworks (e.g. Flutter), there is no inherent declarative reactivity here – the UI is
+ * defined once and needs to be manipulated imperatively (or rebuilt and replaced manually).
+ */
 export namespace Widgets {
     /**
      * Helper class to manage references to [Clutter.Actor] instances.

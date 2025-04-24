@@ -120,8 +120,9 @@ const BUILD_OPTIONS = {
                     'each are responsible for applying and cleaning up patches to Gnome Shell code. A patch can be\n' +
                     'anything, for example overwriting a method in some prototype, connecting to a signal or adding an\n' +
                     'actor to the shell. [PatchManager] allows to easily define a patch and the necessary cleanup\n' +
-                    'in-place, which allows for a good overview and mitigates the risk of forgetting to clean something\n' +
-                    'up/to unapply a patch.\n\n' +
+                    'in-place, which facilitates a good overview and mitigates the risk of forgetting to clean something\n' +
+                    'up/to unapply a patch. When a parent [PatchManager] is destroyed or disabled, all its children are\n' +
+                    'automatically destroyed/disabled too.\n\n' +
                     'Next, it\'s probably best to start with the main [GnomeTouchExtension] class since this is where\n' +
                     'the root PatchManager is defined – all other [PatchManager]s are children of this [PatchManager]\n' +
                     'and are automatically destroyed/unapplied when the root [PatchManager] is.\n\n' +
