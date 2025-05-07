@@ -1,5 +1,5 @@
 import ExtensionFeature from "../../utils/extensionFeature";
-import {PatchManager} from "../../utils/patchManager";
+import {PatchManager} from "$src/utils/patchManager";
 import Gio from "gi://Gio";
 import {Delay} from "$src/utils/delay";
 import {debugLog} from "$src/utils/logging";
@@ -10,7 +10,7 @@ import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnom
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings";
 import TouchUpExtension from "$src/extension";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
 

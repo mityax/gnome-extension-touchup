@@ -1,5 +1,5 @@
-import { writeFileSync, mkdirSync } from 'fs';
-import { renderSync } from 'sass';
+import {mkdirSync, writeFileSync} from 'fs';
+import {compile} from 'sass';
 import {dirname} from "path";
 
 
@@ -19,9 +19,8 @@ export default function sassWriter({ input, output }) {
         name: 'sass-writer',
         buildStart() {
             try {
-                const result = renderSync({
-                    file: input,
-                    indentedSyntax: true, // Because we're using .sass, not .scss
+                const result = compile(input, {
+                    silenceDeprecations: ["import"]
                 });
 
                 // Ensure the output directory exists

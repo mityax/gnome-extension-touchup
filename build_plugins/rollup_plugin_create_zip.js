@@ -27,7 +27,7 @@ export default function createZip({ input, zipFilename }) {
             zip.addLocalFolder(folderToZip);
             zip.writeZip(zipOutputPath);
 
-            this.warn(`📦 Zip archive created at: ${path.relative(process.cwd(), zipOutputPath)}`);
+            console.log(`📦 Zip archive created at: ${path.relative(process.cwd(), zipOutputPath)}`);
         }
     };
 }

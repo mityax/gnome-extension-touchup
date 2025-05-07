@@ -1,6 +1,6 @@
 import BaseNavigationBar from "./baseNavigationBar";
 import St from "gi://St";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
 import {settings} from "$src/settings";

@@ -2,7 +2,7 @@ import Meta from "gi://Meta";
 import Gio from "gi://Gio";
 import ExtensionFeature from "../../utils/extensionFeature";
 import {DisplayConfigState, LogicalMonitorTransform, setMonitorTransform,} from "$src/utils/monitorDBusUtils";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import {clamp} from "$src/utils/utils";
 import St from "gi://St";
 import Clutter from "gi://Clutter";

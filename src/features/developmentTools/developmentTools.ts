@@ -1,7 +1,7 @@
 import {RestartButton} from "$src/features/developmentTools/restartButton";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import {debugLog, log} from "$src/utils/logging";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";

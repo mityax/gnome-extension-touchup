@@ -3,7 +3,7 @@ import {MonitorConstraint} from "resource:///org/gnome/shell/ui/layout.js";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import {debugLog} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";

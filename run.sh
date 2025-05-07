@@ -25,10 +25,8 @@ if [[ -z "$zipFile" ]]; then
   exit 1
 fi
 
-# Remove old version of extension:
-gnome-extensions uninstall "$extensionId"
-
-echo "Starting Gnome Shell..."
+printf "\n\n"
+echo "Build succeeded. Starting Gnome Shell..."
 
 export TOUCHUP_PROJECT_DIR=$projectDir
 if [[ $* == *--watch* ]]; then

@@ -1,5 +1,5 @@
 import St from "gi://St";
-import {Widgets} from "./widgets";
+import * as Widgets from "./widgets";
 import {css} from "./css";
 import Clutter from "gi://Clutter";
 import {Delay} from "../delay";

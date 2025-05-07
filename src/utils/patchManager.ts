@@ -3,7 +3,7 @@ import GObject from "gi://GObject";
 import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
 import {assert, debugLog} from "$src/utils/logging";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import Ref = Widgets.Ref;
 

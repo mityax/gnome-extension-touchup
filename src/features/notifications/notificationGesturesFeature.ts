@@ -13,7 +13,7 @@ import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import {Patch, PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {findActorBy} from "$src/utils/utils";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import Ref = Widgets.Ref;
 

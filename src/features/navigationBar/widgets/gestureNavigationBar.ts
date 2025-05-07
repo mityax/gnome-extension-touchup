@@ -9,7 +9,7 @@ import {IdleRunner} from "$src/utils/idleRunner";
 import {debugLog, log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK

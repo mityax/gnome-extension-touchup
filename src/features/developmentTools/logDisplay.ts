@@ -1,6 +1,6 @@
 import St from "gi://St";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Widgets} from "$src/utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {clamp} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
