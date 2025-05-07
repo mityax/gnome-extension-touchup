@@ -34,7 +34,10 @@ const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MO
 
 export default [
     {
-        input: 'src/extension.ts',
+        input: [
+            'src/extension.ts',
+            'src/prefs.ts',
+        ],
         treeshake: {
             moduleSideEffects: false, //'no-external'
         },
@@ -99,8 +102,25 @@ export default [
             // Ensure that no disallowed modules are imported in extension.js as per the review guidelines:
             // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
             disallowImportsPlugin({
-                filePattern: `${outDir}/extension.js`,
+                include: `src/extension.ts`,
                 blacklist: ['gi://Gdk', 'gi://Gtk', 'gi://Adw'],
+            }),
+
+
+
+            sassWriter({
+                input: 'src/sass/prefs-dark.sass',
+                output: `${outDir}/prefs-dark.css`,
+            }),
+            sassWriter({
+                input: 'src/sass/prefs-light.sass',
+                output: `${outDir}/prefs-light.css`,
+            }),
+            // Ensure that no disallowed modules are imported in prefs.js as per the review guidelines:
+            // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
+            disallowImportsPlugin({
+                include: `src/prefs.ts`,
+                blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
             }),
 
             copy({
@@ -114,55 +134,65 @@ export default [
             }),
         ],
     },
-    {
-        input: 'src/prefs.ts',
-        output: {
-            dir: `${outDir}`,
-            // format: 'iife',
-            // exports: 'default',
-            // name: 'prefs',
-            // footer: prefsFooter,
-            // globals,
-            preserveModules: true,
-        },
-        external: [/gi:\/\/.*/, /resource:\/\/.*/],
-        treeshake: {
-            moduleSideEffects: false,  // "no-external"
-        },
-        plugins: [
-            nodeResolve({
-                preferBuiltins: false,
-            }),
-            typescript({
-                tsconfig: './tsconfig.json',
-            }),
-            strip({
-                labels: [
-                    IS_DEBUG_MODE ? null : 'DEBUG',
-                    IS_DEBUG_MODE ? null : 'BETA',
-                ].filter(e => !!e),
-                functions: [
-                    IS_DEBUG_MODE ? null : 'debugLog',
-                ].filter(e => !!e),
-                include: [
-                    '**/*.js',
-                    '**/*.ts',
-                ],
-            }),
-            sassWriter({
-                input: 'src/sass/prefs-dark.sass',
-                output: `${outDir}/prefs-dark.css`,
-            }),
-            sassWriter({
-                input: 'src/sass/prefs-light.sass',
-                output: `${outDir}/prefs-light.css`,
-            }),
-            // Ensure that no disallowed modules are imported in prefs.js as per the review guidelines:
-            // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
-            disallowImportsPlugin({
-                filePattern: 'prefs.js',
-                blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
-            }),
-        ],
-    },
+    // {
+    //         input: 'src/prefs.ts',
+    //         output: {
+    //             dir: `${outDir}`,
+    //             // format: 'iife',
+    //             // exports: 'default',
+    //             // name: 'prefs',
+    //             // footer: prefsFooter,
+    //             // globals,
+    //             preserveModules: true,
+    //         },
+    //         external: [/gi:\/\/.*/, /resource:\/\/.*/],
+    //         treeshake: {
+    //             moduleSideEffects: false,  // "no-external"
+    //         },
+    //         plugins: [
+    //             nodeResolve({
+    //                 preferBuiltins: false,
+    //             }),
+    //             typescript({
+    //                 tsconfig: './tsconfig.json',
+    //             }),
+    //             strip({
+    //                 labels: [
+    //                     IS_DEBUG_MODE ? null : 'DEBUG',
+    //                     IS_DEBUG_MODE ? null : 'BETA',
+    //                 ].filter(e => !!e),
+    //                 functions: [
+    //                     IS_DEBUG_MODE ? null : 'debugLog',
+    //                 ].filter(e => !!e),
+    //                 include: [
+    //                     '**/*.js',
+    //                     '**/*.ts',
+    //                 ],
+    //             }),
+    //             sassWriter({
+    //                 input: 'src/sass/prefs-dark.sass',
+    //                 output: `${outDir}/prefs-dark.css`,
+    //             }),
+    //             sassWriter({
+    //                 input: 'src/sass/prefs-light.sass',
+    //                 output: `${outDir}/prefs-light.css`,
+    //             }),
+    //             // Ensure that no disallowed modules are imported in prefs.js as per the review guidelines:
+    //             // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
+    //             disallowImportsPlugin({
+    //                 filePattern: 'prefs.js',
+    //                 blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
+    //             }),
+    //
+    //             copy({
+    //                 targets: [
+    //                     { src: 'src/metadata.json', dest: outDir },
+    //                 ],
+    //             }),
+    //
+    //             createZip({
+    //                 zipFilename: `../${metadata.uuid}.zip`,  // relative to `outDir`
+    //             }),
+    //         ],
+    //     },
 ];
