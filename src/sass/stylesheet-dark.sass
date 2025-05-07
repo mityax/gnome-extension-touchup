@@ -1,5 +1,10 @@
 @use 'sass:color'
 
+// The dark color of the gnome shell theme
+$dark-theme-color: color.adjust(#191919, $saturation: -100%)
+// The light color of the gnome shell theme
+$light-theme-color: color.adjust(#f6f5f4, $saturation: -100%)
+
 
 .gnometouch-navbar--visible
     &.gnometouch-navbar
@@ -17,13 +22,6 @@
                 padding-bottom: $height !important
             #keyboard
                 padding-bottom: $height !important
-
-
-// The dark color of the gnome shell theme
-$dark-theme-color: desaturate(#191919, 100%)
-// The light color of the gnome shell theme
-$light-theme-color: desaturate(#f6f5f4, 100%)
-
 
 .gnometouch-navbar
     $bar: &

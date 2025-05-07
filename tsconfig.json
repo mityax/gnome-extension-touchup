@@ -2,23 +2,26 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
   "strict": true,
   "compilerOptions": {
-    "module": "preserve",
+    "module": "es2022",
     "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
-    "sourceMap": true,
+    "allowImportingTsExtensions": false,
     "strict": true,
     "target": "ES2022",
     "paths" : {
-      "$src/*": ["./src/*"]
+      "$src/*": ["./src/*"],
+      "gi://*": ["@girs/*"],
     },
     "lib": [
       "ES2023"
     ],
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "sourceMap": false,
+    "outDir": "./dist/output"
   },
   "include": [
     "src/ambient.d.ts",
-    "@girs/gjs"
+    "@girs/gjs",
+    "*.d.ts"
   ],
   "files": [
     "src/extension.ts",

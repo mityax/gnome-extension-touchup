@@ -9,8 +9,8 @@
   "sideEffects": false,
   "scripts": {
     "clear": "rm -rf dist",
-    "build": "node esbuild.js",
-    "build:release": "npm run lint && npm run build -- --release",
+    "build": "rollup -c",
+    "build:release": "RELEASE_MODE=true rollup -c",
     "enable": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.zip && gnome-extensions enable gnometouch@mityax && echo '✅ Successfully installed and enabled debug build.'",
     "enable:release": "npm run lint && npm run build:release && gnome-extensions install -f ./dist/gnometouch@mityax.zip && gnome-extensions enable gnometouch@mityax && echo '✅ Successfully installed and enabled release build.'",
     "dev": "dbus-run-session -- $(pwd)/run.sh --build",
@@ -54,6 +54,18 @@
     "glob": "^11.0.0",
     "mv": "^2.1.1",
     "sass-embedded": "^1.83.0",
-    "typescript": "^5.3.2"
+    "typescript": "^5.3.2",
+
+    "rollup": "^2.58.3",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup-plugin-styles": "^3.14.1",
+    "@rollup/plugin-commonjs": "^21.0.1",
+    "@rollup/plugin-node-resolve": "^13.0.6",
+    "@rollup/plugin-typescript": "^8.3.0",
+    "@rollup/plugin-strip": "^3.0.4",
+    "@rollup/pluginutils": "^5.1.4",
+    "rollup-plugin-sass": "^1.15.2",
+    "sass": "^1.87.0"
   }
 }

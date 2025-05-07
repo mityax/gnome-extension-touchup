@@ -16,7 +16,6 @@ import {settings} from "$src/settings";
 import Gio from "gi://Gio";
 import DonationsFeature from "$src/features/donations/donationsFeature";
 
-
 export default class GnomeTouchExtension extends Extension {
     static instance?: GnomeTouchExtension;
 
