@@ -79,7 +79,7 @@ export class Delay {
      *
      * This function is only intended to be used to clean up pending [Delay]s when
      * the extension is being disabled; thus do not use it anywhere outside
-     * [GnomeTouchExtension.disable()].
+     * [TouchUpExtension.disable()].
      */
     public static getAllPendingDelays(): CancellablePromise<boolean>[] {
         return [...this.pendingDelays];

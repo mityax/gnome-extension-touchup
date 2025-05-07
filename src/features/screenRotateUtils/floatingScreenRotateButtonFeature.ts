@@ -89,7 +89,7 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
 
         let btn: Widgets.Button | null = this.pm.autoDestroy(new Widgets.Button({
             ref: this.floatingButton,
-            styleClass: 'gnometouch-floating-screen-rotation-button',
+            styleClass: 'touchup-floating-screen-rotation-button',
             iconName: 'rotation-allowed-symbolic',
             width: 40 * sf,
             height: 40 * sf,

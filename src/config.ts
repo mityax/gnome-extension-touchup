@@ -1,8 +1,8 @@
 import GLib from "gi://GLib";
 
-export const logFile = GLib.getenv('GNOMETOUCH_LOGFILE');
+export const logFile = GLib.getenv('TOUCHUP_LOGFILE');
 
-export const devMode = ['true', 'yes', '1'].includes(GLib.getenv('GNOMETOUCH_DEV_MODE') ?? 'false');
+export const devMode = ['true', 'yes', '1'].includes(GLib.getenv('TOUCHUP_DEV_MODE') ?? 'false');
 
 export const assetsGResourceFile = 'assets.gresource';
 
@@ -10,8 +10,8 @@ export const assetsGResourceFile = 'assets.gresource';
  * Path configuration for the resources embedded in [assetsGResourceFile]
  */
 export const assetPath = Object.freeze({
-    root: 'resource:///org/gnome/shell/extensions/gnometouch',
-    icon: (name: string) => `resource:///org/gnome/shell/extensions/gnometouch/icons/scalable/actions/${name}.svg`,
+    root: 'resource:///org/gnome/shell/extensions/touchup',
+    icon: (name: string) => `resource:///org/gnome/shell/extensions/touchup/icons/scalable/actions/${name}.svg`,
 });
 
 /**
@@ -39,7 +39,7 @@ export const donationPlatforms = Object.freeze([
 export const feedbackPlatforms = Object.freeze([
     {
         title: 'Create an Issue on GitHub',
-        url: 'https://github.com/mityax/gnome-touch/issues/new',
+        url: 'https://github.com/mityax/gnome-extension-touchup/issues/new',
         buttonLabel: 'Create Issue',
     },
     // TODO: provide this to make it show up in the settings

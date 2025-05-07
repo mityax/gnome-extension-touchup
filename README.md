@@ -1,10 +1,10 @@
 
-# Gnome Touch [Beta]
+# TouchUp [Beta]
 
 An extension for Gnome Shell that enhances the user experience for devices with a
 touchscreen – primarily focused (and tested) on tablets.
 
-Gnome Touch aims to provide an intuitive, configurable, clean and 
+TouchUp aims to provide an intuitive, configurable, clean and 
 seamless interface. However, please be aware that this is not always 
 possible nor easy since Gnome extension development does not come without 
 challenges or limits and has a steep learning curve.
@@ -14,7 +14,7 @@ challenges or limits and has a steep learning curve.
 This is a rough overview over this extension's implemented features and goals
 (in no particular order). It's a lot, and it's changing, mostly due to 
 new ideas or unforeseen complications – so please don't take this as a fixed 
-plan but more as an idea of the direction Gnome Touch is heading. Also, I have
+plan but more as an idea of the direction TouchUp is heading. Also, I have
 limited time to work on this project, so please don't expect new features 
 very frequently – you can help speed up progress by [donating](#support).
 
@@ -51,7 +51,7 @@ further customized in the extension settings.
 
 In case you'd like to suggest a feature or work on one yourself, please
 don't hesitate
-to [create an issue](https://github.com/mityax/gnome-touch/issues/new) so we can
+to [create an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so we can
 discuss it!
 
 ### Why an extension?
@@ -86,7 +86,7 @@ important if you plan to contribute more than just a simple typo- or bugfix.
 
 ## Support
 
-Your support fuels this work and helps Gnome Touch to make Gnome an 
+Your support fuels this work and helps TouchUp to make Gnome an 
 alternative to corporate touch operating systems. It'll also allow me to 
 allocate more time to this project, thereby making progress faster. Even a 
 dollar a month helps!

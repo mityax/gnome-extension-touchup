@@ -1,4 +1,4 @@
-import GnomeTouchPreferences from "$src/features/preferences/prefs";
+import TouchUpPreferences from "$src/features/preferences/prefs";
 
-export default GnomeTouchPreferences;
+export default TouchUpPreferences;
 

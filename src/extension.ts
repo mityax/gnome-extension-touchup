@@ -16,8 +16,8 @@ import {settings} from "$src/settings";
 import Gio from "gi://Gio";
 import DonationsFeature from "$src/features/donations/donationsFeature";
 
-export default class GnomeTouchExtension extends Extension {
-    static instance?: GnomeTouchExtension;
+export default class TouchUpExtension extends Extension {
+    static instance?: TouchUpExtension;
 
     pm?: PatchManager;
 
@@ -31,7 +31,7 @@ export default class GnomeTouchExtension extends Extension {
 
     enable() {
         debugLog("*************************************************")
-        debugLog(`          StartingGnome Touch v. ${this.metadata.version}          `)
+        debugLog(`          StartingTouchUp v. ${this.metadata.version}          `)
         debugLog("*************************************************")
         debugLog()
 
@@ -51,7 +51,7 @@ export default class GnomeTouchExtension extends Extension {
             return () => uninitSettings();
         }, 'init-settings')
 
-        GnomeTouchExtension.instance = this;
+        TouchUpExtension.instance = this;
 
         DEBUG: if (devMode) this.pm!.patch(() => {
             this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools'), this);
@@ -189,8 +189,8 @@ export default class GnomeTouchExtension extends Extension {
         this.pm?.destroy();
         this.pm = undefined;
 
-        GnomeTouchExtension.instance = undefined;
+        TouchUpExtension.instance = undefined;
 
-        debugLog("GnomeTouch extension successfully unloaded.")
+        debugLog("TouchUp extension successfully unloaded.")
     }
 }

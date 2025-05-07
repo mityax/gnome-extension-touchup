@@ -23,8 +23,8 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
 
     protected _buildActor(): St.BoxLayout {
         return new Widgets.Row({
-            name: 'gnometouch-navbar',
-            styleClass: 'gnometouch-navbar bottom-panel',
+            name: 'touchup-navbar',
+            styleClass: 'touchup-navbar bottom-panel',
             children: [
                 // Left side:
                 new Widgets.Row({
@@ -76,10 +76,10 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
     protected onIsWindowNearChanged(isWindowNear: boolean): void {
         if (isWindowNear && !Main.overview.visible) {
             // Make navbar opaque (black or white, based on shell theme brightness):
-            this.actor.remove_style_class_name('gnometouch-navbar--transparent');
+            this.actor.remove_style_class_name('touchup-navbar--transparent');
         } else {
             // Make navbar transparent:
-            this.actor.add_style_class_name('gnometouch-navbar--transparent');
+            this.actor.add_style_class_name('touchup-navbar--transparent');
         }
     }
 
@@ -87,29 +87,29 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         switch (buttonType) {
             case "keyboard":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__osk-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__osk-button',
+                    styleClass: 'touchup-navbar__button',
                     iconName: 'input-keyboard-symbolic',
                     onClicked: () => Main.keyboard.open(this.monitor.index),
                 });
             case "workspace-previous":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__workspace-previous-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__workspace-previous-button',
+                    styleClass: 'touchup-navbar__button',
                     iconName: 'go-previous-symbolic',
                     onClicked: () => moveToWorkspace('left'),
                 });
             case "workspace-next":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__workspace-next-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__workspace-next-button',
+                    styleClass: 'touchup-navbar__button',
                     iconName: 'go-next-symbolic',
                     onClicked: () => moveToWorkspace('right'),
                 });
             case "overview":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__overview-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__overview-button',
+                    styleClass: 'touchup-navbar__button',
                     child: new Widgets.Icon({
                         gicon: new AssetIcon('box-outline-symbolic'),
                     }),
@@ -117,8 +117,8 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 });
             case "apps":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__apps-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__apps-button',
+                    styleClass: 'touchup-navbar__button',
                     child: new Widgets.Icon({
                         gicon: new AssetIcon('grid-large-symbolic'),
                     }),
@@ -126,8 +126,8 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                 });
             case "back":
                 return new Widgets.Button({
-                    name: 'gnometouch-navbar__back-button',
-                    styleClass: 'gnometouch-navbar__button',
+                    name: 'touchup-navbar__back-button',
+                    styleClass: 'touchup-navbar__button',
                     child: new Widgets.Icon({
                         gicon: new AssetIcon('arrow2-left-symbolic'),
                     }),

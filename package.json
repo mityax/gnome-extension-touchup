@@ -1,5 +1,5 @@
 {
-  "name": "gnometouch",
+  "name": "touchup",
   "version": "1.0.0",
   "description": "Enhances various aspects of the GNOME experience when using a touch device.",
   "author": "mityax",
@@ -11,8 +11,8 @@
     "clear": "rm -rf dist",
     "build": "rollup -c",
     "build:release": "RELEASE_MODE=true rollup -c",
-    "enable": "npm run build && gnome-extensions install -f ./dist/gnometouch@mityax.zip && gnome-extensions enable gnometouch@mityax && echo '✅ Successfully installed and enabled debug build.'",
-    "enable:release": "npm run lint && npm run build:release && gnome-extensions install -f ./dist/gnometouch@mityax.zip && gnome-extensions enable gnometouch@mityax && echo '✅ Successfully installed and enabled release build.'",
+    "enable": "npm run build && gnome-extensions install -f ./dist/touchup@mityax.zip && gnome-extensions enable touchup@mityax && echo '✅ Successfully installed and enabled debug build.'",
+    "enable:release": "npm run lint && npm run build:release && gnome-extensions install -f ./dist/touchup@mityax.zip && gnome-extensions enable touchup@mityax && echo '✅ Successfully installed and enabled release build.'",
     "dev": "dbus-run-session -- $(pwd)/run.sh --build",
     "dev:verbose": "dbus-run-session -- $(pwd)/run.sh --build --verbose",
     "watch": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch; pkill --signal SIGINT -P $pid",
@@ -21,9 +21,9 @@
     "dev-tty:verbose": "dbus-run-session $(pwd)/run.sh --tty --build --vebose",
     "watch-tty": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty; pkill --signal SIGINT -P $pid",
     "watch-tty:verbose": "npm run build -- --watch & pid=\"$!\"; sleep 1s; dbus-run-session -- $(pwd)/run.sh --watch --tty --verbose; pkill --signal SIGINT -P $pid",
-    "prefs": "npm run enable && gnome-extensions prefs gnometouch@mityax",
-    "logs": "journalctl -f -n 20 | grep gnometouch",
-    "logs:file": "source $(pwd)/.env && tail -f $GNOMETOUCH_LOGFILE",
+    "prefs": "npm run enable && gnome-extensions prefs touchup@mityax",
+    "logs": "journalctl -f -n 20 | grep touchup",
+    "logs:file": "source $(pwd)/.env && tail -f $TOUCHUP_LOGFILE",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {

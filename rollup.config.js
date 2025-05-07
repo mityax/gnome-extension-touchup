@@ -81,9 +81,9 @@ export default [
             // Generate the GSettings schema from our settings.ts file:
             gsettingsSchemaPlugin({
                 inputFile: 'src/settings.ts',
-                outputFile: `${outDir}/schemas/org.gnome.shell.extensions.gnometouch.gschema.xml`,
-                schemaId: 'org.gnome.shell.extensions.gnometouch',
-                schemaPath: '/org/gnome/shell/extensions/gnometouch/',
+                outputFile: `${outDir}/schemas/org.gnome.shell.extensions.touchup.gschema.xml`,
+                schemaId: 'org.gnome.shell.extensions.touchup',
+                schemaPath: '/org/gnome/shell/extensions/touchup/',
                 validate: true,
             }),
             compileGSchemas({

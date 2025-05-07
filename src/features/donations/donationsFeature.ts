@@ -9,7 +9,7 @@ import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings";
-import GnomeTouchExtension from "$src/extension";
+import TouchUpExtension from "$src/extension";
 import {Widgets} from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
@@ -114,9 +114,9 @@ export default class DonationsFeature extends ExtensionFeature {
     }
 
     private openDonationPage() {
-        if (!GnomeTouchExtension.instance) return;
+        if (!TouchUpExtension.instance) return;
         settings.initialPreferencesPage.set('donations');
-        GnomeTouchExtension.instance!.openPreferences();
+        TouchUpExtension.instance!.openPreferences();
     }
 
     private async _readInstallationData(): Promise<InstallationData> {
@@ -146,7 +146,7 @@ export default class DonationsFeature extends ExtensionFeature {
     private getNotificationSource(): MessageTray.Source | null {
         if (!this.notificationSource) {
             this.notificationSource = new MessageTray.Source({
-                title: 'GnomeTouch',
+                title: 'TouchUp',
                 // An icon for the source, used a fallback by notifications
                 icon: new Gio.ThemedIcon({name: 'dialog-information'}),
                 iconName: 'dialog-information',
@@ -171,47 +171,47 @@ export default class DonationsFeature extends ExtensionFeature {
 
 const NOTIFICATION_VARIANTS = [
     {
-        "title": "Is GnomeTouch helpful for you? 🌟",
+        "title": "Is TouchUp helpful for you? 🌟",
         "body": "Support its development by making a donation. Every contribution helps! 💖"
     },
     {
-        "title": "Thank you for using GnomeTouch! ❤️",
+        "title": "Thank you for using TouchUp! ❤️",
         "body": "If you find it useful, consider supporting the project with a donation. Click to learn more."
     },
     {
-        "title": "Help Keep GnomeTouch Going 🤝",
+        "title": "Help Keep TouchUp Going 🤝",
         "body": "Donations help cover development time and maintenance. Every little bit helps! ❤️"
     },
     {
-        "title": "Consider Supporting GnomeTouch 🤝",
+        "title": "Consider Supporting TouchUp 🤝",
         "body": "We rely on your generosity to keep improving. Click here to donate. ❤️"
     },
     {
         "title": "Keep Us Coding! 💻",
-        "body": "Your generosity powers innovation and independence. Make a donation today to support GnomeTouch! ❤️"
+        "body": "Your generosity powers innovation and independence. Make a donation today to support TouchUp! ❤️"
     },
     {
         "title": "Support Open Source ❤️",
-        "body": "Your donations keep open-source projects like GnomeTouch alive. Help us grow! 🌟"
+        "body": "Your donations keep open-source projects like TouchUp alive. Help us grow! 🌟"
     },
     {
         "title": "Make a Difference 🌍",
-        "body": "Your support fuels this project. Donate today to keep GnomeTouch going strong! 💪"
+        "body": "Your support fuels this project. Donate today to keep TouchUp going strong! 💪"
     },
     {
         "title": "Empower Open Platforms ✊",
-        "body": "GnomeTouch makes GNOME more useful on tablets – and helps it challenge corporate giants. Your donation strengthens the fight for open software! 🌍"
+        "body": "TouchUp makes GNOME more useful on tablets – and helps it challenge corporate giants. Your donation strengthens the fight for open software! 🌍"
     },
     {
         "title": "Open Source Needs You! 🛠️",
-        "body": "Big Tech monopolies dominate mobile OSes — but you and GnomeTouch can help making GNOME an independent alternative. Donate today!"
+        "body": "Big Tech monopolies dominate mobile OSes — but you and TouchUp can help making GNOME an independent alternative. Donate today!"
     },
     {
-        "title": "We have big plans for GnomeTouch... ",
+        "title": "We have big plans for TouchUp... ",
         "body": "... and you can help making it happen! Take a look at what's coming, leave us some new ideas or make us faster with a small donation! 😄",
     },
     {
-        "title": "GnomeTouch has a long bucket list! 🪣",
+        "title": "TouchUp has a long bucket list! 🪣",
         "body": "Curios what else is coming? Have a look at the planned features and help us realize them with a small donation ❤️"
     }
 ];

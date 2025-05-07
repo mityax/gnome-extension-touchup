@@ -111,8 +111,8 @@ export default class NavigationBarFeature extends ExtensionFeature {
      */
     private updateGlobalStyleClasses() {
         this.removeGlobalStyleClasses();
-        Main.uiGroup.add_style_class_name(`gnometouch-navbar--${this.mode}`);
-        Main.uiGroup.add_style_class_name(`gnometouch-navbar--visible`);
+        Main.uiGroup.add_style_class_name(`touchup-navbar--${this.mode}`);
+        Main.uiGroup.add_style_class_name(`touchup-navbar--visible`);
     }
 
     /**
@@ -121,7 +121,7 @@ export default class NavigationBarFeature extends ExtensionFeature {
     private removeGlobalStyleClasses() {
         Main.uiGroup.styleClass = (Main.uiGroup.styleClass as string)
             .split(/\s+/)
-            .filter(c => !c.startsWith('gnometouch-navbar--'))
+            .filter(c => !c.startsWith('touchup-navbar--'))
             .join(' ')
     }
 

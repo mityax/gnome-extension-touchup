@@ -77,9 +77,9 @@ const BUILD_OPTIONS = {
         // Generate the GSettings schema from our settings.ts file:
         gsettingsSchemaPlugin({
             inputFile: 'src/settings.ts',
-            outputFile: 'schemas/org.gnome.shell.extensions.gnometouch.gschema.xml',
-            schemaId: 'org.gnome.shell.extensions.gnometouch',
-            schemaPath: '/org/gnome/shell/extensions/gnometouch/',
+            outputFile: 'schemas/org.gnome.shell.extensions.touchup.gschema.xml',
+            schemaId: 'org.gnome.shell.extensions.touchup',
+            schemaPath: '/org/gnome/shell/extensions/touchup/',
             validate: true,
         }),
         compileGSchemas({
@@ -123,7 +123,7 @@ const BUILD_OPTIONS = {
                     'in-place, which facilitates a good overview and mitigates the risk of forgetting to clean something\n' +
                     'up/to unapply a patch. When a parent [PatchManager] is destroyed or disabled, all its children are\n' +
                     'automatically destroyed/disabled too.\n\n' +
-                    'Next, it\'s probably best to start with the main [GnomeTouchExtension] class since this is where\n' +
+                    'Next, it\'s probably best to start with the main [TouchUpExtension] class since this is where\n' +
                     'the root PatchManager is defined – all other [PatchManager]s are children of this [PatchManager]\n' +
                     'and are automatically destroyed/unapplied when the root [PatchManager] is.\n\n' +
                     'Thanks for the time you put into this!',
@@ -140,7 +140,7 @@ const BUILD_OPTIONS = {
 
 
 async function build() {
-    console.log(`Building Gnome Touch extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
+    console.log(`Building TouchUp extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
 
     await esbuild.build(BUILD_OPTIONS)
         .then(() => console.log(`✅ Build completed.\n`))
@@ -157,7 +157,7 @@ async function build() {
 }
 
 async function watch() {
-    console.log(`Serving Gnome Touch extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
+    console.log(`Serving TouchUp extension in ${IS_DEBUG_MODE ? 'debug' : 'release'} mode...`);
 
     // Log a success/error message on each rebuild:
     let buildCounter = 0;

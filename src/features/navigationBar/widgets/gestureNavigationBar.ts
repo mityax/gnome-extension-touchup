@@ -36,8 +36,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 
     protected _buildActor(): St.Bin {
         return new Widgets.Bin({
-            name: 'gnometouch-navbar',
-            styleClass: 'gnometouch-navbar gnometouch-navbar--transparent bottom-panel',
+            name: 'touchup-navbar',
+            styleClass: 'touchup-navbar touchup-navbar--transparent bottom-panel',
             reactive: true,
             trackHover: true,
             canFocus: true,
@@ -45,8 +45,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             onCreated: (widget) => this._setupGestureTrackerFor(widget),
             onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
             child: this.pill = new Widgets.Bin({  // the navigation bars pill:
-                name: 'gnometouch-navbar__pill',
-                styleClass: 'gnometouch-navbar__pill',
+                name: 'touchup-navbar__pill',
+                styleClass: 'touchup-navbar__pill',
                 yAlign: Clutter.ActorAlign.CENTER,
                 xAlign: Clutter.ActorAlign.CENTER,
             }),
@@ -204,18 +204,18 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
     private async updateStyleClasses() {
         if (this.reserveSpace && this._isWindowNear) {
             // Make navbar opaque (black or white, based on shell theme brightness):
-            this.actor.remove_style_class_name('gnometouch-navbar--transparent');
-            this.pill.remove_style_class_name('gnometouch-navbar__pill--dark');
+            this.actor.remove_style_class_name('touchup-navbar--transparent');
+            this.pill.remove_style_class_name('touchup-navbar__pill--dark');
         } else {
             // Make navbar transparent:
-            this.actor.add_style_class_name('gnometouch-navbar--transparent');
+            this.actor.add_style_class_name('touchup-navbar--transparent');
 
             // Adjust pill brightness:
             let brightness = await this.findBestPillBrightness();
             if (brightness == 'dark') {
-                this.pill.add_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.add_style_class_name('touchup-navbar__pill--dark')
             } else {
-                this.pill.remove_style_class_name('gnometouch-navbar__pill--dark')
+                this.pill.remove_style_class_name('touchup-navbar__pill--dark')
             }
         }
     }

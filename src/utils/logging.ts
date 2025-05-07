@@ -9,7 +9,7 @@ import {logFile} from "$src/config";
  * Note: This function is **not** optimized for speed (!)
  */
 export function log(...text: any[]): string {
-    console.log("[gnometouch] ", ...text.map(item => {
+    console.log("[touchup] ", ...text.map(item => {
         if (item && item instanceof Error) {
             console.error(item, item.message || '', "\n", item.stack)
         }

@@ -32,9 +32,9 @@ export class SendTestNotificationsButton extends DevToolButton {
             source: this.getNotificationSource(),
             title: randomChoice(["A test!", "Test Notification", "Just a Test", "A Quick Test"]),
             body: randomChoice([
-                "This is a notification to test something in GnomeTouch.",
-                "This notification to test something in GnomeTouch has an expandable body text. It has been " +
-                "triggered using the GnomeTouch DevTools which can only be used during development."]),
+                "This is a notification to test something in TouchUp.",
+                "This notification to test something in TouchUp has an expandable body text. It has been " +
+                "triggered using the TouchUp DevTools which can only be used during development."]),
             gicon: new AssetIcon('positive-feedback-symbolic'),
             urgency: Urgency.NORMAL,
         });
@@ -44,7 +44,7 @@ export class SendTestNotificationsButton extends DevToolButton {
     private getNotificationSource(): Source | null {
         if (!SendTestNotificationsButton.notificationSource) {
             SendTestNotificationsButton.notificationSource = new Source({
-                title: 'GnomeTouch DevTools',
+                title: 'TouchUp DevTools',
                 // An icon for the source, used a fallback by notifications
                 icon: new Gio.ThemedIcon({name: 'dialog-information'}),
                 iconName: 'dialog-information',

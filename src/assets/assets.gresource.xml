@@ -20,7 +20,7 @@ const myIcon = St.Icon({
 
 <gresources>
     <!-- Icons -->
-    <gresource prefix="/org/gnome/shell/extensions/gnometouch/icons/scalable/actions/">
+    <gresource prefix="/org/gnome/shell/extensions/touchup/icons/scalable/actions/">
         <file preprocess="xml-stripblanks" alias="camera-flash-symbolic.svg">icons/camera-flash-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="arrow2-left-symbolic.svg">icons/arrow2-left-symbolic.svg</file>
         <file preprocess="xml-stripblanks" alias="box-outline-symbolic.svg">icons/box-outline-symbolic.svg</file>

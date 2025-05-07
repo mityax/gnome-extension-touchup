@@ -11,7 +11,7 @@ import GObject from "gi://GObject";
 import PolicyType = St.PolicyType;
 
 
-export const PROJECT_DIR  = GLib.getenv('GNOMETOUCH_PROJECT_DIR');
+export const PROJECT_DIR  = GLib.getenv('TOUCHUP_PROJECT_DIR');
 
 
 export function _restartShell() {

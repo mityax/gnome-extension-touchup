@@ -30,23 +30,23 @@ gnome-extensions uninstall "$extensionId"
 
 echo "Starting Gnome Shell..."
 
-export GNOMETOUCH_PROJECT_DIR=$projectDir
+export TOUCHUP_PROJECT_DIR=$projectDir
 if [[ $* == *--watch* ]]; then
-  export GNOMETOUCH_WATCH_EVENT_URL="http://localhost:9876/"
-  export GNOMETOUCH_BUILD_DIRECTORY="$projectDir/dist/output"
+  export TOUCHUP_WATCH_EVENT_URL="http://localhost:9876/"
+  export TOUCHUP_BUILD_DIRECTORY="$projectDir/dist/output"
 fi
 
 if [[ $* == *--tty* ]]; then
   if [[ $* == *--verbose* ]]; then
     gnome-shell --wayland &
   else
-    gnome-shell --wayland 2> >(grep -i -P --color 'gnometouch|Gjs-CRITICAL' 1>&2) &
+    gnome-shell --wayland 2> >(grep -i -P --color 'touchup|Gjs-CRITICAL' 1>&2) &
   fi
 else
   if [[ $* == *--verbose* ]]; then
     gnome-shell --nested --wayland &
   else
-    gnome-shell --nested --wayland 2> >(grep -i -P --color 'gnometouch|Gjs-CRITICAL' 1>&2) &
+    gnome-shell --nested --wayland 2> >(grep -i -P --color 'touchup|Gjs-CRITICAL' 1>&2) &
   fi
 fi
 

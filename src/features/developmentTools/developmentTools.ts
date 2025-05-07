@@ -7,7 +7,7 @@ import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
-import GnomeTouchExtension from "$src/extension";
+import TouchUpExtension from "$src/extension";
 import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton";
 import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource";
@@ -26,7 +26,7 @@ type _PersistedState = {
 
 
 export class DevelopmentTools extends ExtensionFeature {
-    private extension: GnomeTouchExtension;
+    private extension: TouchUpExtension;
 
     // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
     // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
@@ -38,7 +38,7 @@ export class DevelopmentTools extends ExtensionFeature {
         };
     }
 
-    constructor(pm: PatchManager, extension: GnomeTouchExtension) {
+    constructor(pm: PatchManager, extension: TouchUpExtension) {
         super(pm);
         this.extension = extension;
         this._setupDevToolBar();
@@ -48,7 +48,7 @@ export class DevelopmentTools extends ExtensionFeature {
     private buildToolbar() {
         return [
             new Widgets.Label({
-                text: 'Gnome Touch DevTools',
+                text: 'TouchUp DevTools',
                 yAlign: Clutter.ActorAlign.CENTER,
             }),
             new Widgets.Bin({width: 25}),
@@ -105,8 +105,8 @@ export class DevelopmentTools extends ExtensionFeature {
     }
 
     private _setupLiveReload() {
-        const watchBaseUrl = GLib.getenv("GNOMETOUCH_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
-        const baseDir = GLib.getenv("GNOMETOUCH_BUILD_DIRECTORY")?.replace(/\/$/, "");
+        const watchBaseUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
+        const baseDir = GLib.getenv("TOUCHUP_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
         if (!watchBaseUrl || !baseDir) return () => {};
 

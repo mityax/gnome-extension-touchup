@@ -12,7 +12,7 @@ import Gio from "gi://Gio";
 import {assetsGResourceFile} from "$src/config";
 
 
-export default class GnomeTouchPreferences extends ExtensionPreferences {
+export default class TouchUpPreferences extends ExtensionPreferences {
     async fillPreferencesWindow(window: Adw.PreferencesWindow) {
         // @ts-ignore
         initSettings(this.getSettings());

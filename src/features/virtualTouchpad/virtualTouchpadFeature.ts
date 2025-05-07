@@ -28,7 +28,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         const buttonRef = new Widgets.Ref<Widgets.Button>();
 
         this.actor = new Widgets.Bin({
-            name: 'gnometouch-virtual-touchpad',
+            name: 'touchup-virtual-touchpad',
             visible: false,
             reactive: true,
             trackHover: true,
