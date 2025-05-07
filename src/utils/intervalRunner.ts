@@ -1,5 +1,4 @@
 import GLib from "gi://GLib";
-import {Delay} from "$src/utils/delay";
 
 /**
  * IntervalRunner class manages a recurring callback execution at a specified interval with a specified priority.
@@ -33,7 +32,8 @@ import {Delay} from "$src/utils/delay";
  */
 export class IntervalRunner {
     private readonly callback: (stop: () => void) => any;
-    private timeoutId: number | null = null;
+    private _timeoutId: number | null = null;
+    private _scheduleOnceTimeoutId: number | null = null;
     private _interval: number;
     private _priority: number;
 
@@ -50,18 +50,22 @@ export class IntervalRunner {
         this.stop();
         const tid = GLib.timeout_add(this._priority, this._interval, () => {
             this.callback(this.stop.bind(this));
-            return this.timeoutId === tid ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
+            return this._timeoutId === tid ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
         })
-        this.timeoutId = tid;
+        this._timeoutId = tid;
     }
 
     /**
      * Stop the interval. Can be resumed using `start()`.
      */
     stop() {
-        if (this.timeoutId !== null) {
-            GLib.source_remove(this.timeoutId);
-            this.timeoutId = null;
+        if (this._timeoutId !== null) {
+            GLib.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
+        if (this._scheduleOnceTimeoutId !== null) {
+            GLib.source_remove(this._scheduleOnceTimeoutId);
+            this._scheduleOnceTimeoutId = null;
         }
     }
 
@@ -72,9 +76,9 @@ export class IntervalRunner {
      * while it is not running is a no-op.
      */
     setActive(active: boolean) {
-        if (!active && this.timeoutId !== null) {
-            this.stop()
-        } else if (active && this.timeoutId === null) {
+        if (!active && this._timeoutId !== null) {
+            this.stop();
+        } else if (active && this._timeoutId === null) {
             this.start();
         }
     }
@@ -83,11 +87,12 @@ export class IntervalRunner {
      * Run the callback once after the given delay (unless `stop()` is called before that)
      */
     scheduleOnce(delayMs: number = 0) {
-        Delay.ms(delayMs).then(() => {
-            if (this.timeoutId != null) {
+        this._scheduleOnceTimeoutId = GLib.timeout_add(this._priority, delayMs, () => {
+            if (this._timeoutId != null) {
                 this.callback(this.stop.bind(this));
             }
-        });
+            return GLib.SOURCE_REMOVE;
+        })
     }
 
     /**
