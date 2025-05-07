@@ -1,6 +1,6 @@
-import {RestartButton} from "$src/features/developmentTools/restartButton.ts";
+import {RestartButton} from "$src/features/developmentTools/restartButton";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay.ts";
+import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay";
 import {Widgets} from "$src/utils/ui/widgets";
 import {debugLog, log} from "$src/utils/logging";
 import Clutter from "gi://Clutter";
@@ -8,15 +8,15 @@ import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import GnomeTouchExtension from "$src/extension";
-import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton.ts";
+import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton";
 import GLib from "gi://GLib";
-import EventSource from "$src/utils/eventSource.ts";
-import {_hotReloadExtension} from "$src/features/developmentTools/developmentReloadUtils.ts";
-import ExtensionFeature from "$src/utils/extensionFeature.ts";
-import {PatchManager} from "$src/utils/patchManager.ts";
-import {debounce} from "$src/utils/debounce.ts";
+import EventSource from "$src/utils/eventSource";
+import {_hotReloadExtension} from "$src/features/developmentTools/developmentReloadUtils";
+import ExtensionFeature from "$src/utils/extensionFeature";
+import {PatchManager} from "$src/utils/patchManager";
+import {debounce} from "$src/utils/debounce";
 import Cogl from "gi://Cogl";
-import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton.ts";
+import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
 
 
 type _PersistedState = {

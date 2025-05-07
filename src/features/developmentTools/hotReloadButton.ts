@@ -5,14 +5,14 @@ import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
 import GObject from "gi://GObject";
 import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
-import {IntervalRunner} from "$src/utils/intervalRunner.ts";
+import {IntervalRunner} from "$src/utils/intervalRunner";
 import {
     _hotReloadExtension,
     _rebuildExtension,
     PROJECT_DIR
-} from "$src/features/developmentTools/developmentReloadUtils.ts";
-import {debugLog} from "$src/utils/logging.ts";
-import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
+} from "$src/features/developmentTools/developmentReloadUtils";
+import {debugLog} from "$src/utils/logging";
+import {AssetIcon} from "$src/utils/ui/assetIcon";
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');

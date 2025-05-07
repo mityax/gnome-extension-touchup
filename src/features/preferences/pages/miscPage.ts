@@ -1,7 +1,7 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
-import {settings} from "$src/settings.ts";
-import {buildPreferencesGroup, buildSwitchRow} from "$src/features/preferences/uiUtils.ts";
+import {settings} from "$src/settings";
+import {buildPreferencesGroup, buildSwitchRow} from "$src/features/preferences/uiUtils";
 
 export class MiscPage extends Adw.PreferencesPage {
     static {

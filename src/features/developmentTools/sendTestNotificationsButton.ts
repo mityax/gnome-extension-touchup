@@ -5,8 +5,8 @@ import {Notification, Source, Urgency} from "resource:///org/gnome/shell/ui/mess
 import Gio from "gi://Gio";
 import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
-import {randomChoice} from "$src/utils/utils.ts";
+import {AssetIcon} from "$src/utils/ui/assetIcon";
+import {randomChoice} from "$src/utils/utils";
 
 
 export class SendTestNotificationsButton extends DevToolButton {

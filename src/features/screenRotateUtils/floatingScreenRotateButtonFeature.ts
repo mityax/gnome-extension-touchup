@@ -1,16 +1,16 @@
 import Meta from "gi://Meta";
 import Gio from "gi://Gio";
 import ExtensionFeature from "../../utils/extensionFeature";
-import {DisplayConfigState, LogicalMonitorTransform, setMonitorTransform,} from "$src/utils/monitorDBusUtils.ts";
-import {Widgets} from "$src/utils/ui/widgets.ts";
-import {clamp} from "$src/utils/utils.ts";
+import {DisplayConfigState, LogicalMonitorTransform, setMonitorTransform,} from "$src/utils/monitorDBusUtils";
+import {Widgets} from "$src/utils/ui/widgets";
+import {clamp} from "$src/utils/utils";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
-import {debugLog} from "$src/utils/logging.ts";
+import {debugLog} from "$src/utils/logging";
 import Mtk from "gi://Mtk";
-import {Delay} from "$src/utils/delay.ts";
-import {PatchManager} from "$src/utils/patchManager.ts";
+import {Delay} from "$src/utils/delay";
+import {PatchManager} from "$src/utils/patchManager";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';

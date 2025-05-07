@@ -7,7 +7,7 @@ import {css} from "$src/utils/ui/css";
 import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
-import {Delay} from "$src/utils/delay.ts";
+import {Delay} from "$src/utils/delay";
 import Pango from "gi://Pango";
 import Cogl from "gi://Cogl";
 import Stage = Clutter.Stage;

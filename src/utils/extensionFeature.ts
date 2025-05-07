@@ -1,4 +1,4 @@
-import {PatchManager} from "$src/utils/patchManager.ts";
+import {PatchManager} from "$src/utils/patchManager";
 
 
 /**

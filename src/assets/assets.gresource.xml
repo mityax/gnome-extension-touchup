@@ -6,7 +6,7 @@ with the extension. They can be loaded anywhere in the extension using the utili
 by Gio, e.g.:
 
 ```
-import {assetPath} from "$src/config.ts";
+import {assetPath} from "$src/config";
 
 // Load an arbitrary file:
 const myFile = Gio.File.new_for_uri(assetPath.root + '/my-file.txt'));

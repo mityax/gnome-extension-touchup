@@ -1,8 +1,8 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
-import {settings} from "$src/settings.ts";
+import {settings} from "$src/settings";
 import Gtk from "gi://Gtk";
-import {buildPreferencesGroup, buildSpinRow, buildSwitchRow} from "$src/features/preferences/uiUtils.ts";
+import {buildPreferencesGroup, buildSpinRow, buildSwitchRow} from "$src/features/preferences/uiUtils";
 
 export class OskKeyPopupPage extends Adw.PreferencesPage {
     static {

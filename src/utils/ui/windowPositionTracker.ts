@@ -2,7 +2,7 @@ import Meta from 'gi://Meta';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
-import {CancellablePromise, Delay} from "$src/utils/delay.ts";
+import {CancellablePromise, Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
 
 

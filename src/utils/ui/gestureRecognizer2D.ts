@@ -1,6 +1,6 @@
 import Clutter from "gi://Clutter";
 import St from "gi://St";
-import {assert} from "$src/utils/logging.ts";
+import {assert} from "$src/utils/logging";
 import Stage = Clutter.Stage;
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
@@ -224,7 +224,8 @@ export class GestureRecognizer2D {
      * If the primary move cannot (yet) be determined, `null` is returned.
      */
     get primaryMove(): SwipePattern | null {
-        let pattern = this.recordedPatterns.find((p) => p.type == 'swipe');
+        let pattern = this.recordedPatterns
+            .find((p) => p.type == 'swipe') as SwipePattern;
         return pattern ? {...pattern} : null;
     }
 
@@ -236,7 +237,8 @@ export class GestureRecognizer2D {
      * If the primary move cannot (yet) be determined, `null` is returned.
      */
     get secondaryMove(): SwipePattern | null {
-        let pattern = this.recordedPatterns.findLast((p) => p.type == 'swipe');
+        let pattern = this.recordedPatterns
+            .findLast((p) => p.type == 'swipe') as SwipePattern;
         return pattern ? {...pattern} : null;
     }
 

@@ -1,18 +1,18 @@
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "../../utils/patchManager";
 import Gio from "gi://Gio";
-import {Delay} from "$src/utils/delay.ts";
+import {Delay} from "$src/utils/delay";
 import {debugLog} from "$src/utils/logging";
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
-import {randomChoice} from "$src/utils/utils.ts";
-import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
+import {randomChoice} from "$src/utils/utils";
+import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {settings} from "$src/settings.ts";
-import GnomeTouchExtension from "$src/extension.ts";
-import {Widgets} from "$src/utils/ui/widgets.ts";
-import {css} from "$src/utils/ui/css.ts";
-import showToast from "$src/utils/ui/toast.ts";
+import {settings} from "$src/settings";
+import GnomeTouchExtension from "$src/extension";
+import {Widgets} from "$src/utils/ui/widgets";
+import {css} from "$src/utils/ui/css";
+import showToast from "$src/utils/ui/toast";
 
 
 type InstallationData = {

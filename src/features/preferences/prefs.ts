@@ -3,13 +3,13 @@ import {initSettings} from "$src/features/preferences/backend";
 import {NavigationBarPage} from "$src/features/preferences/pages/navigationBarPage";
 import {OskKeyPopupPage} from "$src/features/preferences/pages/oskKeyPopupPage";
 import {ExtensionPreferences} from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
-import {DonationsPage} from "$src/features/preferences/pages/donationsPage.ts";
+import {DonationsPage} from "$src/features/preferences/pages/donationsPage";
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
-import {settings} from "$src/settings.ts";
-import {MiscPage} from "$src/features/preferences/pages/miscPage.ts";
+import {settings} from "$src/settings";
+import {MiscPage} from "$src/features/preferences/pages/miscPage";
 import Gio from "gi://Gio";
-import {assetsGResourceFile} from "$src/config.ts";
+import {assetsGResourceFile} from "$src/config";
 
 
 export default class GnomeTouchPreferences extends ExtensionPreferences {

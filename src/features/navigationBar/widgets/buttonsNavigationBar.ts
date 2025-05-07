@@ -3,11 +3,11 @@ import St from "gi://St";
 import {Widgets} from "$src/utils/ui/widgets";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
-import {settings} from "$src/settings.ts";
-import {log} from "$src/utils/logging.ts";
-import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils.ts";
-import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
-import {SettingsType} from "$src/features/preferences/backend.ts";
+import {settings} from "$src/settings";
+import {log} from "$src/utils/logging";
+import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils";
+import {AssetIcon} from "$src/utils/ui/assetIcon";
+import {SettingsType} from "$src/features/preferences/backend";
 import ActorAlign = Clutter.ActorAlign;
 
 

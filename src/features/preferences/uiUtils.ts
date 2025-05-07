@@ -1,6 +1,6 @@
 import Adw from "gi://Adw";
 import Gtk from "gi://Gtk";
-import {Setting} from "$src/features/preferences/backend.ts";
+import {Setting} from "$src/features/preferences/backend";
 import Gio from "gi://Gio";
 import Align = Gtk.Align;
 

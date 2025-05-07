@@ -5,13 +5,13 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
 import {Widgets} from "$src/utils/ui/widgets";
 import {debugLog} from "$src/utils/logging";
-import ExtensionFeature from "$src/utils/extensionFeature.ts";
-import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem.ts";
-import {css} from "$src/utils/ui/css.ts";
-import {DisplayConfigState} from "$src/utils/monitorDBusUtils.ts";
-import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay.ts";
+import ExtensionFeature from "$src/utils/extensionFeature";
+import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
+import {css} from "$src/utils/ui/css";
+import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
+import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay";
 import Mtk from "gi://Mtk";
-import {clamp} from "$src/utils/utils.ts";
+import {clamp} from "$src/utils/utils";
 
 
 export class VirtualTouchpadFeature extends ExtensionFeature {

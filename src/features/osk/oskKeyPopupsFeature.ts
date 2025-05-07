@@ -7,9 +7,9 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import St from "gi://St";
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
-import {settings} from "$src/settings.ts";
-import {Delay} from "$src/utils/delay.ts";
-import {PatchManager} from "$src/utils/patchManager.ts";
+import {settings} from "$src/settings";
+import {Delay} from "$src/utils/delay";
+import {PatchManager} from "$src/utils/patchManager";
 import Clutter from "gi://Clutter";
 
 

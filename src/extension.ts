@@ -3,18 +3,18 @@ import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeatu
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
 import Clutter from "gi://Clutter";
-import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature.ts";
+import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
-import {FloatingScreenRotateButtonFeature} from "$src/features/screenRotateUtils/floatingScreenRotateButtonFeature.ts";
-import {Delay} from "$src/utils/delay.ts";
-import {assetsGResourceFile, devMode} from "$src/config.ts";
-import ExtensionFeature from "$src/utils/extensionFeature.ts";
-import {settings} from "$src/settings.ts";
+import {FloatingScreenRotateButtonFeature} from "$src/features/screenRotateUtils/floatingScreenRotateButtonFeature";
+import {Delay} from "$src/utils/delay";
+import {assetsGResourceFile, devMode} from "$src/config";
+import ExtensionFeature from "$src/utils/extensionFeature";
+import {settings} from "$src/settings";
 import Gio from "gi://Gio";
-import DonationsFeature from "$src/features/donations/donationsFeature.ts";
+import DonationsFeature from "$src/features/donations/donationsFeature";
 
 
 export default class GnomeTouchExtension extends Extension {

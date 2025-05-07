@@ -5,7 +5,7 @@ import {css} from "$src/utils/ui/css";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Cogl from "gi://Cogl";
-import {Widgets} from "$src/utils/ui/widgets.ts";
+import {Widgets} from "$src/utils/ui/widgets";
 import Side = St.Side;
 
 

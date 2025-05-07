@@ -12,7 +12,7 @@ import {IdleRunner} from "../../utils/idleRunner";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 // @ts-ignore
 import {getPointerWatcher} from 'resource:///org/gnome/shell/ui/pointerWatcher.js';
-import {PatchManager} from "$src/utils/patchManager.ts";
+import {PatchManager} from "$src/utils/patchManager";
 
 
 export class CursorOverlay {

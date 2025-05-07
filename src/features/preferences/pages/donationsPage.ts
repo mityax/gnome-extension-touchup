@@ -1,11 +1,11 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
-import {buildPreferencesGroup} from "$src/features/preferences/uiUtils.ts";
-import {randomChoice} from "$src/utils/utils.ts";
+import {buildPreferencesGroup} from "$src/features/preferences/uiUtils";
+import {randomChoice} from "$src/utils/utils";
 import Gio from "gi://Gio";
 import Pango from "gi://Pango";
-import {donationPlatforms, feedbackPlatforms} from "$src/config.ts";
+import {donationPlatforms, feedbackPlatforms} from "$src/config";
 
 
 export class DonationsPage extends Adw.PreferencesPage {

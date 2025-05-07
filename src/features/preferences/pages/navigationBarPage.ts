@@ -1,13 +1,13 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
-import {settings} from "$src/settings.ts";
-import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils.ts";
+import {settings} from "$src/settings";
+import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils";
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
-import {SettingsType} from "$src/features/preferences/backend.ts";
+import {SettingsType} from "$src/features/preferences/backend";
 import Gio from "gi://Gio";
-import {AssetIcon} from "$src/utils/ui/assetIcon.ts";
-import {debounce} from "$src/utils/debounce.ts";
+import {AssetIcon} from "$src/utils/ui/assetIcon";
+import {debounce} from "$src/utils/debounce";
 import PropagationPhase = Gtk.PropagationPhase;
 
 

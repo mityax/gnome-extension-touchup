@@ -3,7 +3,7 @@ import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
 import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
-import {Delay} from "$src/utils/delay.ts";
+import {Delay} from "$src/utils/delay";
 
 
 /**
@@ -124,7 +124,7 @@ export namespace Widgets {
             config,
             //@ts-ignore
             entry => typeof entry[0] === "string" && (
-                !filterOut.some((filter) => filter instanceof RegExp
+                !filterOut!.some((filter) => filter instanceof RegExp
                     ? filter.test(entry[0] as string)
                     : filter === entry[0])
             )

@@ -1,4 +1,4 @@
-import GnomeTouchPreferences from "$src/features/preferences/prefs.ts";
+import GnomeTouchPreferences from "$src/features/preferences/prefs";
 
 export default GnomeTouchPreferences;
 
