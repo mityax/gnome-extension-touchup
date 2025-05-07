@@ -88,9 +88,8 @@ export class IntervalRunner {
      */
     scheduleOnce(delayMs: number = 0) {
         this._scheduleOnceTimeoutId = GLib.timeout_add(this._priority, delayMs, () => {
-            if (this._timeoutId != null) {
-                this.callback(this.stop.bind(this));
-            }
+            this.callback(this.stop.bind(this));
+            this._scheduleOnceTimeoutId = null;
             return GLib.SOURCE_REMOVE;
         })
     }
