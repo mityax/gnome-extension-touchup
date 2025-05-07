@@ -1,4 +1,5 @@
 import GLib from "gi://GLib";
+import {Delay} from "$src/utils/delay";
 
 /**
  * IntervalRunner class manages a recurring callback execution at a specified interval with a specified priority.
@@ -82,12 +83,11 @@ export class IntervalRunner {
      * Run the callback once after the given delay (unless `stop()` is called before that)
      */
     scheduleOnce(delayMs: number = 0) {
-        GLib.timeout_add(this._priority, delayMs, () => {
+        Delay.ms(delayMs).then(() => {
             if (this.timeoutId != null) {
                 this.callback(this.stop.bind(this));
             }
-            return GLib.SOURCE_REMOVE;
-        })
+        });
     }
 
     /**
