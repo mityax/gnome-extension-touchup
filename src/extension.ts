@@ -91,6 +91,8 @@ export default class TouchUpExtension extends Extension {
         this.defineFeature(
             'navigation-bar',
             pm => new NavigationBarFeature(pm),
+            // Note: The below callback is also responsible for 'nulling out' everything when the extension is
+            // disabled; it's called with `undefined` as argument then:
             f => this.navigationBar = f,
             settings.navigationBar.enabled,
         );
@@ -154,7 +156,8 @@ export default class TouchUpExtension extends Extension {
             let feature: T | undefined = create(this.pm!.fork(featureName));
             assign(feature);
 
-            // Destroy the feature and call assign with `undefined` to remove all references:
+            // Destroy the feature and call assign with `undefined` to remove all references/null out
+            // the class attribute when the extension is disabled:
             return () => {
                 feature?.destroy();
                 feature = undefined;
