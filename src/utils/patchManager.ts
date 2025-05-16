@@ -222,6 +222,10 @@ export class PatchManager {
         this._patches.toReversed().forEach(p => p.disable());
         this._patches = [];
 
+        // This should be a noop, as all patches already restored their original method during
+        // unpatching, but we'll still clear the [InjectionManager] here for completeness:
+        this._injectionManager.clear();
+
         this._isDestroyed = true;
     }
 
@@ -239,6 +243,10 @@ export class PatchManager {
 
         this._children.toReversed().forEach(c => c.disable());
         this._patches.toReversed().forEach(p => p.disable());
+
+        // This should be a noop, as all patches already restored their original method during
+        // unpatching, but we'll still clear the [InjectionManager] here for completeness:
+        this._injectionManager.clear();
     }
 
     /**
