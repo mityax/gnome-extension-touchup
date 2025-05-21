@@ -129,6 +129,21 @@ export class StringListSetting<T extends string> extends Setting<T[]>{
     }
 }
 
+/**
+ * Store arbitrary (small!) JSON structures in a setting.
+ *
+ * This does not perform any kind of validation; we rely on typescript in this codebase and trust other
+ * parties editing the setting to ensure that the data is valid.
+ */
+export class JSONSetting<T extends JSONValue> extends Setting<T> {
+    get(): T {
+        return JSON.parse(gioSettings!.get_string(this.key)) as T;
+    }
+    set(value: T): void {
+        gioSettings!.set_string(this.key, JSON.stringify(value) as string);
+    }
+}
+
 
 /**
  * Returns the value type of a Setting, i.e. SettingsType<BoolSetting> => bool

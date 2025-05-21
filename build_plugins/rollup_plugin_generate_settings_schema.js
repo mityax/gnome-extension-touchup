@@ -103,7 +103,21 @@ function generateXMLForSetting(node, sourceFile, source) {
         // We use JSON.stringify to easily escape quotes in the code and automatically add surrounding quotes, i.e.
         // to convert ["a-value"] to "[\"a-value\"]":
         defaultValue = JSON.stringify(node.initializer.arguments[1]?.getText(sourceFile) || '[]');
-        JSON.parse(JSON.parse(defaultValue));  // throw an error if the default value is not valid json
+        try {
+            JSON.parse(JSON.parse(defaultValue));  // throw an error if the default value is not valid json
+        } catch (e) {
+            throw Error(`The default value of StringListSetting "${settingName}" is not valid JSON: ${defaultValue}`, {cause: e})
+        }
+    } else if (settingType === 'JSONSetting') {
+        gtype = 's';
+        // We use JSON.stringify to easily escape quotes in the code and automatically add surrounding quotes, i.e.
+        // to convert ["a-value"] to "[\"a-value\"]":
+        defaultValue = JSON.stringify(node.initializer.arguments[1]?.getText(sourceFile) || 'null');
+        try {
+            JSON.parse(JSON.parse(defaultValue));  // throw an error if the default value is not valid json
+        } catch (e) {
+            throw Error(`The default value of JSONSetting "${settingName}" is not valid JSON: ${defaultValue}`, {cause: e})
+        }
     } else {
         throw Error(`Unknown settings type ${settingType} - you need to implement this type in the settings schema generator.`);
     }
