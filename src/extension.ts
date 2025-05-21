@@ -2,7 +2,6 @@ import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
 import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
 import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
-import Clutter from "gi://Clutter";
 import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
@@ -15,19 +14,13 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
 import Gio from "gi://Gio";
 import DonationsFeature from "$src/features/donations/donationsFeature";
+import {TouchModeService} from "$src/services/touchModeService";
 
 export default class TouchUpExtension extends Extension {
     static instance?: TouchUpExtension;
 
     pm?: PatchManager;
-
-    developmentTools?: DevelopmentTools;
-    navigationBar?: NavigationBarFeature;
-    oskKeyPopups?: OskKeyPopupsFeature;
-    floatingScreenRotateButton?: FloatingScreenRotateButtonFeature;
-    virtualTouchpad?: VirtualTouchpadFeature;
-    notificationGestures?: NotificationGesturesFeature;
-    donations?: DonationsFeature;
+    features: ExtensionFeature[] = [];
 
     enable() {
         debugLog("*************************************************")
@@ -53,82 +46,76 @@ export default class TouchUpExtension extends Extension {
 
         TouchUpExtension.instance = this;
 
-        DEBUG: if (devMode) this.pm!.patch(() => {
-            this.developmentTools = new DevelopmentTools(this.pm!.fork('development-tools'), this);
-            return () => {
-                this.developmentTools?.destroy();
-                this.developmentTools = undefined;
-            }
-        }, 'enable-feature(development-tools)');
+        // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
+        // features need to work):
+        this.defineServices();
 
         // This is the entry point for all features of this extension:
         this.defineFeatures();
 
         // Sync ui on touch-mode and monitor changes:
-        this.pm.connectTo(Clutter.get_default_backend().get_default_seat(), 'notify::touch-mode', () => this.syncUI());
+        this.getFeature(TouchModeService)?.onChanged.connect(() => this.syncUI());
         this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.syncUI());
 
         this.syncUI();
     }
 
     syncUI() {
-        let touchMode = Clutter.get_default_backend().get_default_seat().get_touch_mode();
-
-        DEBUG: if (this.developmentTools?.enforceTouchMode) touchMode = true;
-
-        if (touchMode) {
-            this.navigationBar?.show();
-        } else {
-            this.navigationBar?.hide();
-        }
+        let touchMode = this.getFeature(TouchModeService)!.isTouchModeActive;
 
         // TODO: uncomment:
-        this.virtualTouchpad?.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
+        BETA: this.getFeature(VirtualTouchpadFeature)?.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
     }
 
 
+    private defineServices() {
+        this.defineFeature(
+            'touch-mode-service',
+            pm => new TouchModeService(pm)
+        );
+    }
+
     private defineFeatures() {
+        DEBUG: if (devMode) {
+            this.defineFeature(
+                'development-tools',
+                (pm) => new DevelopmentTools(pm),
+            );
+        }
+
         this.defineFeature(
             'navigation-bar',
             pm => new NavigationBarFeature(pm),
-            // Note: The below callback is also responsible for 'nulling out' everything when the extension is
-            // disabled; it's called with `undefined` as argument then:
-            f => this.navigationBar = f,
             settings.navigationBar.enabled,
         );
 
         this.defineFeature(
             'osk-key-popups',
             pm => new OskKeyPopupsFeature(pm),
-            f => this.oskKeyPopups = f,
             settings.oskKeyPopups.enabled,
         );
 
         this.defineFeature(
             'floating-screen-rotate-button',
             pm => new FloatingScreenRotateButtonFeature(pm),
-            f => this.floatingScreenRotateButton = f,
             settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
         );
 
         this.defineFeature(
             'notification-gestures',
             pm => new NotificationGesturesFeature(pm),
-            f => this.notificationGestures = f,
             settings.notificationGestures.enabled,
         );
 
         BETA: this.defineFeature(
             'virtual-touchpad',
             pm => new VirtualTouchpadFeature(pm),
-            f => this.virtualTouchpad = f,
             settings.virtualTouchpad.enabled,
         );
 
         this.defineFeature(
             'donations',
             pm => new DonationsFeature(pm),
-            f => this.donations = f,
         )
     }
 
@@ -148,20 +135,17 @@ export default class TouchUpExtension extends Extension {
     private defineFeature<T extends ExtensionFeature>(
         featureName: string,
         create: (pm: PatchManager) => T,
-        assign: (feature?: T) => void,
         setting?: BoolSetting,
     ) {
         let p = this.pm!.registerPatch(() => {
-            // Create the feature and call `assign` to allow the callee to create references:
+            // Create the feature:
             let feature: T | undefined = create(this.pm!.fork(featureName));
-            assign(feature);
+            this.features.push(feature);
 
-            // Destroy the feature and call assign with `undefined` to remove all references/null out
-            // the class attribute when the extension is disabled:
             return () => {
+                // Destroy the feature on unpatch:
+                this.features = this.features.filter(f => f != feature);
                 feature?.destroy();
-                feature = undefined;
-                assign(undefined);
             }
         }, `enable-feature(${featureName})`);
 
@@ -192,8 +176,17 @@ export default class TouchUpExtension extends Extension {
         this.pm?.destroy();
         this.pm = undefined;
 
+        // Destroy all features (this has been done already by the PatchManager, but is explicitly done here
+        // again to not make things unnecessarily complicated for reviewers):
+        this.features.forEach(f => f.destroy());
+        this.features = [];
+
         TouchUpExtension.instance = undefined;
 
-        debugLog("TouchUp extension successfully unloaded.")
+        debugLog("TouchUp extension successfully unloaded.");
+    }
+
+    getFeature<T extends ExtensionFeature>(type: { new (...args: any[]): T }): T | null {
+        return this.features.find(f => f instanceof type) as T ?? null;
     }
 }

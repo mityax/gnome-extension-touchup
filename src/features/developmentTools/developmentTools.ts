@@ -17,6 +17,7 @@ import {PatchManager} from "$src/utils/patchManager";
 import {debounce} from "$src/utils/debounce";
 import Cogl from "gi://Cogl";
 import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
+import {TouchModeService} from "$src/services/touchModeService";
 
 
 type _PersistedState = {
@@ -26,23 +27,24 @@ type _PersistedState = {
 
 
 export class DevelopmentTools extends ExtensionFeature {
-    private extension: TouchUpExtension;
-
     // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
     // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
     get _persistedState(): _PersistedState {
         // @ts-ignore
-        return window._gnomeTouchPersistedState ??= {
+        return window._touchUpPersistedState ??= {
             enforceTouchMode: false,
             showLogDisplays: true,
         };
     }
 
-    constructor(pm: PatchManager, extension: TouchUpExtension) {
+    constructor(pm: PatchManager) {
         super(pm);
-        this.extension = extension;
         this._setupDevToolBar();
         this._setupLiveReload();
+
+        // Set the [enforceTouchMode] from the persisted state:
+        TouchUpExtension.instance!.getFeature(TouchModeService)!.enforceTouchMode =
+            this._persistedState.enforceTouchMode;
     }
 
     private buildToolbar() {
@@ -63,13 +65,13 @@ export class DevelopmentTools extends ExtensionFeature {
                 initialValue: this._persistedState.enforceTouchMode,
                 onPressed: (v) => {
                     this._persistedState.enforceTouchMode = v;
-                    this.extension.syncUI();
+                    TouchUpExtension.instance!.getFeature(TouchModeService)!.enforceTouchMode = v;
                 }
             }),
             new Widgets.Bin({width: 15}),
             new RestartButton(),
             new Widgets.Bin({width: 10}),
-            new HotReloadButton(this.extension.metadata.uuid),
+            new HotReloadButton(TouchUpExtension.instance!.metadata.uuid),
             new Widgets.Bin({width: 10}),
             new Widgets.Bin({width: 1, backgroundColor: Cogl.Color.from_string('grey')[1]}),
             new Widgets.Bin({width: 10}),
@@ -113,7 +115,7 @@ export class DevelopmentTools extends ExtensionFeature {
         this.pm.patch(() => {
             const source = new EventSource(`${watchBaseUrl}/esbuild`);
             source.on('change', debounce((data) => {
-                _hotReloadExtension(this.extension.metadata.uuid, {
+                _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
                     baseUri: `file://${baseDir}`,
                     // `data` is a JSON-string containing info about changed files, e.g.:
                     //   {"added":[],"removed":[],"updated":["/extension.js"]}

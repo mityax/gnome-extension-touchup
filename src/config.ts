@@ -42,10 +42,9 @@ export const feedbackPlatforms = Object.freeze([
         url: 'https://github.com/mityax/gnome-extension-touchup/issues/new',
         buttonLabel: 'Create Issue',
     },
-    // TODO: provide this to make it show up in the settings
-    //{
-    //    title: 'Leave a Review on Gnome Extensions',
-    //    url: 'todo',
-    //    buttonLabel: 'Leave Review',
-    //},
+    {
+        title: 'Leave a review on Gnome Extensions',
+        url: 'https://extensions.gnome.org/extension/8102',
+        buttonLabel: 'Leave Review',
+    },
 ]);

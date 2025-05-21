@@ -66,6 +66,11 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         this.onVisibilityChanged.emit(false);
     }
 
+    setMonitor(monitorIndex: number) {
+        this._monitor = Main.layoutManager.monitors[monitorIndex];
+        this.reallocate();
+    }
+
     setReserveSpace(reserveSpace: boolean) {
         if (reserveSpace != this._reserveSpace) {
             this._reserveSpace = reserveSpace;
@@ -76,8 +81,8 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     }
 
     reallocate() {
-        // TODO: find touch-enabled monitor, keyword: ClutterInputDevice
-        this._monitor = Main.layoutManager.primaryMonitor!;
+        // FIXME: find touch-enabled monitor, keyword: ClutterInputDevice
+        this._monitor ??= Main.layoutManager.primaryMonitor!;
 
         this.onBeforeReallocate();
 

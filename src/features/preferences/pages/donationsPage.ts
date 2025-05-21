@@ -17,7 +17,7 @@ export class DonationsPage extends Adw.PreferencesPage {
         super({
             name: 'donations',
             title: "Support",
-            icon_name: 'emblem-favorite-symbolic',
+            icon_name: 'emote-love-symbolic',
         });
 
         this.add(buildPreferencesGroup({

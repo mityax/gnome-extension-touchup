@@ -1,4 +1,11 @@
-import {BoolSetting, EnumSetting, IntSetting, StringListSetting, StringSetting} from "./features/preferences/backend";
+import {
+    BoolSetting,
+    EnumSetting,
+    IntSetting,
+    JSONSetting,
+    StringListSetting,
+    StringSetting
+} from "./features/preferences/backend";
 
 
 // NOTE: the doc comments in the following structure will be automatically included in the GSettings schema
@@ -10,6 +17,13 @@ export const settings = {
          * Whether to enable the navigation bar feature or not.
          */
         enabled: new BoolSetting('navigation-bar-enabled', true),
+
+        /**
+         * When set, and the chosen monitor is connected, the navigation bar is show on that monitor
+         * regardless of whether Gnome's touch mode is currently active. Can also be set to the built-in
+         * monitor to facilitate an "always show navigation bar" behavior.
+         */
+        alwaysShowOnMonitor: new JSONSetting<{name: string, id: string} | null>('navigation-bar-always-show-on-monitor', null),
 
         /**
          * Navigation bar mode – whether to use a small gesture navigation bar or a more old school

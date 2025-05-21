@@ -8,6 +8,7 @@ import {SettingsType} from "$src/features/preferences/backend";
 import Gio from "gi://Gio";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {debounce} from "$src/utils/debounce";
+import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
 import PropagationPhase = Gtk.PropagationPhase;
 
 
@@ -40,6 +41,12 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                         { label: "Buttons", value: "buttons" },
                     ],
                     setting: settings.navigationBar.mode,
+                }),
+                this.buildAlwaysShowOnMonitorRow({
+                    title: "Always show on monitor",
+                    subtitle: "Select a monitor to always show the navigation bar on.",
+                    tooltipText: "When a monitor is selected, the navigation bar is shown on it regardless of whether Gnome's \"touch mode\" is enabled or supported on this device. You can select the built-in monitor to make the navigation bar always show up.",
+                    setting: settings.navigationBar.alwaysShowOnMonitor,
                 }),
             ]
         }));
@@ -256,5 +263,91 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             child: box,
             cssClasses: ['navigation-bar-page__buttons-bar-layout']
         });
+    }
+
+    private buildAlwaysShowOnMonitorRow(props: {
+        title: string,
+        subtitle: string,
+        tooltipText?: string,
+        setting: typeof settings.navigationBar.alwaysShowOnMonitor,
+    }) {
+        let monitors: ({name: string, id: string} | null)[] = [];
+        const initiallySelected = props.setting.get();
+        const model = new Gtk.StringList();
+
+        const row = new Adw.ComboRow({
+            title: props.title,
+            subtitle: props.subtitle,
+            tooltipText: props.tooltipText,
+            model: model,
+        });
+
+        const onChangeHandlerId = row.connect('notify::selected-item', ()  => {
+            const monitor = monitors[row.selected];
+            props.setting.set(monitor);
+        });
+
+        const refreshButton = new Gtk.Button({
+            iconName: 'view-refresh-symbolic',
+            valign: Gtk.Align.CENTER,
+            marginStart: 10
+        });
+        refreshButton.connect('clicked', () => updateMonitors());
+        row.add_suffix(refreshButton);
+
+        async function updateMonitors() {
+            const state = await DisplayConfigState.getCurrent();
+
+            row.block_signal_handler(onChangeHandlerId);
+
+            // Keep track of the originally selected item:
+            const selected = row.selected !== Gtk.INVALID_LIST_POSITION
+                ? monitors[row.selected]
+                : initiallySelected;
+
+            const newMonitors: typeof monitors = [ null ];  // `null` is the "None" value
+
+            // Add the initially selected monitor in case it is not connected right now:
+            if (initiallySelected && !state.monitors.some(m => m.constructMonitorId() === initiallySelected.id)) {
+                newMonitors.push(initiallySelected);
+            }
+
+            // Add all currently connected monitors:
+            for (let monitor of state.monitors) {
+                newMonitors.push({
+                    name: `${monitor.vendorName} (${monitor.productSerial})`,
+                    id: monitor.constructMonitorId(),
+                })
+            }
+
+            // Derive a list of dropdown item labels from the monitors:
+            const newComboboxItems: string[] = [];
+            for (let monitor of newMonitors) {
+                if (monitor === null) {
+                    newComboboxItems.push("None");
+                } else if (!state.monitors.some(m => m.constructMonitorId() === monitor.id)) {
+                    newComboboxItems.push(`${monitor.name} (disconnected)`);
+                } else if (state.monitors.find(m => m.constructMonitorId() === monitor.id)?.isBuiltin) {
+                    newComboboxItems.push(`Built-in display`);
+                } else {
+                    newComboboxItems.push(monitor.name);
+                }
+            }
+
+            // Replace all dropdown items with the new ones:
+            model.splice(0, model.get_n_items(), newComboboxItems);
+            monitors = newMonitors;
+
+            // Restore the originally selected item:
+            const newSelectedIdx = newMonitors.findIndex(m => m?.id === selected?.id);
+            row.set_selected(newSelectedIdx === -1 ? 0 : newSelectedIdx);
+
+            row.unblock_signal_handler(onChangeHandlerId);
+        }
+
+        // Perform initial update:
+        updateMonitors().then(() => {});
+
+        return row;
     }
 }

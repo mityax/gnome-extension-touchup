@@ -94,21 +94,65 @@ export class LogicalMonitor {
 
 export class Monitor {
     connector: string;
+    vendorName: string;
+    productName: string;
+    productSerial: string;
     currentModeId: number | null = null;
     isUnderscanning: boolean = false;
     isBuiltin: boolean = false;
 
     constructor(variant: GLib.Variant) {
-        const unpacked = variant.unpack() as any[];
-        this.connector = unpacked[0].unpack()[0].unpack();
+        // variant.deepUnpack() yields (in Gnome 48):
+        // (see for docs: https://gitlab.gnome.org/GNOME/mutter/-/blob/main/data/dbus-interfaces/org.gnome.Mutter.DisplayConfig.xml#L385)
+        // [
+        //   [ // - [0] - meta information
+        //     "LVDS1", // - [0][0] - connector
+        //     "MetaProducts Inc.",  // vendor name
+        //     "MetaMonitor",  // product name
+        //     "0xC0FFEE-1"  // product serial
+        //   ],
+        //   [ // - [1] - "modes"
+        //     [
+        //       "1400x1000@60.000", // - [1][0]
+        //       1400,
+        //       1000,
+        //       60,
+        //       1,
+        //       [ // - [1][1]
+        //         1, // - [1][1][0]
+        //         1.25,
+        //         1.5037593841552734,
+        //         1.7543859481811523
+        //       ],
+        //       {
+        //         "is-current": {},
+        //         "is-preferred": {}
+        //       }
+        //     ]
+        //   ],
+        //   { // - [2] - "props"
+        //     "is-builtin": {},
+        //     "display-name": {},
+        //     "is-for-lease": {},
+        //     "color-mode": {},
+        //     "supported-color-modes": {}
+        //   }
+        // ]
 
-        const modes = unpacked[1].unpack();
+        const unpacked = variant.deepUnpack() as any[];
+
+        this.connector = unpacked[0][0];
+        this.vendorName = unpacked[0][1];
+        this.productName = unpacked[0][2];
+        this.productSerial = unpacked[0][3];
+
+        const modes = unpacked[1];
         for (const modeVariant of modes) {
-            const mode = modeVariant.unpack();
-            const id = mode[0].unpack();
-            const modeProps = mode[6].unpack();
+            const mode = modeVariant;
+            const id = mode[0];
+            const modeProps = mode[6];
             if ('is-current' in modeProps) {
-                const isCurrent = modeProps['is-current'].unpack().get_boolean();
+                const isCurrent = modeProps['is-current'].get_boolean();
                 if (isCurrent) {
                     this.currentModeId = id;
                     break;
@@ -116,13 +160,24 @@ export class Monitor {
             }
         }
 
-        const props = unpacked[2].unpack();
+        const props = unpacked[2];
         if ('is-underscanning' in props) {
-            this.isUnderscanning = props['is-underscanning'].unpack().get_boolean();
+            this.isUnderscanning = props['is-underscanning'].get_boolean();
         }
         if ('is-builtin' in props) {
-            this.isBuiltin = props['is-builtin'].unpack().get_boolean();
+            this.isBuiltin = props['is-builtin'].get_boolean();
         }
+    }
+
+    /**
+     * This method makes no guarantees about the returned string, except that it will uniquely
+     * identify this physical monitor, even after disconnecting and reconnecting it.
+     *
+     * This is at the moment done by monitor metadata by constructing a tuple of (vendor name,
+     * product name, serial).
+     */
+    constructMonitorId(): string {
+        return `${this.vendorName}::${this.productName}::${this.productSerial}`;
     }
 }
 
@@ -132,7 +187,7 @@ export class DisplayConfigState {
     logicalMonitors: LogicalMonitor[] = [];
     properties: Record<string, any>;
 
-    constructor(result: GLib.Variant) {
+    private constructor(result: GLib.Variant) {
         const unpacked = result.unpack() as any[];
         this.serial = unpacked[0].unpack();
 
@@ -218,3 +273,4 @@ export class DisplayConfigState {
         return new GLib.Variant('(uua(iiduba(ssa{sv}))a{sv})', packing);
     }
 }
+
