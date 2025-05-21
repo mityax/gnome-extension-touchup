@@ -64,7 +64,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
             self.unpatchOnTrayClose = [];
         })
 
-        // Path the message tray `_updateState` function such that it does not expand the banner on hover:
+        // Patch the message tray `_updateState` function such that it does not expand the banner on hover:
         this.pm.patchMethod(MessageTray.MessageTray.prototype, '_updateState',
             function(this: MessageTray.MessageTray & {_banner: NotificationMessage}, orig) {
                 // we achieve this by making it seem to the function that the banner is already expanded:
@@ -90,6 +90,10 @@ export class NotificationGesturesFeature extends ExtensionFeature {
 
             const notificationGroup = container.get_parent() as NotificationMessageGroup;
 
+            // This is updated in each call to `onMoveHorizontally` and tracks which actor to move: the
+            // [notificationGroup] or the [message]:
+            let horizontalMoveActor: Clutter.Actor | null = null;
+
             // Track and recognize touch and mouse events:
             const gestureHelper = new SwipeGesturesHelper({
                 actor: container,
@@ -104,8 +108,8 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 },
                 onHoverEnd: () => message.remove_style_pseudo_class('hover'),
                 onMoveHorizontally: (x) => {
-                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
-                    actor.translationX = x;
+                    horizontalMoveActor = notificationGroup.expanded || isTray ? message : notificationGroup;
+                    horizontalMoveActor.translationX = x;
                 },
                 onMoveVertically: (y) => {
                     if (isTray) {
@@ -114,8 +118,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 },
                 onScrollScrollView: (deltaY) => this.scrollNotificationList(deltaY),
                 onEaseBackPosition: () => {
-                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
-                    gestureHelper.easeBackPositionOf(actor);
+                    gestureHelper.easeBackPositionOf(horizontalMoveActor!);
                 },
                 onActivate: () =>
                     // @ts-ignore
@@ -142,10 +145,8 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                     }
                 },
                 onClose: (swipeDirection) => {
-                    const actor = notificationGroup.expanded || isTray ? message : notificationGroup;
-
                     // @ts-ignore
-                    actor.ease({
+                    horizontalMoveActor?.ease({
                         translationX: swipeDirection == 'right' ? message.width : -message.width,
                         opacity: 0,
                         duration: 150,
