@@ -78,7 +78,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         this.logAddedCallbacks.push((t) => {
             // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
             const a = display.get_vadjustment();
-            if (a.value + a.pageSize >= a.upper - 25 * scaleFactor) {
+            if (a.value < a.upper - display.contentBox.get_height() - 25 * scaleFactor) {
                 Delay.ms(100).then(() => {
                     if (this.logDisplays.includes(display)) a.set_value(a.upper);
                 });
