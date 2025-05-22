@@ -38,7 +38,7 @@ export abstract class Setting<T> {
     }
 
     connect(signal: 'changed' | string, handler: (newValue: T) => any): number {
-        console.assert(signal === 'changed', "The only supported signal for now is `changed`");
+        assert(signal === 'changed', "The only supported signal for now is `changed`");
         return gioSettings!.connect(`${signal}::${this.key}`, () => handler(this.get()));
     }
 
