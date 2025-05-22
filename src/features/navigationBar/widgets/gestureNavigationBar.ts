@@ -73,7 +73,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         this.actor.set_height(height);
 
         this.pill.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
-        this.pill.set_height(Math.floor(Math.min(height * 0.8, 5.5 * sf, height - 2)));
+        this.pill.set_height(Math.floor(Math.min(height * 0.8, 6 * sf, height - 2)));
     }
 
     private _setupGestureTrackerFor(actor: Clutter.Actor) {
