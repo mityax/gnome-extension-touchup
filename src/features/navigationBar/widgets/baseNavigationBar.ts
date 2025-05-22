@@ -127,5 +127,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
     destroy() {
         this.actor.destroy();
         this.windowPositionTracker?.destroy();
+        this._visible = false;
     }
 }

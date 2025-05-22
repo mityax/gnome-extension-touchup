@@ -48,6 +48,11 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                     tooltipText: "When a monitor is selected, the navigation bar is shown on it regardless of whether Gnome's \"touch mode\" is enabled or supported on this device. You can select the built-in monitor to make the navigation bar always show up.",
                     setting: settings.navigationBar.alwaysShowOnMonitor,
                 }),
+                buildSwitchRow({
+                    title: "Primary monitor follows navigation bar",
+                    subtitle: "Change the primary monitor to the one the navigation bar appears on, whenever it's visible.",
+                    setting: settings.navigationBar.primaryMonitorFollowsNavbar,
+                }),
             ]
         }));
 

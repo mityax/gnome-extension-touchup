@@ -26,6 +26,12 @@ export const settings = {
         alwaysShowOnMonitor: new JSONSetting<{name: string, id: string} | null>('navigation-bar-always-show-on-monitor', null),
 
         /**
+         * When enabled, the primary monitor is automatically changed to the monitor the navigation bar
+         * is placed on, as long as it's visible.
+         */
+        primaryMonitorFollowsNavbar: new BoolSetting('navigation-bar-primary-monitor-follows-navbar', true),
+
+        /**
          * Navigation bar mode – whether to use a small gesture navigation bar or a more old school
          * navigation bar with buttons.
          */

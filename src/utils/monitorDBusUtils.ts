@@ -1,5 +1,6 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
+import {assert} from "$src/utils/logging";
 
 
 export const Methods = Object.freeze({
@@ -233,6 +234,15 @@ export class DisplayConfigState {
         return this.logicalMonitors.find((logMonitor) =>
             logMonitor.monitors.some((lmMonitor) => connector === lmMonitor[0])
         ) || null;
+    }
+
+    setPrimaryMonitor(monitor: LogicalMonitor) {
+        assert(this.logicalMonitors.includes(monitor));
+
+        this.logicalMonitors.forEach(m => m.primary = false);
+        monitor.primary = true;
+
+        callDbusMethod('ApplyMonitorsConfig', null, this.packToApply(Methods.temporary));
     }
 
     packToApply(method: number): GLib.Variant {

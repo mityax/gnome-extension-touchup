@@ -11,16 +11,22 @@ import {Patch, PatchManager} from "$src/utils/patchManager";
 import TouchUpExtension from "$src/extension";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
-
+import Mtk from "gi://Mtk";
+import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
+import {debounce} from "$src/utils/debounce";
 
 export  type NavbarMode = 'gestures' | 'buttons';
 
-export default class NavigationBarFeature extends ExtensionFeature {
-    declare private currentNavBar: BaseNavigationBar<any>;
-    private declare _mode: NavbarMode;
 
+export default class NavigationBarFeature extends ExtensionFeature {
     readonly onVisibilityChanged = new Signal<boolean>();
-    private removeOskActionPatch: Patch;
+
+    declare private _currentNavBar: BaseNavigationBar<any>;
+    declare private _mode: NavbarMode;
+    private _removeOskActionPatch: Patch;
+    private _updatePrimaryMonitorPatch: Patch;
+    private readonly _debouncedPrimaryMonitorPatchSetActive: (props: {active: boolean, force?: boolean}) => void;
+
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -40,13 +46,19 @@ export default class NavigationBarFeature extends ExtensionFeature {
             this.setMode(mode));
         this.pm.connectTo(settings.navigationBar.alwaysShowOnMonitor, 'changed', () =>
             this._updateVisibility());
+        this.pm.connectTo(settings.navigationBar.primaryMonitorFollowsNavbar, 'changed', (enabled) => {
+            if (!enabled) {
+                this._debouncedPrimaryMonitorPatchSetActive({active: false});
+            }
+            this._updateVisibility();
+        });
         this.pm.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
             if (this._mode === 'gestures') {
-                this.currentNavBar.setReserveSpace(value);
+                this._currentNavBar.setReserveSpace(value);
             }
         });
 
-        this.removeOskActionPatch = this.pm.patch(() => {
+        this._removeOskActionPatch = this.pm.patch(() => {
             let oskAction = global.stage.get_action('osk')!;
             if (oskAction) global.stage.remove_action(oskAction);
 
@@ -55,7 +67,19 @@ export default class NavigationBarFeature extends ExtensionFeature {
             };
         });
 
-        this.setMode(settings.navigationBar.mode.get()).then(() => {});  // builds the appropriate navigation bar
+        this._updatePrimaryMonitorPatch = this._createPrimaryMonitorPatch();
+        // Debounce the primary monitor changes to avoid concurrency issues in rare cases:
+        this._debouncedPrimaryMonitorPatchSetActive = debounce(
+            (props: {active: boolean, force?: boolean}) => {
+                if (props.active) {
+                    this._updatePrimaryMonitorPatch.enable(props.force);
+                } else {
+                    this._updatePrimaryMonitorPatch.disable(props.force);
+                }
+            }, 120);
+
+        // Build the appropriate navigation bar:
+        this.setMode(settings.navigationBar.mode.get()).then(() => {});
     }
 
     async setMode(mode: NavbarMode) {
@@ -64,33 +88,80 @@ export default class NavigationBarFeature extends ExtensionFeature {
         }
 
         this._mode = mode;
-        this.currentNavBar?.destroy();
+        this._currentNavBar?.destroy();
 
         switch (mode) {
             case 'gestures':
-                this.currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
+                this._currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
                 break;
             case 'buttons':
-                this.currentNavBar = new ButtonsNavigationBar();
+                this._currentNavBar = new ButtonsNavigationBar();
                 break;
             default:
                 log(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
                 this._mode = 'gestures';
-                this.currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
+                this._currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
         }
 
         await this._updateVisibility();
 
         this._mode == 'gestures'
-            ? this.removeOskActionPatch.enable()
-            : this.removeOskActionPatch.disable();
+            ? this._removeOskActionPatch.enable()
+            : this._removeOskActionPatch.disable();
     }
 
     get mode(): NavbarMode {
         return this._mode;
     }
 
+    get isVisible(): boolean {
+        return this._currentNavBar?.isVisible ?? false;
+    }
+
     private async _updateVisibility() {
+        let monitorIndex = await this._getNavigationBarTargetMonitor();
+
+        if (monitorIndex != null) {
+            // Update the navbar monitor:
+            this._currentNavBar.setMonitor(monitorIndex);
+
+            // If enabled, make the primary monitor follow the navbar:
+            if (settings.navigationBar.primaryMonitorFollowsNavbar.get()) {
+                this._debouncedPrimaryMonitorPatchSetActive({active: true, force: true});  // `force=true` to enable changing the monitor again if it has already been changed before
+            }
+
+            // Show the navbar if it's not visible already, and trigger signal handlers:
+            if (!this.isVisible) {
+                this._currentNavBar.show();
+                this.onVisibilityChanged.emit(true);
+            }
+
+            // Update style classes to reflect the current state:
+            this._updateGlobalStyleClasses();
+        } else {
+            // If the navbar is visible, hide it and trigger signal handlers:
+            if (this.isVisible) {
+                this._currentNavBar.hide();
+                this.onVisibilityChanged.emit(false);
+            }
+
+            // Restore the original primary monitor if it has been changed before:
+            if (settings.navigationBar.primaryMonitorFollowsNavbar.get()) {
+                this._debouncedPrimaryMonitorPatchSetActive({active: false});
+            }
+
+            // Remove all global style classes:
+            this._removeGlobalStyleClasses();
+        }
+    }
+
+    /**
+     * Finds out whether the navigation bar should currently be visible and, if so, on which monitor
+     * it should be placed.
+     *
+     * Returns `null` if the navigation bar should be hidden and the appropriate monitor index otherwise.
+     */
+    private async _getNavigationBarTargetMonitor() {
         const touchMode = TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive;
         const alwaysShowOnMonitor = settings.navigationBar.alwaysShowOnMonitor.get();
 
@@ -99,30 +170,12 @@ export default class NavigationBarFeature extends ExtensionFeature {
 
         if (alwaysShowOnMonitor && state.monitors.some(m => m.constructMonitorId() === alwaysShowOnMonitor.id)) {
             const monitor = state.monitors.find(m => m.constructMonitorId() === alwaysShowOnMonitor.id)!;
-            monitorIndex =  global.backend.get_monitor_manager().get_monitor_for_connector(monitor.connector);
+            monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitor.connector);
         } else if (touchMode) {
             monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector);
         }
-
-        if (monitorIndex != -1) {
-            this.currentNavBar.setMonitor(monitorIndex);
-            if (!this.isVisible) {
-                this.currentNavBar.show();
-                this.onVisibilityChanged.emit(true);
-            }
-            this.updateGlobalStyleClasses();
-        } else {
-            if (this.isVisible) {
-                this.currentNavBar.hide();
-                this.onVisibilityChanged.emit(false);
-            }
-            this.removeGlobalStyleClasses();
-        }
-    }
-
-
-    get isVisible(): boolean {
-        return this.currentNavBar?.isVisible ?? false;
+ 
+        return monitorIndex === -1 ? null : monitorIndex;
     }
 
     /**
@@ -131,16 +184,16 @@ export default class NavigationBarFeature extends ExtensionFeature {
      * and visibility. This is for example used to move up the dash to make place for the navigation bar
      * below it.
      */
-    private updateGlobalStyleClasses() {
-        this.removeGlobalStyleClasses();
+    private _updateGlobalStyleClasses() {
+        this._removeGlobalStyleClasses();
         Main.layoutManager.uiGroup.add_style_class_name(`touchup-navbar--${this.mode}`);
         Main.layoutManager.uiGroup.add_style_class_name(`touchup-navbar--visible`);
     }
 
     /**
-     * Remove any style class from [Main.layoutManager.uiGroup] that was added by [updateGlobalStyleClasses]
+     * Remove any style class from [Main.layoutManager.uiGroup] that was added by [_updateGlobalStyleClasses]
      */
-    private removeGlobalStyleClasses() {
+    private _removeGlobalStyleClasses() {
         if (Main.layoutManager.uiGroup) {
             Main.layoutManager.uiGroup.styleClass = (Main.layoutManager.uiGroup.styleClass as string)
                 .split(/\s+/)
@@ -149,9 +202,42 @@ export default class NavigationBarFeature extends ExtensionFeature {
         }
     }
 
+    /**
+     * Changes the primary monitor to the given one.
+     *
+     * If the primary monitor is already the target monitor, no display change operation is performed.
+     */
+    private async _setPrimaryMonitor(monitor: Monitor) {
+        if (Main.layoutManager.primaryIndex === monitor.index) return;
+
+        // Note: there's probably a better way to do this - can we rely on the order of the logical monitors?
+        const rect = new Mtk.Rectangle({
+            x: monitor.x,
+            y: monitor.y,
+            width: monitor.width,
+            height: monitor.height,
+        });
+        const state = await DisplayConfigState.getCurrent();
+        const m = state.logicalMonitors.find(m => rect.contains_point(m.x + 1, m.y + 1))!;
+        state.setPrimaryMonitor(m);
+    }
+
+    private _createPrimaryMonitorPatch() {
+        let originalMonitor: Monitor | undefined;
+
+        return this.pm.registerPatch(() => {
+            originalMonitor ??= Main.layoutManager.primaryMonitor!;
+            this._setPrimaryMonitor(this._currentNavBar.monitor);
+            return () => {
+                this._setPrimaryMonitor(originalMonitor!);
+                originalMonitor = undefined;
+            }
+        });
+    }
+
     destroy() {
-        this.removeGlobalStyleClasses()
-        this.currentNavBar?.destroy();
+        this._removeGlobalStyleClasses()
+        this._currentNavBar?.destroy();
         super.destroy();
     }
 }
