@@ -1,0 +1,16 @@
+{
+    "name": "TouchUp [debug]",
+    "description": "Enhances various aspects of the GNOME experience when using a touch device.",
+    "url": "https://github.com/mityax/gnome-extension-touchup",
+    "version-label": "1000.debug",
+    "version": 1000,
+    "uuid": "touchup@mityax",
+    "shell-version": ["48"],
+    "gettext-domain": "touchup",
+    "settings-schema": "org.gnome.shell.extensions.touchup",
+    "donations": {
+        "kofi": "mityax",
+        "patreon": "mityax",
+        "buymeacoffee": "mityax"
+    }
+}

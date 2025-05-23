@@ -1,4 +1,4 @@
-import {dirname, join} from 'path';
+import path, {dirname, join} from 'path';
 import {fileURLToPath} from 'url';
 import * as fs from "fs";
 import typescript from '@rollup/plugin-typescript';
@@ -125,7 +125,11 @@ export default [
 
             copy({
                 targets: [
-                    { src: 'src/metadata.json', dest: outDir },
+                    {
+                        src: `src/${IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json'}`,
+                        dest: outDir,
+                        rename: 'metadata.json'
+                    },
                 ],
             }),
 
