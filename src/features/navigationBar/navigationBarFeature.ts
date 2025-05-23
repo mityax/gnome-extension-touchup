@@ -194,8 +194,8 @@ export default class NavigationBarFeature extends ExtensionFeature {
      * Remove any style class from [Main.layoutManager.uiGroup] that was added by [_updateGlobalStyleClasses]
      */
     private _removeGlobalStyleClasses() {
-        if (Main.layoutManager.uiGroup) {
-            Main.layoutManager.uiGroup.styleClass = (Main.layoutManager.uiGroup.styleClass as string)
+        if (Main.layoutManager.uiGroup.styleClass != null) {
+            Main.layoutManager.uiGroup.styleClass = Main.layoutManager.uiGroup.styleClass
                 .split(/\s+/)
                 .filter(c => !c.startsWith('touchup-navbar--'))
                 .join(' ')
