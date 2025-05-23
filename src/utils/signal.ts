@@ -5,6 +5,7 @@ type HandlerT<T> = (args: T) => void;
 
 export default class Signal<T> {
     private readonly listeners: Map<number, (args: T) => void> = new Map();
+    private _signalIdCounter = 0;
 
     emit(args: T) {
         for (let l of this.listeners.values()) {
@@ -16,8 +17,9 @@ export default class Signal<T> {
     // Add an overload with a dummy signal name to keep this signature compatible with GObjects:
     connect(signal: 'changed' | string, handler: HandlerT<T>): number
     connect(signal: string | HandlerT<T>, handler?: HandlerT<T>): number {
-        assert(signal === 'changed', 'The only supported signal for now is `changed`');
-        let id = Date.now() + Math.random();
+        assert(typeof signal !== 'string' || signal === 'changed', 'The only supported signal for now is `changed`');
+
+        let id = this._signalIdCounter++;
         this.listeners.set(id, handler ?? signal as HandlerT<T>);
         return id;
     }
