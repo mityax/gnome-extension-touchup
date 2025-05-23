@@ -15,7 +15,7 @@ import Mtk from "gi://Mtk";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {debounce} from "$src/utils/debounce";
 
-export  type NavbarMode = 'gestures' | 'buttons';
+export type NavbarMode = 'gestures' | 'buttons';
 
 
 export default class NavigationBarFeature extends ExtensionFeature {
