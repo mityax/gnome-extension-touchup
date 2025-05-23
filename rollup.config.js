@@ -20,16 +20,24 @@ import createZip from "./build_plugins/rollup_plugin_create_zip.js";
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const outDir = 'dist/output'
 
+
+/**
+ * Whether to create a debug or release build
+ */
+const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MODE);
+
+
 /**
  * The extension metadata
  */
-const metadata = JSON.parse(fs.readFileSync(join(rootDir, "src/metadata.json")).toString());
+const metadataFile = join(rootDir, 'src', IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json');
+const metadata = JSON.parse(fs.readFileSync(metadataFile).toString());
 
 // Clear up/remove previous build:
-if (fs.existsSync('dist')) fs.rmSync('dist', { recursive: true });
+if (fs.existsSync('dist')) {
+    fs.rmSync('dist', { recursive: true });
+}
 
-// Whether to strip debugging code out of the build or keep it:
-const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MODE);
 
 
 export default [
@@ -127,7 +135,7 @@ export default [
             copy({
                 targets: [
                     {
-                        src: `src/${IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json'}`,
+                        src: metadataFile,
                         dest: outDir,
                         rename: 'metadata.json'
                     },
