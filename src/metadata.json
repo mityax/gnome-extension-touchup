@@ -2,7 +2,7 @@
     "name": "TouchUp",
     "description": "Enhances various aspects of the GNOME experience when using a touch device.",
     "url": "https://github.com/mityax/gnome-extension-touchup",
-    "version-name": "1.0.0",
+    "version-name": "1.1.0",
     "uuid": "touchup@mityax",
     "shell-version": ["48"],
     "gettext-domain": "touchup",
