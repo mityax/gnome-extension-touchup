@@ -113,14 +113,14 @@ export class DevelopmentTools extends ExtensionFeature {
         if (!watchBaseUrl || !baseDir) return () => {};
 
         this.pm.patch(() => {
-            const source = new EventSource(`${watchBaseUrl}/esbuild`);
-            source.on('change', debounce((data) => {
+            const source = new EventSource(`${watchBaseUrl}/watch`);
+            source.on('reload', debounce((data) => {
                 _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
                     baseUri: `file://${baseDir}`,
                     // `data` is a JSON-string containing info about changed files, e.g.:
-                    //   {"added":[],"removed":[],"updated":["/extension.js"]}
-                    // We're lazy here and just check whether '.js"' is present in that string:
-                    stylesheetsOnly: !/\.js"/.test(data),
+                    //   {"added":[],"removed":[],"updated":["src/extension.ts"]}
+                    // We're lazy here and just check whether '.js"' or '.ts"' is present in that string:
+                    stylesheetsOnly: !/\.[jt]s"/.test(data),
                 }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
             }, 500));
             source.start()

@@ -30,7 +30,7 @@ echo "Build succeeded. Starting Gnome Shell..."
 
 export TOUCHUP_PROJECT_DIR=$projectDir
 if [[ $* == *--watch* ]]; then
-  export TOUCHUP_WATCH_EVENT_URL="http://localhost:9876/"
+  export TOUCHUP_WATCH_EVENT_URL="http://localhost:35729/"
   export TOUCHUP_BUILD_DIRECTORY="$projectDir/dist/output"
 fi
 

@@ -18,6 +18,8 @@ export default function sassWriter({ input, output }) {
     return {
         name: 'sass-writer',
         buildStart() {
+            this.addWatchFile(input);
+
             try {
                 const result = compile(input, {
                     silenceDeprecations: ["import"]

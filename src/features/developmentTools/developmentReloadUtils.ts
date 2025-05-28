@@ -1,10 +1,10 @@
 import Meta from "gi://Meta";
 import Gio from "gi://Gio";
-import {assert, debugLog} from "../../utils/logging";
+import {assert, debugLog} from "$src/utils/logging";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
 import {MessageDialogContent} from "resource:///org/gnome/shell/ui/dialog.js";
 import St from "gi://St";
-import * as Widgets from "../../utils/ui/widgets";
+import * as Widgets from "$src/utils/ui/widgets";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import GObject from "gi://GObject";
