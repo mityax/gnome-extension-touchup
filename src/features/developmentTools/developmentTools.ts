@@ -2,7 +2,7 @@ import {RestartButton} from "$src/features/developmentTools/restartButton";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay";
 import * as Widgets from "$src/utils/ui/widgets";
-import {debugLog, log} from "$src/utils/logging";
+import {debugLog} from "$src/utils/logging";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
@@ -107,13 +107,13 @@ export class DevelopmentTools extends ExtensionFeature {
     }
 
     private _setupLiveReload() {
-        const watchBaseUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
+        const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
         const baseDir = GLib.getenv("TOUCHUP_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
-        if (!watchBaseUrl || !baseDir) return () => {};
+        if (!watchEventUrl || !baseDir) return () => {};
 
         this.pm.patch(() => {
-            const source = new EventSource(`${watchBaseUrl}/watch`);
+            const source = new EventSource(watchEventUrl);
             source.on('reload', debounce((data) => {
                 _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
                     baseUri: `file://${baseDir}`,
@@ -124,8 +124,8 @@ export class DevelopmentTools extends ExtensionFeature {
                 }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
             }, 500));
             source.start()
-                .then(_ => debugLog(`[Live-reload] Connected to ${watchBaseUrl}`))
-                .catch((e) => log("[Live-reload] Failed to start listening to SSE events: ", e));
+                .then(_ => debugLog(`[Live-reload] Connected to ${watchEventUrl}`))
+                .catch((e) => debugLog(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e));
 
             return () => source.close();
         });

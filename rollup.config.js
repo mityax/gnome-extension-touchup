@@ -14,6 +14,9 @@ import disallowImportsPlugin from "./build_plugins/rollup_plugin_disallow_import
 import createZip from "./build_plugins/rollup_plugin_create_zip.js";
 import reloadSSENotifier from "./build_plugins/rollup_plugin_reload_sse_notifier.js";
 import conditional from "rollup-plugin-conditional";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 
 
 /**
@@ -28,16 +31,19 @@ const outDir = 'dist/output'
  */
 const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MODE);
 
+
 /**
  * Whether rollup is running in watch mode
  */
-const IS_WATCH_MODE = process.env.ROLLUP_WATCH;
+const IS_WATCH_MODE = !!process.env.ROLLUP_WATCH || process.argv.includes('-w') || process.argv.includes('--watch');
+
 
 /**
  * The extension metadata
  */
 const metadataFile = path.join(rootDir, 'src', IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json');
 const metadata = JSON.parse(fs.readFileSync(metadataFile).toString());
+
 
 // Clear up/remove previous build:
 if (fs.existsSync('dist')) {
@@ -144,7 +150,9 @@ export default {
         }),
 
         conditional(IS_WATCH_MODE,
-            reloadSSENotifier(),
+            reloadSSENotifier({
+                port: process.env.TOUCHUP_WATCH_PORT ? Number.parseInt(process.env.TOUCHUP_WATCH_PORT) : 35729
+            }),
         ),
     ],
 };

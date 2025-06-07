@@ -23,7 +23,7 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
         if (server) {
             console.log('[sse-build-notifier] Shutting down SSE server...');
             server.close();
-            clients.forEach(res => res.end());
+            server.closeAllConnections();
             clients = [];
             server = null;
             serverStarted = false;
@@ -34,7 +34,6 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
     const setupSignalHandlers = () => {
         const cleanup = () => {
             stopServer();
-            process.exit();
         };
 
         process.once('SIGINT', cleanup);
@@ -75,6 +74,9 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
                 server.listen(port, () => {
                     console.log(`[sse-build-notifier] SSE server running at http://localhost:${port}/watch`);
                 });
+                server.on('error', err => {
+                    console.error(`[sse-build-notifier] SSE server encountered an error: `, err);
+                });
 
                 serverStarted = true;
                 setupSignalHandlers();
@@ -89,7 +91,7 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
                     changedFiles: fileList
                 });
 
-                console.log(`[reload-sse-notifier] Sending reload event to ${clients.length} connected client(s) (changed files: ${fileList.length}`);
+                console.log(`[reload-sse-notifier] Sending reload event to ${clients.length} connected client(s) (changed files: ${fileList.length})`);
 
                 clients.forEach(res => {
                     res.write(`event: reload\n`);
@@ -97,6 +99,8 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
                 });
 
                 changedFiles.clear();
+            } else if (clients.length === 0) {
+                console.log(`[reload-sse-notifier] No client connected; not sending reload event`);
             }
         },
 
