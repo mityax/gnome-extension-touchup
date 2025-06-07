@@ -58,14 +58,14 @@ $light-theme-color: color.adjust(#f6f5f4, $saturation: -100%)
     // Navbar with a transparent background. The pill color by default adjusts to the
     // shell theme brightness, but can be explicitly set using the 'touchup-navbar__pill--dark'
     // or 'touchup-navbar__pill--light' classes:
-    &--transparent
+    &#{$bar}--transparent
         background-color: rgba(0,0,0,0)
 
         #{$pill}
             background-color: $light-theme-color
 
             &--dark
-                background-color: $dark-theme-color !important
+                background-color: $dark-theme-color
 
 
 .touchup-floating-screen-rotation-button

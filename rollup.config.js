@@ -13,7 +13,6 @@ import compileGResources from "./build_plugins/rollup_plugin_compile_gresources.
 import disallowImportsPlugin from "./build_plugins/rollup_plugin_disallow_imports.js";
 import createZip from "./build_plugins/rollup_plugin_create_zip.js";
 import reloadSSENotifier from "./build_plugins/rollup_plugin_reload_sse_notifier.js";
-import conditional from "rollup-plugin-conditional";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -149,10 +148,10 @@ export default {
             zipFilename: `../${metadata.uuid}.zip`,  // relative to `outDir`
         }),
 
-        conditional(IS_WATCH_MODE,
-            reloadSSENotifier({
-                port: process.env.TOUCHUP_WATCH_PORT ? Number.parseInt(process.env.TOUCHUP_WATCH_PORT) : 35729
-            }),
-        ),
-    ],
+        IS_WATCH_MODE
+            ? reloadSSENotifier({
+                  port: process.env.TOUCHUP_WATCH_PORT ? Number.parseInt(process.env.TOUCHUP_WATCH_PORT) : 35729
+              })
+            : null,
+    ].filter(p => p != null),  // filter out `null` to allow conditionals in the list
 };

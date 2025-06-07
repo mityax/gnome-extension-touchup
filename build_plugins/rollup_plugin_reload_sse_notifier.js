@@ -51,6 +51,8 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
 
         buildStart() {
             if (!serverStarted && this.meta.watchMode) {
+                console.log(`[sse-build-notifier] Starting SSE server at http://localhost:${port}/watch`);
+
                 server = http.createServer((req, res) => {
                     if (req.url === '/watch') {
                         res.writeHead(200, {

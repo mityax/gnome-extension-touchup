@@ -30,9 +30,12 @@ very frequently – you can help speed up progress by [donating](#support).
    - [ ] Touchpad two-finger gestures
  - [ ] Add "copy"/"open" button in notifications for elements like 2FA
        codes or links
- - [x] Key popups for the onscreen keyboard
-- [ ] Virtual Touchpad (use device as touchpad when connected to a
-  second monitor) \[WIP]
+ - [x] Onscreen Keyboard (OSK)
+   - [x] Key popups
+   - [ ] Bigger keys
+   - [ ] Compatibility with the "GJS OSK" extension (?)
+ - [ ] Virtual Touchpad (use device as touchpad when connected to a
+   second monitor) \[WIP]
  - [x] Floating temporary screen rotation button when auto-rotation
        is disabled but device is being rotated (as in android)
  - [ ] Pattern unlock
@@ -43,8 +46,9 @@ very frequently – you can help speed up progress by [donating](#support).
    - [ ] Single-finger swipe up/down outside a window to app list/close overview
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
-- [ ] Option to display individual windows instead of workspaces when navigating
-  using gesture navigation bar
+ - [ ] Option to display individual windows instead of workspaces when navigating
+   using gesture navigation bar
+ - [ ] Run arbitrary commands on touch-mode change
 
 Each of these features can be enabled/disabled individually and most can be 
 further customized in the extension settings.
