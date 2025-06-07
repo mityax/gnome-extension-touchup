@@ -39,16 +39,16 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             constraints: [],
             child: new Widgets.Button({
                 child: new Widgets.Icon({
-                    iconName: 'edit-delete-symbolic',
-                    iconSize: 25,
+                    iconName: 'window-close-symbolic',
+                    iconSize: 35,
                     style: css({ color: 'white' }),
                 }),
                 ref: buttonRef,
                 reactive: true,
                 trackHover: true,
                 canFocus: true,
-                x: 25,
-                y: 25,
+                x: 35,
+                y: 35,
                 onClicked: () => {
                     debugLog('Virtual Touchpad Close Button Clicked');
                     this.close();
