@@ -26,10 +26,48 @@ export class NotificationGesturesFeature extends ExtensionFeature {
         super(pm);
         const self = this;
 
-        // Setup listeners for existing notifications and notification groups in the panel:
         this.calendarMessageList = findActorBy(global.stage, a => a.constructor.name == 'CalendarMessageList') as any;
 
-        // Note: [MessageView.messages] actually contains the [NotificationMessageGroup]s
+        this.createMessageTrayPatches(self);
+        this.createMessageListPatches(self);
+    }
+
+    private createMessageTrayPatches(self: this) {
+        // Patch already existing message tray notification:
+        // @ts-ignore
+        if (Main.messageTray._banner !== null) {
+            // @ts-ignore
+            self.unpatchOnTrayClose.push(self.patchNotification(Main.messageTray._banner, true));
+        }
+
+        // Patch future new notifications added to the tray:
+        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_showNotification',
+            function (this: MessageTray.MessageTray & { _banner: NotificationMessage }) {
+                self.unpatchOnTrayClose.push(self.patchNotification(this._banner, true));
+            },
+        );
+
+        // When the tray is hidden, un-patch the message and container to avoid
+        // double callback invocations:
+        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_hideNotification', function () {
+            self.unpatchOnTrayClose.forEach(p => p.disable())
+            self.unpatchOnTrayClose = [];
+        })
+
+        // Patch the message tray `_updateState` function such that it does not expand the banner on hover:
+        this.pm.patchMethod(MessageTray.MessageTray.prototype, '_updateState',
+            function (this: MessageTray.MessageTray & { _banner: NotificationMessage }, orig) {
+                // we achieve this by making it seem to the function that the banner is already expanded:
+                const originalValue = this._banner?.expanded;
+                if (this._banner) this._banner.expanded = true;
+                orig();
+                if (this._banner) this._banner.expanded = originalValue;
+            },
+        );
+    }
+
+    private createMessageListPatches(self: this) {
+        // Setup listeners for existing notification groups in the message list:
         this.calendarMessageList?._messageView.messages.forEach(notificationGroup => {
             // Patch each notification inside the group:
             for (let child of notificationGroup.get_children()) {
@@ -42,36 +80,13 @@ export class NotificationGesturesFeature extends ExtensionFeature {
 
         // New message added to a [NotificationMessageGroup]:
         this.pm.appendToMethod(NotificationMessageGroup.prototype, '_addNotification',
-            function(
-                this: NotificationMessageGroup & {_notificationToMessage: Map<MessageTray.Notification, NotificationMessage>},
+            function (
+                this: NotificationMessageGroup & {
+                    _notificationToMessage: Map<MessageTray.Notification, NotificationMessage>
+                },
                 notification: MessageTray.Notification
             ) {
                 self.patchNotification(this._notificationToMessage.get(notification)!, false);
-            },
-        );
-
-        // New message added to message tray:
-        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_showNotification',
-            function(this: MessageTray.MessageTray & {_banner: NotificationMessage}) {
-                self.unpatchOnTrayClose.push(self.patchNotification(this._banner, true));
-            },
-        );
-
-        // When the notification tray banner is closed, un-patch the message and container
-        // to avoid double callback invocations:
-        this.pm.appendToMethod(MessageTray.MessageTray.prototype, '_hideNotification', function () {
-            self.unpatchOnTrayClose.forEach(p => p.disable())
-            self.unpatchOnTrayClose = [];
-        })
-
-        // Patch the message tray `_updateState` function such that it does not expand the banner on hover:
-        this.pm.patchMethod(MessageTray.MessageTray.prototype, '_updateState',
-            function(this: MessageTray.MessageTray & {_banner: NotificationMessage}, orig) {
-                // we achieve this by making it seem to the function that the banner is already expanded:
-                const originalValue = this._banner?.expanded;
-                if (this._banner) this._banner.expanded = true;
-                orig();
-                if (this._banner) this._banner.expanded = originalValue;
             },
         );
     }
