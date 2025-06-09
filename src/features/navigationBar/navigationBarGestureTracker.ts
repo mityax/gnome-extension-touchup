@@ -3,17 +3,9 @@ import Clutter from "gi://Clutter";
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Shell from "gi://Shell";
-import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {debugLog} from "$src/utils/logging";
-
-
-type _SemanticEvent = {
-    type: 'up' | 'move' | 'down',
-    x: number,
-    y: number,
-    timestamp: number,
-    e: Clutter.Event,
-}
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import St from "gi://St";
 
 
 export class NavigationBarGestureTracker extends Clutter.GestureAction {
@@ -32,7 +24,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
     private _orientation: Clutter.Orientation | null = null;
     declare private _allowedModes: Shell.ActionMode;
 
-    declare private recognizer: GestureRecognizer2D;
+    declare private recognizer: GestureRecognizer;
 
     //@ts-ignore
     _init(allowedModes: Shell.ActionMode = Shell.ActionMode.ALL, nTouchPoints: number = 1, thresholdTriggerEdge: Clutter.GestureTriggerEdge = Clutter.GestureTriggerEdge.AFTER) {
@@ -41,7 +33,9 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         this.set_threshold_trigger_edge(thresholdTriggerEdge);
 
         this._allowedModes = allowedModes;
-        this.recognizer = new GestureRecognizer2D();
+        this.recognizer = new GestureRecognizer({
+            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
+        });
     }
 
     get orientation(): Clutter.Orientation | null {
@@ -73,8 +67,7 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         }
 
         this.emit('begin', time, xPress, yPress);
-        this.recognizer.resetAndStartGesture();
-        this.recognizer.pushEvent(this.get_last_event(0));
+        this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(this.get_last_event(0)));
         return true;
     }
 
@@ -85,21 +78,21 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         let time = this.get_last_event(0).get_time();
 
         this.emit('update', time, initialX - x, initialY - y);
-        this.recognizer.pushEvent(this.get_last_event(0));
+        this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(this.get_last_event(0)));
 
         return true;
     }
 
     vfunc_gesture_end(_actor: Clutter.Actor) {
-        this.recognizer.pushEvent(this.get_last_event(0));
+        const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(this.get_last_event(0)));
 
-        let lastPattern = this.recognizer.getPatterns().at(-1) || null;
+        let lastPattern = state.lastPattern || null;
 
-        debugLog("Full gesture: ", this.recognizer.toString());
+        debugLog("Full gesture: ", state.toString());
         debugLog("Last Pattern: ", lastPattern);
 
         if (lastPattern && lastPattern.type === 'swipe') {
-            this.emit('end', lastPattern.swipeDirection, lastPattern.swipeSpeed);
+            this.emit('end', lastPattern.direction, lastPattern.speed);
         } else {
             this.emit('end', null, null);
         }
@@ -109,6 +102,6 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         let time = Clutter.get_current_event_time();
 
         this.emit('cancel', time);
-        this.recognizer.pushEvent(this.get_last_event(0));
+        this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(this.get_last_event(0)));
     }
 }

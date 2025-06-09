@@ -11,11 +11,12 @@ import {CalendarMessageList} from "resource:///org/gnome/shell/ui/calendar.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 import {Patch, PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer2D} from "$src/utils/ui/gestureRecognizer2D";
 import {findActorBy} from "$src/utils/utils";
 import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import Ref = Widgets.Ref;
+import Stage = Clutter.Stage;
 
 
 export class NotificationGesturesFeature extends ExtensionFeature {
@@ -226,7 +227,7 @@ class SwipeGesturesHelper {
 
     private readonly actor: Clutter.Actor;
     private readonly scrollView?: St.ScrollView;
-    readonly recognizer: GestureRecognizer2D;
+    readonly recognizer: GestureRecognizer;
     private _signalIds: number[];
 
     /**
@@ -270,7 +271,9 @@ class SwipeGesturesHelper {
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
         // Track and recognize touch and mouse events:
-        this.recognizer = new GestureRecognizer2D();
+        this.recognizer = new GestureRecognizer({
+            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor,
+        });
 
         // Setup event handlers:
         this._signalIds = [
@@ -285,33 +288,33 @@ class SwipeGesturesHelper {
     }
 
     private _onEvent(_: Clutter.Actor, e: Clutter.Event) {
-        const prevDeltaY = this.recognizer.totalMotionDelta.y;
+        const prevDeltaY = this.recognizer.currentState.totalMotionDelta.y;
 
-        this.recognizer.pushEvent(e);
+        const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
 
         if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
             e.type() == Clutter.EventType.BUTTON_PRESS) {
             this._updateHover();
         }
 
-        if (this.recognizer.isDuringGesture) {
-            if (this.recognizer.primaryMove?.swipeAxis == 'horizontal') {
-                this.onMoveHorizontally?.(this.recognizer.totalMotionDelta.x);
-            } else if (this.recognizer.primaryMove?.swipeAxis == 'vertical') {
+        if (state.isDuringGesture) {
+            if (state.first('swipe')?.axis === 'horizontal') {
+                this.onMoveHorizontally?.(state.totalMotionDelta.x);
+            } else if (state.first('swipe')?.axis == 'vertical') {
                 // Scroll the message list, if possible:
-                const dy = this.recognizer.totalMotionDelta.y - prevDeltaY;
+                const dy = state.totalMotionDelta.y - prevDeltaY;
                 if (!this.gestureStartedWithLongPress && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
                     this.onScrollScrollView?.(dy);
-                    if (this.recognizer.isCertainlyMovement) {
+                    if (state.isCertainlyMovement) {
                         this.isScrollGesture = true;
                     }
                 } else {
-                    this.onMoveVertically?.(this.recognizer.totalMotionDelta.y)
+                    this.onMoveVertically?.(state.totalMotionDelta.y)
                 }
             }
         }
 
-        if (this.recognizer.gestureHasJustFinished) {
+        if (state.isGestureCompleted) {
             this._onGestureFinished();
             this._updateHover();
             this.isScrollGesture = false;
@@ -319,8 +322,8 @@ class SwipeGesturesHelper {
     }
 
     private _updateHover() {
-        if (this.recognizer.isDuringGesture || (this.actor instanceof St.Widget && this.actor.hover)) {
-            this.onHover?.(this.recognizer.isTouchGesture);
+        if (this.recognizer.currentState.isDuringGesture || (this.actor instanceof St.Widget && this.actor.hover)) {
+            this.onHover?.(this.recognizer.currentState.isTouchGesture);
         } else {
             this.onHoverEnd?.();
         }
@@ -336,29 +339,32 @@ class SwipeGesturesHelper {
         let defaultShouldEaseBack = false;
         let res: SwipeGesturesHelperCallbackFinishedResult = undefined;
 
-        if (this.recognizer.wasTap() || !this.recognizer.isTouchGesture) {
+        if (this.recognizer.currentState.isTap || !this.recognizer.currentState.isTouchGesture) {
             res = this.onActivate?.();
-        } else if (this.recognizer.secondaryMove != null) {
-            switch (this.recognizer.secondaryMove.swipeDirection) {
-                case 'up':
-                    if (this.isScrollGesture)
-                        break;
-                    res = this.onCollapse?.();
-                    defaultShouldEaseBack = true;
-                    break;
-                case 'down':
-                    if (this.isScrollGesture)
-                        break;
-                    res = this.onExpand?.();
-                    defaultShouldEaseBack = true;
-                    break;
-                default:
-                    if (this.recognizer.secondaryMove.swipeDirection == 'right' && this.recognizer.totalMotionDelta.x > 0 ||
-                        this.recognizer.secondaryMove.swipeDirection == 'left' && this.recognizer.totalMotionDelta.x < 0) {
-                        res = this.onClose?.(this.recognizer.secondaryMove.swipeDirection);
-                    } else {
+        } else {
+            const lastSwipe = this.recognizer.currentState.last('swipe');
+            if (lastSwipe != null) {
+                switch (lastSwipe.direction) {
+                    case 'up':
+                        if (this.isScrollGesture)
+                            break;
+                        res = this.onCollapse?.();
                         defaultShouldEaseBack = true;
-                    }
+                        break;
+                    case 'down':
+                        if (this.isScrollGesture)
+                            break;
+                        res = this.onExpand?.();
+                        defaultShouldEaseBack = true;
+                        break;
+                    default:
+                        if (lastSwipe.direction == 'right' && this.recognizer.currentState.totalMotionDelta.x > 0 ||
+                            lastSwipe.direction == 'left' && this.recognizer.currentState.totalMotionDelta.x < 0) {
+                            res = this.onClose?.(lastSwipe.direction);
+                        } else {
+                            defaultShouldEaseBack = true;
+                        }
+                }
             }
         }
 
@@ -368,7 +374,7 @@ class SwipeGesturesHelper {
     }
 
     private get gestureStartedWithLongPress () {
-        return this.recognizer.primaryPattern?.type === 'hold'
+        return this.recognizer.currentState.firstPattern?.type === 'hold'
     };
 
     private canScrollScrollView(direction: 'up' | 'down' | null = null): boolean {
