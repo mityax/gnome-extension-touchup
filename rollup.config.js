@@ -45,8 +45,8 @@ const metadata = JSON.parse(fs.readFileSync(metadataFile).toString());
 
 
 // Clear up/remove previous build:
-if (fs.existsSync('dist')) {
-    fs.rmSync('dist', { recursive: true });
+if (fs.existsSync(outDir)) {
+    fs.rmSync(outDir, { recursive: true });
 }
 
 

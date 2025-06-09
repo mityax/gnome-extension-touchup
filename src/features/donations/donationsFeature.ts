@@ -35,9 +35,6 @@ export default class DonationsFeature extends ExtensionFeature {
     constructor(pm: PatchManager) {
         super(pm);
 
-        // For testing:
-        DEBUG: Delay.s(2).then(_ => this.showDonationNotification());  // TODO: comment out
-
         // Read after a delay to not make this feature slow down startup:
         Delay.ms(700)
             .then(_ => this._initializeInstallationData())
