@@ -2,7 +2,7 @@ import St from "gi://St";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
-import {clamp} from "$src/utils/utils";
+import {clamp, findActorBy} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
@@ -89,39 +89,74 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 col.current!.remove_child(col.current!.get_child_at_index(0)!);
             }
 
+            if (col.current?.get_last_child() != null) {
+                const text = findActorBy(col.current.get_last_child()!,
+                        e => (e as St.Widget).styleClass === 'log-item-text') as Widgets.Label;
+                const counter = findActorBy(col.current.get_last_child()!,
+                        e => (e as St.Widget).styleClass === 'log-item-duplicates-counter') as Widgets.Label;
+
+                if (text.text === t) {
+                    counter.text = `${Number.parseInt(counter.text) + 1}`;
+                    counter.visible = true;
+
+                    return;
+                }
+            }
+
             // Add the log message:
-            col.current?.add_child(new Widgets.Row({
-                xAlign: ActorAlign.FILL,
-                style: css({
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "7px",
-                    padding: "7px",
-                    marginTop: "7px",
-                    fontFamily: "monospace",
-                    fontSize: '9pt',
-                }),
-                children: [
-                    new Widgets.Label({
-                        xExpand: true,
-                        text: t,
-                        onCreated: (l) => {
-                            l.clutterText.lineWrap = true;
-                            l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
-                            l.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
-                            l.clutterText.selectable = true;
-                            l.clutterText.reactive = true;
-                            l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
-                        },
-                    }),
-                    new Widgets.Label({
-                        text: new Date().toLocaleTimeString(),
-                        style: css({ fontSize: '7pt' }),
-                        xAlign: ActorAlign.END,
-                    }),
-                ],
-            }));
+            col.current?.add_child(this._buildNewLogMessage(t));
         });
         this.logDisplays.push(display);
+    }
+
+    private _buildNewLogMessage(t: string) {
+        return new Widgets.Row({
+            xAlign: ActorAlign.FILL,
+            style: css({
+                backgroundColor: "rgba(255,255,255,0.2)",
+                borderRadius: "7px",
+                padding: "7px",
+                marginTop: "7px",
+                fontFamily: "monospace",
+                fontSize: '9pt',
+            }),
+            children: [
+                new Widgets.Label({
+                    xExpand: true,
+                    text: t,
+                    styleClass: 'log-item-text',
+                    onCreated: (l) => {
+                        l.clutterText.lineWrap = true;
+                        l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
+                        l.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
+                        l.clutterText.selectable = true;
+                        l.clutterText.reactive = true;
+                        l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
+                    },
+                }),
+                new Widgets.Label({
+                    text: '1',
+                    styleClass: 'log-item-duplicates-counter',
+                    visible: false,
+                    xAlign: Clutter.ActorAlign.END,
+                    yAlign: Clutter.ActorAlign.START,
+                    style: css({
+                        fontSize: '7pt',
+                        fontWeight: 'bold',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        padding: '1px 5px',
+                        borderRadius: '50px',
+                        marginRight: '5px',
+                    }),
+                }),
+                new Widgets.Label({
+                    text: new Date().toLocaleTimeString(),
+                    style: css({fontSize: '7pt'}),
+                    xAlign: ActorAlign.END,
+                }),
+            ],
+        });
     }
 
     private _onPressed(value: boolean) {
