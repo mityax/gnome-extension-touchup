@@ -4,68 +4,76 @@ import {assert} from "../logging";
 
 const MAX_HOLD_MOVEMENT = 10;  // in logical pixels
 const MIN_HOLD_TIME_US = 500 * 1000;  // in microseconds (1000us = 1ms)
-const SWIPE_ANGLE_CHANGE_TOLERANCE = 80;  // in degrees (0° - 360°)
+const SWIPE_ANGLE_CHANGE_TOLERANCE = 20;  // in degrees (0° - 360°)
 const MIN_SWIPE_DISTANCE = 4;  // in logical pixels
 
 
-export enum GestureRecognizerEventType {
-    start, motion, end
+export enum EventType {
+    start = 's',
+    motion = 'm',
+    end = 'e'
 }
 
 export class GestureRecognizerEvent {
     readonly x: number;
     readonly y: number;
     readonly slot: number;
-    readonly time_us: number;
-    readonly type: GestureRecognizerEventType;
+    readonly timeUS: number;
+    readonly type: EventType;
     readonly isPointerEvent: boolean;
 
-    constructor(props: {x: number, y: number, slot: number, time_us: number, type: GestureRecognizerEventType, isPointerEvent: boolean}) {
+    constructor(props: {x: number, y: number, slot: number, time_us: number, type: EventType, isPointerEvent: boolean}) {
         this.x = props.x;
         this.y = props.y;
         this.slot = props.slot;
-        this.time_us = props.time_us;
+        this.timeUS = props.time_us;
         this.type = props.type;
         this.isPointerEvent = props.isPointerEvent;
     }
 
     static fromClutterEvent(event: Clutter.Event) {
-        let type: GestureRecognizerEventType;
+        let type: EventType;
 
         switch (event.type()) {
             case Clutter.EventType.TOUCH_BEGIN:
             case Clutter.EventType.BUTTON_PRESS:
-                type = GestureRecognizerEventType.start;
+                type = EventType.start;
                 break;
             case Clutter.EventType.TOUCH_UPDATE:
             case Clutter.EventType.MOTION:
-                type = GestureRecognizerEventType.motion;
+                type = EventType.motion;
                 break;
             case Clutter.EventType.TOUCH_END:
             case Clutter.EventType.TOUCH_CANCEL:
             case Clutter.EventType.BUTTON_RELEASE:
-                type = GestureRecognizerEventType.end;
+                type = EventType.end;
                 break;
             default:
                 throw Error(`Unsupported Clutter.EventType: ${event.type()}`);
         }
 
+        const isPointerEvent = [
+            Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
+            Clutter.EventType.MOTION, Clutter.EventType.PAD_BUTTON_PRESS,
+            Clutter.EventType.PAD_BUTTON_RELEASE,
+        ].includes(event.type());
+
         return new GestureRecognizerEvent({
             type,
             x: event.get_coords()[0],
             y: event.get_coords()[1],
-            slot: event.get_event_sequence().get_slot(),
+            slot: isPointerEvent ? -1 : event.get_event_sequence().get_slot(),
             time_us: event.get_time_us(),
-            isPointerEvent: [
-                Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
-                Clutter.EventType.MOTION, Clutter.EventType.PAD_BUTTON_PRESS,
-                Clutter.EventType.PAD_BUTTON_RELEASE,
-            ].includes(event.type()),
+            isPointerEvent,
         });
     }
 
     get coords(): [number, number] {
         return [this.x, this.y];
+    }
+
+    toString(): string {
+        return `<Event '${this.isPointerEvent ? 'pointer-' : ''}${this.type}' at ${this.coords} (slot: ${this.slot})>`;
     }
 }
 
@@ -156,25 +164,11 @@ export class GestureState {
     }
 
     get firstPattern(): Pattern | null {
-        for (let p of this._patternMatchers) {
-            const end = p.matchLeading(this._events);
-            if (end !== null) {
-                return p.constructPattern(this._events.slice(0, end));
-            }
-        }
-
-        return null;
+        return this.patterns.next().value;
     }
 
     get lastPattern(): Pattern | null {
-        for (let p of this._patternMatchers) {
-            const start = p.matchTrailing(this._events);
-            if (start !== null) {
-                return p.constructPattern(this._events.slice(start));
-            }
-        }
-
-        return null;
+        return [...this.patterns].at(-1) ?? null;
     }
 
     first<T extends Pattern['type']>(type: T): Pattern & {type: T} | null {
@@ -203,6 +197,7 @@ export class GestureState {
      * This method will skip any unclassifiable segments within the event sequence.
      */
     get patterns(): Generator<Pattern> {
+        // TODO: cache this
         function* generator(remainingEvents: GestureRecognizerEvent[], matchers: PatternMatcher<any>[]) {
             while(remainingEvents.length > 0) {
                 for (let m of matchers) {
@@ -226,7 +221,7 @@ export class GestureState {
         });
 
         return this.isGestureCompleted
-            && this._events.at(-1)!.time_us - this._events[0].time_us < MIN_HOLD_TIME_US
+            && this._events.at(-1)!.timeUS - this._events[0].timeUS < MIN_HOLD_TIME_US
             && p.matchLeading(this._events) === this._events.length;
     }
 
@@ -250,20 +245,53 @@ export class GestureState {
         return !this._events.some((e) => e.isPointerEvent);
     }
 
-    get fingerCount(): number {
+    get totalFingerCount(): number {
         return _nSlots(this._events);
+    }
+
+    get currentFingerCount(): number {
+        return _eventsBySlots(this.events)
+            .filter(seq => seq.at(-1)!.type !== EventType.end)
+            .length;
     }
 
     /**
      * Retrieve the total motion delta between the first and the last event.
+     *
+     * If multiple touch points where present during this gesture, the largest
+     * motion delta of those individual touch points is returned.
      */
     get totalMotionDelta(): {x: number, y: number} {
-        if (this._events.length < 2) return {x: 0, y: 0};
+        return _eventsBySlots(this._events)
+            .map(seq => {
+                if (seq.length < 2) return {x: 0, y: 0};
+                return {
+                    x: seq.at(-1)!.x - seq[0].x,
+                    y: seq.at(-1)!.y - seq[0].y,
+                };
+            })
+            .reduce((prev, d) => {
+                return Math.hypot(prev.x, prev.y) > Math.hypot(d.x, d.y) ? prev : d;
+            });
+    }
+
+    /**
+     * Returns the current motion delta, that is, the distance in both axes between
+     * the most recent event and the one before it that belongs to the same slot.
+     */
+    get currentMotionDelta(): {x: number, y: number} {
+        if (this.events.length < 2) return {x: 0, y: 0};
+
+        const lastEvent = this._events.at(-1)!;
+        const prevEvent = this._events
+            .findLast(e => e !== lastEvent && e.slot === lastEvent.slot);
+
+        if (!prevEvent) return {x: 0, y: 0};
 
         return {
-            x: this._events.at(-1)!.x - this._events[0].x,
-            y: this._events.at(-1)!.y - this._events[0].y,
-        };
+            x: lastEvent.x - prevEvent.x,
+            y: lastEvent.y - prevEvent.y,
+        }
     }
 
     get events(): GestureRecognizerEvent[] {
@@ -282,7 +310,7 @@ export class GestureState {
      */
     get isGestureCompleted(): boolean {
         return !_eventsBySlots(this._events)
-            .some((seq) => seq.at(-1)!.type !== GestureRecognizerEventType.end);
+            .some((seq) => seq.at(-1)!.type !== EventType.end);
     }
 
     /**
@@ -291,10 +319,32 @@ export class GestureState {
     get isDuringGesture(): boolean {
         return this._events.length > 0 && !this.isGestureCompleted;
     }
+
+    /**
+     * Returns a human-readable representation of the recorded patterns
+     */
+    toString() {
+        let s: string[] = []
+
+        for (let p of this.patterns) {
+            switch (p.type) {
+                case "hold":
+                    s.push(`hold ${(p.durationUS / 1000 / 1000).toFixed(2)}s`);
+                    break;
+                case "swipe":
+                    s.push(`swipe ${p.direction} (${Math.round(p.angle)}°, ${Math.round(p.distance)}px)`)
+            }
+        }
+
+        return `<${this.constructor.name} ` +
+            `(gesture ${this.isDuringGesture ? 'ongoing' : 'completed'}` +
+            `${this.isLongTap ? ', is-long-tap' : this.isTap ? ', is-tap' : ''}) ` +
+            `patterns: [ ${s.join(' • ')} ]>`;
+    }
 }
 
 
-abstract class PatternMatcher<T extends Pattern> {
+export abstract class PatternMatcher<T extends Pattern> {
     readonly scaleFactor: number;
 
     constructor(props: {scaleFactor: number}) {
@@ -325,7 +375,7 @@ abstract class PatternMatcher<T extends Pattern> {
 }
 
 
-class SwipePatternMatcher extends PatternMatcher<SwipePattern> {
+export class SwipePatternMatcher extends PatternMatcher<SwipePattern> {
     matchLeading(events: GestureRecognizerEvent[]): number | null {
         // FIXME: This method does at the moment not properly end the swipe gesture
         //   match when a hold comes after a swipe, i.e. when the movement stops
@@ -336,27 +386,28 @@ class SwipePatternMatcher extends PatternMatcher<SwipePattern> {
         let maxDist: number = 0;
 
         for (let sequence of _eventsBySlots(events)) {
-            let totalAngle = 0;
+            let totalAngle: number | null = null;
 
             for (let i = 1; i < sequence.length; i++) {
+                const dist = _distBetween(sequence[i].coords, sequence[i - 1].coords);
                 const angle = _angleBetween(
                     sequence[i].x - sequence[i - 1].x,
                     sequence[i].y - sequence[i - 1].y,
                 );
-                const avgAngleSoFar = totalAngle / i;
+                const avgAngleSoFar = (totalAngle ?? angle) / i;
 
-                if (Math.abs(avgAngleSoFar - angle) <= SWIPE_ANGLE_CHANGE_TOLERANCE) {
+                if (dist > 1 && Math.abs(_angleDifference(avgAngleSoFar, angle)) > SWIPE_ANGLE_CHANGE_TOLERANCE) {
                     const originalIndex = events.indexOf(sequence[i]);
                     idx = Math.max(idx ?? 0, originalIndex);
-                    maxDist = Math.max(maxDist, _dist(sequence[0].coords, sequence[idx].coords));
+                    maxDist = Math.max(maxDist, _distBetween(sequence[0].coords, sequence[i - 1].coords));
                 }
 
-                totalAngle += angle;
+                totalAngle = totalAngle !== null ? totalAngle + angle : angle;
             }
         }
 
         if (idx != null && maxDist >= MIN_SWIPE_DISTANCE * this.scaleFactor) {
-            return idx + 1;
+            return idx;
         }
 
         return null;
@@ -376,8 +427,8 @@ class SwipePatternMatcher extends PatternMatcher<SwipePattern> {
         for (let sequence of eventsBySlots) {
             dX = Math.max(sequence.at(-1)!.x - sequence[0].x);
             dY = Math.max(sequence.at(-1)!.y - sequence[0].y);
-            durationUS = Math.max(durationUS, sequence.at(-1)!.time_us - sequence[0].time_us);
-            distance = Math.max(distance, _dist(sequence[0].coords, sequence.at(-1)!.coords));
+            durationUS = Math.max(durationUS, sequence.at(-1)!.timeUS - sequence[0].timeUS);
+            distance = Math.max(distance, _distBetween(sequence[0].coords, sequence.at(-1)!.coords));
             angle += _angleBetween(dX, dY);
         }
 
@@ -401,7 +452,7 @@ class SwipePatternMatcher extends PatternMatcher<SwipePattern> {
 }
 
 
-class HoldPatternMatcher extends PatternMatcher<HoldPattern> {
+export class HoldPatternMatcher extends PatternMatcher<HoldPattern> {
     private readonly minTimeUS: number;
 
     constructor(props: {scaleFactor: number, minTimeUS?: number}) {
@@ -414,13 +465,13 @@ class HoldPatternMatcher extends PatternMatcher<HoldPattern> {
 
         for (let sequence of _eventsBySlots(events)) {
             for (let i = 1; i < sequence.length; i++) {
-                if (_dist(sequence[0].coords, sequence[i].coords) < MAX_HOLD_MOVEMENT * this.scaleFactor) {
+                if (_distBetween(sequence[0].coords, sequence[i].coords) < MAX_HOLD_MOVEMENT * this.scaleFactor) {
                     let originalEventIndex = events.indexOf(sequence[i]);
                     idx = Math.max(idx ?? 0, originalEventIndex);
                 }
             }
         }
-        if (idx !== null && events.length > 1 && events.at(idx)!.time_us - events.at(0)!.time_us >= this.minTimeUS) {
+        if (idx !== null && events.length > 1 && events.at(idx)!.timeUS - events.at(0)!.timeUS >= this.minTimeUS) {
             return idx + 1;
         }
         return null;
@@ -433,7 +484,7 @@ class HoldPatternMatcher extends PatternMatcher<HoldPattern> {
             type: 'hold',
             x: events[0].x,
             y: events[0].y,
-            durationUS: events.at(-1)!.time_us - events[0].time_us,
+            durationUS: events.at(-1)!.timeUS - events[0].timeUS,
             fingerCount: _nSlots(events),
         };
     }
@@ -455,13 +506,33 @@ function _nSlots(events: GestureRecognizerEvent[]): number {
     return new Set(events.map((e) => e.slot)).size;
 }
 
-function _dist([x1, y1]: [number, number], [x2, y2]: [number, number]): number {
-    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+function _distBetween([x1, y1]: [number, number], [x2, y2]: [number, number]): number {
+    return Math.hypot((x2 - x1), (y2 - y1));
 }
 
 // up = 0, right = 90, down = 180, left = 270
 function _angleBetween(dx: number, dy: number) {
     return (Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360;
+}
+
+/**
+ * The shortest (signed) distance from a1 to a2, such that:
+ *
+ * ```
+ * a1 + _angleDifference(a1, a2) == a2
+ * ```
+ */
+function _angleDifference(a1: number, a2: number): number {
+    // Make `a` the lesser of (a1, a2) and `b` the greater one:
+    const [a, b] = a1 > a2 ? [a2, a1] : [a1, a2];
+
+    let diff = b - a;
+    if (diff > 180) {
+        diff = 360 - diff;
+        return a1 > a2 ? diff : -diff;
+    } else {
+        return a1 > a2 ? -diff : diff;
+    }
 }
 
 function _directionForAngle(angle: number): Direction {

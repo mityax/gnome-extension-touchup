@@ -4,7 +4,7 @@ import Clutter from "gi://Clutter";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Shell from "gi://Shell";
 import {debugLog} from "$src/utils/logging";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent, SwipePatternMatcher} from "$src/utils/ui/gestureRecognizer";
 import St from "gi://St";
 
 
@@ -33,8 +33,12 @@ export class NavigationBarGestureTracker extends Clutter.GestureAction {
         this.set_threshold_trigger_edge(thresholdTriggerEdge);
 
         this._allowedModes = allowedModes;
+        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         this.recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
+            scaleFactor: sf,
+            patternMatchers: [
+                new SwipePatternMatcher({scaleFactor: sf}),
+            ],
         });
     }
 

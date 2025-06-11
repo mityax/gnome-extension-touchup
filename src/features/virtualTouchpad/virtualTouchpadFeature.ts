@@ -4,7 +4,6 @@ import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
 import * as Widgets from "$src/utils/ui/widgets";
-import {debugLog} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
 import {css} from "$src/utils/ui/css";
@@ -12,6 +11,10 @@ import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
 import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay";
 import Mtk from "gi://Mtk";
 import {clamp} from "$src/utils/utils";
+import {Delay} from "$src/utils/delay";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import GLib from "gi://GLib";
+import Stage = Clutter.Stage;
 
 
 export class VirtualTouchpadFeature extends ExtensionFeature {
@@ -21,13 +24,12 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
     private _cursorOverlay?: CursorOverlay;
     private monitorIndex: number = 0;
 
-
     constructor(pm: PatchManager) {
         super(pm);
 
         const buttonRef = new Widgets.Ref<Widgets.Button>();
 
-        this.actor = new Widgets.Bin({
+        this.actor = new Widgets.Column({
             name: 'touchup-virtual-touchpad',
             visible: false,
             reactive: true,
@@ -37,28 +39,47 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 backgroundColor: 'black',
             }),
             constraints: [],
-            child: new Widgets.Button({
-                child: new Widgets.Icon({
-                    iconName: 'window-close-symbolic',
-                    iconSize: 35,
-                    style: css({ color: 'white' }),
+            children: [
+                new Widgets.Row({
+                    xAlign: Clutter.ActorAlign.START,
+                    yAlign: Clutter.ActorAlign.START,
+                    style: css({ padding: '10px' }),
+                    children: [
+                        new Widgets.Button({
+                            xAlign: Clutter.ActorAlign.START,
+                            child: new Widgets.Icon({
+                                iconName: 'window-close-symbolic',
+                                iconSize: 35,
+                                style: css({ color: 'white' }),
+                            }),
+                            ref: buttonRef,
+                            reactive: true,
+                            trackHover: true,
+                            canFocus: true,
+                            onClicked: () => this.close(),
+                        })
+                    ],
                 }),
-                ref: buttonRef,
-                reactive: true,
-                trackHover: true,
-                canFocus: true,
-                x: 35,
-                y: 35,
-                onClicked: () => {
-                    debugLog('Virtual Touchpad Close Button Clicked');
-                    this.close();
-                },
-            }),
+            ],
         });
-        DEBUG: this.actor.opacity = 0.7 * 255;  // a little transparency in debug mode to see the logs below ;)
         this._setupGestureTracker();
 
+        DEBUG: {
+            // In debug mode, add a little bit of transparency to make the logs below visible:
+            this.actor.opacity = 0.7 * 255;
+
+            // Add an info label to explain the development-specific changes:
+            const label = new Widgets.Label({
+                text: 'Development notice: The touchpad is transparent and, if only one monitor is connected, only ' +
+                    'spans half of the screen in development mode; This is intentional to ease testing.',
+                style: css({ color: 'white', padding: '25px' }),
+            });
+            label.clutterText.lineWrap = true;
+            this.actor.add_child(label);
+        }
+
         this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.updateMonitor());
+
         void this.updateMonitor();
 
         this.pm.patch(() => {
@@ -133,54 +154,64 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             workArea: true,
             index: this.monitorIndex,
         }));
+
+        DEBUG: {
+            // In debug mode, make the touchpad only occupy half the screen if there is no second monitor
+            // connected:
+            if (Main.layoutManager.monitors.length === 1) {
+                this.actor.remove_constraint_by_name('monitor');
+                this.actor.set_position(
+                    Main.layoutManager.monitors[this.monitorIndex].width / 2,
+                    0,
+                );
+                this.actor.set_size(
+                    Main.layoutManager.monitors[this.monitorIndex].width / 2,
+                    Main.layoutManager.monitors[this.monitorIndex].height,
+                );
+            }
+        }
     }
 
     private _setupGestureTracker() {
-        // TODO: implement multi-finger gestures
+        const recognizer = new GestureRecognizer({
+            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor,
+        });
 
-        /*const recognizer = new GestureRecognizer2D();
-        let lastEvent: Clutter.Event | null;
+        let lastPos: [number, number] | null = null;
 
-        this.actor.connect("touch-event", (_, e: Clutter.Event) => {
-            recognizer.pushEvent(e);
+        const onEvent = async (e: Clutter.Event) => {
+            const evt = GestureRecognizerEvent.fromClutterEvent(e);
+            const state = recognizer.push(evt);
 
-            if (recognizer.isDuringGesture && lastEvent) {
-                const [dx, dy] = this._clampMovementToMonitor(
-                    e.get_coords()[0] - lastEvent.get_coords()[0],
-                    e.get_coords()[1] - lastEvent.get_coords()[1],
-                );
-                this._virtualInputDevice.notify_absolute_motion(e.get_time_us(), dx, dy);
+            if (state.gestureHasJustStarted) {
+                lastPos = null;
             }
-            if (recognizer.gestureHasJustFinished && recognizer.isTap()) {
-                this._virtualInputDevice.notify_button(e.get_time_us(), 1, Clutter.ButtonState.PRESSED);
-                this._virtualInputDevice.notify_button(e.get_time_us(), 1, Clutter.ButtonState.RELEASED);
+
+            if (state.isDuringGesture && state.isCertainlyMovement) {
+                if (state.totalFingerCount === 1) {
+                    const d = state.currentMotionDelta;
+                    const [dx, dy] = this._clampMovementToMonitor(d.x, d.y);
+                    lastPos = [dx, dy];
+                    this._virtualInputDevice.notify_absolute_motion(evt.timeUS, dx, dy);
+                } else if (state.totalFingerCount === 2) {
+                    // TODO: support pinch gestures
+
+                    const d = state.currentMotionDelta;
+                    this._virtualInputDevice.notify_scroll_continuous(
+                        evt.timeUS, -d.x, -d.y, Clutter.ScrollSource.FINGER, null
+                    );
+                } else if (state.totalFingerCount === 3) {
+                    // TODO: support workspace & overview gestures
+                }
+            } else if (state.isTap) {
+                this._virtualInputDevice.notify_absolute_motion(evt.timeUS, lastPos![0], lastPos![1]);
+                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.PRESSED);
+                await Delay.ms(100);
+                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.RELEASED);
             }
-            lastEvent = recognizer.gestureHasJustFinished ? null : e;
-        });*/
+        }
 
-        const rotate = new Clutter.RotateAction({nTouchPoints: 2});
-        this.actor.add_action(rotate);
-        rotate.connect("rotate", (_source, actor, angle) => {
-            debugLog("Rotate: ", angle);
-        });
-
-        const zoom = new Clutter.ZoomAction({nTouchPoints: 2});
-        this.actor.add_action(zoom);
-        zoom.connect("zoom", (_source, actor, focal_point, factor) => {
-            debugLog("Zoom: ", factor);
-        });
-
-        /*const swipe = new Clutter.SwipeAction({nTouchPoints: 2});
-        this.actor.add_action(swipe);
-        swipe.connect("swipe", (_source, actor, direction) => {
-            debugLog("Swipe: ", direction);
-        });
-
-        const tap = new Clutter.TapAction({nTouchPoints: 1});
-        this.actor.add_action(tap);
-        tap.connect("tap", (_source, actor) => {
-            debugLog("Tap!");
-        });*/
+        this.actor.connect("touch-event", (_: any, e: Clutter.Event) => onEvent(e));
     }
 
     destroy() {

@@ -6,7 +6,7 @@ import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {NavigationBarGestureTracker} from "../navigationBarGestureTracker";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {debugLog, log} from "$src/utils/logging";
+import {log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
@@ -168,7 +168,6 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 
             // Workspace switching:
             if (direction === 'left' || direction === 'right') {
-                debugLog(`currenWorkspaceProgress=${targetWorkspaceProgress}, change: ${(direction == 'left' ? 0.5 : -0.5)}`)
                 wsController._switchWorkspaceEnd({}, 500, targetWorkspaceProgress + (direction == 'left' ? 0.5 : -0.5));
             } else {
                 wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);

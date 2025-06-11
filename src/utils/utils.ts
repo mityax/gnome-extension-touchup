@@ -12,12 +12,12 @@ export type UnknownClass = Record<string, any>;
  * Recursively walks the topActor's nested children until a child is found that satisfies `test`.
  * If no such child is found, returns `null`
  */
-export function findActorBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor) => boolean): Clutter.Actor | null {
+export function findActorBy<T extends Clutter.Actor>(topActor: T, test: (actor: T) => boolean): T | null {
     for (let child of topActor.get_children()) {
-        if (test(child)) {
-            return child;
+        if (test(child as T)) {
+            return child as T;
         } else if (child.get_n_children()) {
-            let result = findActorBy(child, test);
+            let result = findActorBy(child as T, test);
             if (result) {
                 return result;
             }
