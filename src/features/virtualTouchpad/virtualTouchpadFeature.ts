@@ -205,9 +205,11 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
                 }
             } else if (state.isTap) {
                 this._virtualInputDevice.notify_absolute_motion(evt.timeUS, lastPos![0], lastPos![1]);
-                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.PRESSED);
+
+                const button = state.totalFingerCount === 2 ? Clutter.BUTTON_SECONDARY : Clutter.BUTTON_PRIMARY;
+                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
                 await Delay.ms(100);
-                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.RELEASED);
+                this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
             }
         }
 
