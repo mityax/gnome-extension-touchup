@@ -288,12 +288,9 @@ class SwipeGesturesHelper {
     }
 
     private _onEvent(_: Clutter.Actor, e: Clutter.Event) {
-        const prevDeltaY = this.recognizer.currentState.totalMotionDelta.y;
-
         const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
 
-        if (e.type() == Clutter.EventType.TOUCH_BEGIN ||
-            e.type() == Clutter.EventType.BUTTON_PRESS) {
+        if (state.hasGestureJustStarted) {
             this._updateHover();
         }
 
@@ -302,7 +299,7 @@ class SwipeGesturesHelper {
                 this.onMoveHorizontally?.(state.totalMotionDelta.x);
             } else if (state.first('swipe')?.axis == 'vertical') {
                 // Scroll the message list, if possible:
-                const dy = state.totalMotionDelta.y - prevDeltaY;
+                const dy = state.currentMotionDelta.y;
                 if (!this.gestureStartedWithLongPress && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
                     this.onScrollScrollView?.(dy);
                     if (state.isCertainlyMovement) {
