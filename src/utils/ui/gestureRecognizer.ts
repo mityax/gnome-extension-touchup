@@ -270,9 +270,12 @@ export class GestureState {
                     y: seq.at(-1)!.y - seq[0].y,
                 };
             })
-            .reduce((prev, d) => {
-                return Math.hypot(prev.x, prev.y) > Math.hypot(d.x, d.y) ? prev : d;
-            });
+            .reduce(
+                (prev, d) => {
+                    return Math.hypot(prev.x, prev.y) > Math.hypot(d.x, d.y) ? prev : d;
+                },
+                { x: 0, y: 0 },
+            );
     }
 
     /**
@@ -301,7 +304,7 @@ export class GestureState {
     /**
      * Returns true if the first event has been pushed and no other event is present yet.
      */
-    get gestureHasJustStarted(): boolean {
+    get hasGestureJustStarted(): boolean {
         return this._events.length === 1;
     }
 

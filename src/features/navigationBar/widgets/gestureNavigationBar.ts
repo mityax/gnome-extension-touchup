@@ -1,15 +1,17 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import {IntervalRunner} from "$src/utils/intervalRunner";
-import {clamp, UnknownClass} from "$src/utils/utils";
+import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {NavigationBarGestureTracker} from "../navigationBarGestureTracker";
 import {IdleRunner} from "$src/utils/idleRunner";
 import {log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
+import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import {GestureRecognizer, GestureRecognizerEvent, SwipePatternMatcher} from "$src/utils/ui/gestureRecognizer";
+import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -21,11 +23,13 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
     declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
+    private readonly gestureManager: NavigationBarGestureManager;
 
     constructor({reserveSpace} : {reserveSpace: boolean}) {
         super({ reserveSpace: reserveSpace });
 
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
+        this.gestureManager = new NavigationBarGestureManager(this.actor);
 
         this.onVisibilityChanged.connect('changed', () => this._updateStyleClassIntervalActivity());
         this.onReserveSpaceChanged.connect('changed', (reserveSpace) => {
@@ -42,7 +46,6 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
             trackHover: true,
             canFocus: true,
             layoutManager: new Clutter.BinLayout(),
-            onCreated: (widget) => this._setupGestureTrackerFor(widget),
             onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
             child: this.pill = new Widgets.Bin({  // the navigation bars pill:
                 name: 'touchup-navbar__pill',
@@ -76,128 +79,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         this.pill.set_height(Math.floor(Math.min(height * 0.8, 6 * sf, height - 2)));
     }
 
-    private _setupGestureTrackerFor(actor: Clutter.Actor) {
-        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
-
-        //@ts-ignore
-        const wsController: UnknownClass = Main.wm._workspaceAnimation;
-
-        // TODO: potentially delete the NavigationBarGestureTracker and just use a plain GestureRecognizer2D instead
-
-        const gesture = new NavigationBarGestureTracker();
-        actor.add_action_full('navigation-bar-gesture', Clutter.EventPhase.CAPTURE, gesture as Clutter.Action);
-        gesture.orientation = null; // Clutter.Orientation.HORIZONTAL;
-
-        let baseDistX = 900;
-        let baseDistY = global.screenHeight;
-
-        let initialWorkspaceProgress = 0;
-        let targetWorkspaceProgress = 0;
-        let currentWorkspaceProgress = 0;
-
-        let initialOverviewProgress = 0;
-        let targetOverviewProgress = 0;
-        let currentOverviewProgress = 0;
-
-        let overviewMaxSpeed = 0.005;
-        let workspaceMaxSpeed = 0.0016;
-
-        // This idle runner is responsible for making the actual overview/workspace progress smoothly
-        // follow the according target progress:
-        const idleRunner = new IdleRunner((_, dt) => {
-            dt ??= 0;
-
-            if (Math.abs(targetOverviewProgress - currentWorkspaceProgress) > 5 * overviewMaxSpeed) {
-                let d = targetOverviewProgress - currentOverviewProgress;
-                currentOverviewProgress += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * overviewMaxSpeed);
-                Main.overview._gestureUpdate(gesture, currentOverviewProgress);
-            }
-
-            if (Math.abs(targetWorkspaceProgress - currentWorkspaceProgress) > 5 * workspaceMaxSpeed) {
-                let d = targetWorkspaceProgress - currentWorkspaceProgress;
-                currentWorkspaceProgress += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * workspaceMaxSpeed);
-                wsController._switchWorkspaceUpdate({}, currentWorkspaceProgress);
-            }
-        });
-
-        gesture.connect('begin', (_: any, time: number, xPress: number, yPress: number) => {
-            // Workspace switching:
-            wsController._switchWorkspaceBegin({
-                confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
-                    baseDistX = baseDistance;
-                    initialWorkspaceProgress = currentWorkspaceProgress = targetWorkspaceProgress = progress;
-                }
-            }, this.monitor.index);
-
-            // Overview toggling:
-            Main.overview._gestureBegin({
-                confirmSwipe(baseDistance: number, points: number[], progress: number, cancelProgress: number) {
-                    baseDistY = baseDistance;
-
-                    // The following tenary expression is needed to fix a bug (presumably in Gnome Shell's
-                    // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
-                    // gesture begin, even though the overview is not visible:
-                    initialOverviewProgress = currentOverviewProgress = targetOverviewProgress = Main.overview._visible ? progress : 0;
-                }
-            });
-
-            // Close OSK if it is open:
-            if (Main.keyboard.visible)
-                Main.keyboard._keyboard
-                    ? Main.keyboard._keyboard.close(true)  // close with immediate = true
-                    : Main.keyboard.close();
-
-            idleRunner.start();
-        });
-
-        gesture.connect('update', (_: any, time: number, distX, distY) => {
-            // Workspace switching:
-            targetWorkspaceProgress = initialWorkspaceProgress + distX / baseDistX * 1.6;   // TODO: potential extension setting
-
-            // Overview toggling:
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
-                Main.keyboard._keyboard.gestureProgress(distY / baseDistY);
-            } else {
-                // TODO: potential extension setting:
-                targetOverviewProgress = initialOverviewProgress + distY / (baseDistY * 0.2);  // baseDist ist the whole screen height, which is way too long for our bottom drag gesture, thus we only take a fraction of it
-            }
-        });
-
-        gesture.connect('end', (_: any, direction: string, speed: number) => {
-            idleRunner.stop();
-
-            // Workspace switching:
-            if (direction === 'left' || direction === 'right') {
-                wsController._switchWorkspaceEnd({}, 500, targetWorkspaceProgress + (direction == 'left' ? 0.5 : -0.5));
-            } else {
-                wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
-            }
-
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
-                if (direction == 'up') {
-                    //@ts-ignore
-                    Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
-                }
-            } else {
-                // Overview toggling:
-                if (direction === 'up' || direction === null) {  // `null` means user holds still at the end
-                    Main.overview._gestureEnd({}, 300, clamp(Math.round(targetOverviewProgress), 1, 2));
-                } else {
-                    Main.overview._gestureEnd({}, 300, initialOverviewProgress);
-                }
-            }
-        });
-
-        gesture.connect('gesture-cancel', (_gesture) => {
-            idleRunner.stop();
-
-            wsController._switchWorkspaceEnd({}, 500, initialWorkspaceProgress);
-            if (Main.keyboard._keyboard && gesture.get_press_coords(0)[0] < LEFT_EDGE_OFFSET * scaleFactor) {
-                Main.keyboard._keyboard.gestureCancel();
-            } else {
-                Main.overview._gestureEnd({}, 300, 0);
-            }
-        })
+    setMonitor(monitorIndex: number) {
+        super.setMonitor(monitorIndex);
+        this.gestureManager.setMonitor(monitorIndex);
     }
 
     private async updateStyleClasses() {
@@ -340,6 +224,112 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 }
 
 
+class NavigationBarGestureManager {
+    private controller: OverviewAndWorkspaceGestureController;
+    private recognizer: GestureRecognizer;
+    private idleRunner: IdleRunner;
+
+    private targetWorkspaceProgress: number | null = 0;
+    private targetOverviewProgress: number | null = null;
+
+    private readonly overviewMaxSpeed = 0.005;
+    private readonly workspaceMaxSpeed = 0.0016;
+    private readonly scaleFactor: number;
+
+    constructor(private actor: Clutter.Actor, private monitor?: Monitor) {
+        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+
+        this.controller = new OverviewAndWorkspaceGestureController({
+            monitorIndex: monitor?.index ?? Main.layoutManager.primaryIndex,
+        });
+
+        this.recognizer = new GestureRecognizer({
+            scaleFactor: this.scaleFactor,
+            patternMatchers: [ new SwipePatternMatcher({ scaleFactor: this.scaleFactor }) ],
+        });
+
+        this.idleRunner = new IdleRunner((_, dt) => this.onIdleRun(dt ?? undefined));
+
+        this.actor.connect('touch-event', (_, e) => this.onTouchEvent(e));
+        this.actor.connect('destroy', () => this.idleRunner.stop());
+    }
+
+    private onTouchEvent(e: Clutter.Event) {
+        const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
+        const totalMotionDelta = state.totalMotionDelta;
+
+        if (state.hasGestureJustStarted) {
+            this.controller.gestureBegin();
+            this.targetOverviewProgress = this.controller.initialOverviewProgress;
+            this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress;
+            this.idleRunner.start();
+        }
+
+        if (state.isDuringGesture) {
+            this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress
+                - (totalMotionDelta.x / this.controller.baseDistX) * 1.6;
+
+            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                Main.keyboard._keyboard.gestureProgress(-totalMotionDelta.y / this.controller.baseDistY);
+            } else {
+                this.targetOverviewProgress = this.controller.initialOverviewProgress
+                    + (-totalMotionDelta.y / (this.controller.baseDistY * 0.2));
+            }
+        } else if (state.isGestureCompleted) {
+            this.idleRunner.stop();
+
+            const direction = state.last('swipe')?.direction ?? null;
+
+            if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                //@ts-ignore
+                Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
+                this.controller.gestureEnd({ direction: null });
+            } else {
+                this.controller.gestureEnd({ direction });
+            }
+
+            this.targetOverviewProgress = null;
+            this.targetWorkspaceProgress = null;
+        }
+
+        if (Main.keyboard.visible) {
+            Main.keyboard._keyboard
+                ? Main.keyboard._keyboard.close(true)
+                : Main.keyboard.close();
+        }
+    }
+
+    private onIdleRun(dt: number = 0) {
+        let overviewProg = this.controller.currentOverviewProgress;
+        let workspaceProg = this.controller.currentWorkspaceProgress;
+
+        if (this.targetOverviewProgress !== null
+            && Math.abs(this.targetOverviewProgress - overviewProg) > 5 * this.overviewMaxSpeed) {
+            let d = this.targetOverviewProgress - overviewProg;
+            overviewProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * this.overviewMaxSpeed);
+        }
+
+        if (this.targetWorkspaceProgress !== null
+            && Math.abs(this.targetWorkspaceProgress - workspaceProg) > 5 * this.workspaceMaxSpeed) {
+            let d = this.targetWorkspaceProgress - workspaceProg;
+            workspaceProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * this.workspaceMaxSpeed);
+        }
+
+        this.controller.gestureUpdate({
+            overviewProgress: overviewProg - this.controller.initialOverviewProgress,
+            workspaceProgress: workspaceProg - this.controller.initialWorkspaceProgress,
+        });
+    }
+
+    setMonitor(monitorIndex: number) {
+        this.controller.monitorIndex = monitorIndex;
+    }
+}
+
+
+
+
+
 // Note: these are potentially needed for some of the approaches in `updatePillBrightness`, should
 // they work one day:
 //
@@ -360,5 +350,3 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 //     }
 // }
 //
-
-
