@@ -263,6 +263,16 @@ class NavigationBarGestureManager {
             this.targetOverviewProgress = this.controller.initialOverviewProgress;
             this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress;
             this.idleRunner.start();
+
+            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+                Main.keyboard._keyboard.gestureBegin();
+            }
+
+            if (Main.keyboard.visible) {
+                Main.keyboard._keyboard
+                    ? Main.keyboard._keyboard.close(true)
+                    : Main.keyboard.close();
+            }
         }
 
         if (state.isDuringGesture) {
@@ -290,12 +300,6 @@ class NavigationBarGestureManager {
 
             this.targetOverviewProgress = null;
             this.targetWorkspaceProgress = null;
-        }
-
-        if (Main.keyboard.visible) {
-            Main.keyboard._keyboard
-                ? Main.keyboard._keyboard.close(true)
-                : Main.keyboard.close();
         }
     }
 
