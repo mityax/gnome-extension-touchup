@@ -26,6 +26,10 @@ export default class OverviewAndWorkspaceGestureController {
         this._monitorIndex = props?.monitorIndex;
     }
 
+    /**
+     * This function is optional; if it has not been called before `gestureUpdate` the gesture
+     * will begin automatically.
+     */
     gestureBegin() {
         this.gestureUpdate({overviewProgress: 0, workspaceProgress: 0});
     }
@@ -72,20 +76,24 @@ export default class OverviewAndWorkspaceGestureController {
     }
 
     gestureEnd(props: {direction: 'left' | 'right' | 'up' | 'down' | null}) {
-        // Workspace switching:
-        if (props.direction === 'left' || props.direction === 'right') {
-            this._wsController._switchWorkspaceEnd({}, 500, this._currentWorkspaceProgress + (props.direction == 'left' ? 0.5 : -0.5));
-        } else {
-            this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress));
+        // Overview toggling:
+        if (this._isOverviewGestureRunning) {
+            if (props.direction === 'up') {  // `null` means user holds still at the end
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.1), 1, 2));
+            } else if (props.direction === 'down') {
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.1), 0, 1));
+            } else {
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
+            }
         }
 
-        // Overview toggling:
-        if (props.direction === 'up') {  // `null` means user holds still at the end
-            Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.1), 1, 2));
-        } else if (props.direction === 'down') {
-            Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.1), 0, 1));
-        } else {
-            Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
+        // Workspace switching:
+        if (this._isWorkspaceGestureRunning) {
+            if (props.direction === 'left' || props.direction === 'right') {
+                this._wsController._switchWorkspaceEnd({}, 500, this._currentWorkspaceProgress + (props.direction == 'left' ? 0.5 : -0.5));
+            } else {
+                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress));
+            }
         }
 
         this._isOverviewGestureRunning = false;

@@ -50,11 +50,7 @@ export class GestureRecognizerEvent {
                 throw Error(`Unsupported Clutter.EventType: ${event.type()}`);
         }
 
-        const isPointerEvent = [
-            Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
-            Clutter.EventType.MOTION, Clutter.EventType.PAD_BUTTON_PRESS,
-            Clutter.EventType.PAD_BUTTON_RELEASE,
-        ].includes(event.type());
+        const isPointerEvent = GestureRecognizerEvent.isPointer(event);
 
         return new GestureRecognizerEvent({
             type,
@@ -72,6 +68,21 @@ export class GestureRecognizerEvent {
 
     toString(): string {
         return `<Event '${this.isPointerEvent ? 'pointer-' : ''}${this.type}' at ${this.coords} (slot: ${this.slot})>`;
+    }
+
+    static isPointer(event: Clutter.Event) {
+        return [
+            Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
+            Clutter.EventType.MOTION, Clutter.EventType.PAD_BUTTON_PRESS,
+            Clutter.EventType.PAD_BUTTON_RELEASE,
+        ].includes(event.type());
+    }
+
+    static isTouch(event: Clutter.Event) {
+        return [
+            Clutter.EventType.TOUCH_BEGIN, Clutter.EventType.TOUCH_UPDATE,
+            Clutter.EventType.TOUCH_END, Clutter.EventType.TOUCH_CANCEL,
+        ].includes(event.type());
     }
 }
 

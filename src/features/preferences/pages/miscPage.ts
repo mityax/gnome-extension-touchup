@@ -28,6 +28,20 @@ export class MiscPage extends Adw.PreferencesPage {
             ]
         }));
 
+        BETA: this.add(buildPreferencesGroup({
+            title: "Overview Gestures",
+            description: "Overview gestures contain nuanced improvements to the touch-interaction with " +
+                "the opened overview. For example: swipe-close the overview, allow starting swiping also " +
+                "on application icons.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable Overview Gestures",
+                    subtitle: "Toggle to enable or disable the overview gestures feature",
+                    setting: settings.notificationGestures.enabled
+                })
+            ]
+        }));
+
         this.add(buildPreferencesGroup({
             title: "Floating Screen Rotate Button",
             description: "When auto-rotate is off, rotating your device triggers a temporary floating button in the " +

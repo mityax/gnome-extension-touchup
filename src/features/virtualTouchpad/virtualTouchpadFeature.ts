@@ -252,7 +252,7 @@ class _TouchPadActor extends Widgets.Column {
                 const d = state.totalMotionDelta;
                 this.overviewAndWorkspaceController.gestureUpdate({
                     overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.35),
-                    workspaceProgress: -d.x / this.overviewAndWorkspaceController.baseDistX * 1.6,
+                    workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
                 });
             }
         } else if (state.isTap) {

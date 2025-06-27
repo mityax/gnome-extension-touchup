@@ -15,6 +15,7 @@ import {settings} from "$src/settings";
 import Gio from "gi://Gio";
 import DonationsFeature from "$src/features/donations/donationsFeature";
 import {TouchModeService} from "$src/services/touchModeService";
+import {OverviewGesturesFeature} from "$src/features/overviewGestures/overviewGesturesFeature";
 
 export default class TouchUpExtension extends Extension {
     static instance?: TouchUpExtension;
@@ -89,6 +90,18 @@ export default class TouchUpExtension extends Extension {
             settings.navigationBar.enabled,
         );
 
+        BETA: this.defineFeature(
+            'overview-gestures',
+            pm => new OverviewGesturesFeature(pm),
+            settings.overviewGestures.enabled,
+        )
+
+        this.defineFeature(
+            'notification-gestures',
+            pm => new NotificationGesturesFeature(pm),
+            settings.notificationGestures.enabled,
+        );
+
         this.defineFeature(
             'osk-key-popups',
             pm => new OskKeyPopupsFeature(pm),
@@ -99,12 +112,6 @@ export default class TouchUpExtension extends Extension {
             'floating-screen-rotate-button',
             pm => new FloatingScreenRotateButtonFeature(pm),
             settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
-        );
-
-        this.defineFeature(
-            'notification-gestures',
-            pm => new NotificationGesturesFeature(pm),
-            settings.notificationGestures.enabled,
         );
 
         BETA: this.defineFeature(

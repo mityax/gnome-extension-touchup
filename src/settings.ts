@@ -93,6 +93,13 @@ export const settings = {
             ["workspace-previous", "workspace-next", "spacer", "apps", "overview", "back"]),
     },
 
+    overviewGestures: {
+        /**
+         * Whether to enable the overview gestures feature or not.
+         */
+        enabled: new BoolSetting('overview-gestures-enabled', true),
+    },
+
     oskKeyPopups: {
         /**
          * Whether to enable the OSK key popup feature or not.
