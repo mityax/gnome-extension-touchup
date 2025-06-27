@@ -38,6 +38,11 @@ const IS_WATCH_MODE = !!process.env.ROLLUP_WATCH || process.argv.includes('-w') 
 
 
 /**
+ * Whether to preserve modules or bundle all JS
+ */
+const PRESERVE_MODULES = !IS_WATCH_MODE && process.env.BUNDLE_JS !== 'true';
+
+/**
  * The extension metadata
  */
 const metadataFile = path.join(rootDir, 'src', IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json');
@@ -61,7 +66,7 @@ export default {
     external: [/gi:\/\/.*/, /resource:\/\/.*/],
     output: {
         dir: outDir,
-        preserveModules: !IS_WATCH_MODE,
+        preserveModules: PRESERVE_MODULES,
     },
     plugins: [
         nodeResolve({

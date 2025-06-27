@@ -12,6 +12,7 @@ import PolicyType = St.PolicyType;
 
 
 export const PROJECT_DIR  = GLib.getenv('TOUCHUP_PROJECT_DIR');
+export const BUILD_OUTPUT_DIR = GLib.getenv("TOUCHUP_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
 
 export function _restartShell() {
@@ -110,16 +111,22 @@ export async function _hotReloadExtension(extensionUuid: string, config?: { base
 }
 
 
-export async function _rebuildExtension(showDialogOnError: boolean = true) {
+export async function _rebuildExtension(opts: {showDialogOnError: boolean, buildForHotReload: boolean}) {
     try {
         const launcher = new Gio.SubprocessLauncher({
             flags: Gio.SubprocessFlags.STDIN_PIPE |
                 Gio.SubprocessFlags.STDOUT_PIPE |
                 Gio.SubprocessFlags.STDERR_PIPE,
         });
-        debugLog("Rebuilding extension, cwd: ", PROJECT_DIR);
         launcher.set_cwd(PROJECT_DIR!);
-        const proc = launcher.spawnv(['npm', 'run', 'enable']);
+
+        if (opts.buildForHotReload) {
+            launcher.setenv('BUNDLE_JS', 'true', true);
+        }
+
+        debugLog("Rebuilding extension, cwd: ", PROJECT_DIR);
+
+        const proc = launcher.spawnv(['npm', 'run', opts.buildForHotReload ? 'build' : 'enable']);
         // @ts-ignore
         const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 
@@ -128,7 +135,7 @@ export async function _rebuildExtension(showDialogOnError: boolean = true) {
         if (!proc.get_successful()) {
             debugLog(`Build failed.\n\nstdout:\n${stdout}"\n\nstderr:\n${stderr}`)
 
-            if (showDialogOnError) {
+            if (opts.showDialogOnError) {
                 _showBuildFailedDialog(proc.get_exit_status(), stdout, stderr);
             }
 

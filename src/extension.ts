@@ -28,6 +28,8 @@ export default class TouchUpExtension extends Extension {
         debugLog("*************************************************")
         debugLog()
 
+        TouchUpExtension.instance = this;
+
         // This is the root patch manager of which all other patch managers are descendents:
         this.pm = new PatchManager("root");
 
@@ -43,8 +45,6 @@ export default class TouchUpExtension extends Extension {
             initSettings(this.getSettings());
             return () => uninitSettings();
         }, 'init-settings')
-
-        TouchUpExtension.instance = this;
 
         // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
         // features need to work):

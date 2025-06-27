@@ -11,7 +11,7 @@ import TouchUpExtension from "$src/extension";
 import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton";
 import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource";
-import {_hotReloadExtension} from "$src/features/developmentTools/developmentReloadUtils";
+import {_hotReloadExtension, BUILD_OUTPUT_DIR} from "$src/features/developmentTools/developmentReloadUtils";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
 import {debounce} from "$src/utils/debounce";
@@ -79,10 +79,6 @@ export class DevelopmentTools extends ExtensionFeature {
         ];
     }
 
-    get enforceTouchMode(): boolean {
-        return this._persistedState.enforceTouchMode;
-    }
-
     private _setupDevToolBar() {
         this.pm.patch(() => {
             const box = new Widgets.Row({
@@ -108,15 +104,14 @@ export class DevelopmentTools extends ExtensionFeature {
 
     private _setupLiveReload() {
         const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
-        const baseDir = GLib.getenv("TOUCHUP_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
-        if (!watchEventUrl || !baseDir) return () => {};
+        if (!watchEventUrl || !BUILD_OUTPUT_DIR) return () => {};
 
         this.pm.patch(() => {
             const source = new EventSource(watchEventUrl);
             source.on('reload', debounce((data) => {
                 _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
-                    baseUri: `file://${baseDir}`,
+                    baseUri: `file://${BUILD_OUTPUT_DIR}`,
                     // `data` is a JSON-string containing info about changed files, e.g.:
                     //   {"added":[],"removed":[],"updated":["src/extension.ts"]}
                     // We're lazy here and just check whether '.js"' or '.ts"' is present in that string:

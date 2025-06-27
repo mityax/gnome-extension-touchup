@@ -9,6 +9,7 @@ import {IntervalRunner} from "$src/utils/intervalRunner";
 import {
     _hotReloadExtension,
     _rebuildExtension,
+    BUILD_OUTPUT_DIR,
     PROJECT_DIR
 } from "$src/features/developmentTools/developmentReloadUtils";
 import {debugLog} from "$src/utils/logging";
@@ -43,13 +44,18 @@ export class HotReloadButton extends DevToolButton {
         let res = true;
         this.icon.opacity = 128;
         try {
-            if (PROJECT_DIR) {
-                res = await this._withAnimatedIcon(() => _rebuildExtension());
+            if (PROJECT_DIR && BUILD_OUTPUT_DIR) {
+                res = await this._withAnimatedIcon(() => _rebuildExtension({
+                    buildForHotReload: true,
+                    showDialogOnError: true,
+                }));
             }
             this.icon.opacity = 255;
 
             if (res) {
-                await _hotReloadExtension(this.extensionUuid);
+                await _hotReloadExtension(this.extensionUuid, {
+                    baseUri: `file://${BUILD_OUTPUT_DIR}`,
+                });
             }
         } catch (e) {
             debugLog("Error during hot reloading or building: ", e);

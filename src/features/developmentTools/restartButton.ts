@@ -34,7 +34,10 @@ export class RestartButton extends DevToolButton {
         let res = true;
         this.icon.opacity = 128;
         if (PROJECT_DIR) {
-            res = await this._withAnimatedIcon(() => _rebuildExtension());
+            res = await this._withAnimatedIcon(() => _rebuildExtension({
+                buildForHotReload: false,
+                showDialogOnError: true,
+            }));
         }
         this.icon.opacity = 255;
 

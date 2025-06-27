@@ -29,9 +29,10 @@ printf "\n\n"
 echo "Build succeeded. Starting Gnome Shell..."
 
 export TOUCHUP_PROJECT_DIR=$projectDir
+export TOUCHUP_BUILD_DIRECTORY="$projectDir/dist/output"
+
 if [[ $* == *--watch* ]]; then
   export TOUCHUP_WATCH_EVENT_URL="http://localhost:${TOUCHUP_WATCH_PORT:-35729}/watch"
-  export TOUCHUP_BUILD_DIRECTORY="$projectDir/dist/output"
 fi
 
 if [[ $* == *--tty* ]]; then
