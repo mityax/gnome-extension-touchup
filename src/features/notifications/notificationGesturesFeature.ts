@@ -295,12 +295,12 @@ class SwipeGesturesHelper {
         }
 
         if (state.isDuringGesture) {
-            if (state.first('swipe')?.axis === 'horizontal') {
+            if (state.firstMotionDirection?.axis === 'horizontal') {
                 this.onMoveHorizontally?.(state.totalMotionDelta.x);
-            } else if (state.first('swipe')?.axis == 'vertical') {
+            } else if (state.firstMotionDirection?.axis == 'vertical') {
                 // Scroll the message list, if possible:
                 const dy = state.currentMotionDelta.y;
-                if (!this.gestureStartedWithLongPress && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
+                if (!state.startsWithHold && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
                     this.onScrollScrollView?.(dy);
                     if (state.isCertainlyMovement) {
                         this.isScrollGesture = true;
@@ -311,7 +311,7 @@ class SwipeGesturesHelper {
             }
         }
 
-        if (state.isGestureCompleted) {
+        if (state.hasGestureJustEnded) {
             this._onGestureFinished();
             this._updateHover();
             this.isScrollGesture = false;
@@ -339,9 +339,9 @@ class SwipeGesturesHelper {
         if (this.recognizer.currentState.isTap || !this.recognizer.currentState.isTouchGesture) {
             res = this.onActivate?.();
         } else {
-            const lastSwipe = this.recognizer.currentState.last('swipe');
-            if (lastSwipe != null) {
-                switch (lastSwipe.direction) {
+            const lastMotion = this.recognizer.currentState.lastMotionDirection;
+            if (lastMotion != null) {
+                switch (lastMotion.direction) {
                     case 'up':
                         if (this.isScrollGesture)
                             break;
@@ -355,9 +355,9 @@ class SwipeGesturesHelper {
                         defaultShouldEaseBack = true;
                         break;
                     default:
-                        if (lastSwipe.direction == 'right' && this.recognizer.currentState.totalMotionDelta.x > 0 ||
-                            lastSwipe.direction == 'left' && this.recognizer.currentState.totalMotionDelta.x < 0) {
-                            res = this.onClose?.(lastSwipe.direction);
+                        if (lastMotion.direction == 'right' && this.recognizer.currentState.totalMotionDelta.x > 0 ||
+                            lastMotion.direction == 'left' && this.recognizer.currentState.totalMotionDelta.x < 0) {
+                            res = this.onClose?.(lastMotion.direction);
                         } else {
                             defaultShouldEaseBack = true;
                         }
@@ -369,10 +369,6 @@ class SwipeGesturesHelper {
             this.onEaseBackPosition?.();
         }
     }
-
-    private get gestureStartedWithLongPress () {
-        return this.recognizer.currentState.firstPattern?.type === 'hold'
-    };
 
     private canScrollScrollView(direction: 'up' | 'down' | null = null): boolean {
         if (!this.scrollView?.get_vscrollbar_visible()) return false;

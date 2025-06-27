@@ -231,7 +231,8 @@ class _TouchPadActor extends Widgets.Column {
         const state = this._recognizer.push(evt);
 
         if (state.hasGestureJustStarted) {
-            this._lastPos = null;
+            const [x, y, _] = global.get_pointer();
+            this._lastPos = [x, y];
         }
 
         if (state.isDuringGesture && state.isCertainlyMovement) {
@@ -263,8 +264,8 @@ class _TouchPadActor extends Widgets.Column {
             this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
         }
 
-        if (state.isGestureCompleted && state.totalFingerCount === 3) {
-            const d = state.last('swipe');
+        if (state.hasGestureJustEnded && state.totalFingerCount === 3) {
+            const d = state.lastMotionDirection;
             this.overviewAndWorkspaceController.gestureEnd({
                 direction: d?.direction ?? null,
             });

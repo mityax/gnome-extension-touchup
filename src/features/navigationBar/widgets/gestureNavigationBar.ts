@@ -5,12 +5,12 @@ import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {log} from "$src/utils/logging";
+import {debugLog, log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
-import {GestureRecognizer, GestureRecognizerEvent, SwipePatternMatcher} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 
 
@@ -245,7 +245,6 @@ class NavigationBarGestureManager {
 
         this.recognizer = new GestureRecognizer({
             scaleFactor: this.scaleFactor,
-            patternMatchers: [ new SwipePatternMatcher({ scaleFactor: this.scaleFactor }) ],
         });
 
         this.idleRunner = new IdleRunner((_, dt) => this.onIdleRun(dt ?? undefined));
@@ -285,10 +284,12 @@ class NavigationBarGestureManager {
                 this.targetOverviewProgress = this.controller.initialOverviewProgress
                     + (-totalMotionDelta.y / (this.controller.baseDistY * 0.2));
             }
-        } else if (state.isGestureCompleted) {
+        } else if (state.hasGestureJustEnded) {
             this.idleRunner.stop();
 
-            const direction = state.last('swipe')?.direction ?? null;
+            const direction = state.lastMotionDirection?.direction ?? null;
+
+            debugLog("Last motion direction: ", state.lastMotionDirection);
 
             if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
                 //@ts-ignore
