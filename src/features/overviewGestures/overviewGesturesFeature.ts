@@ -155,6 +155,9 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                         this.overviewAndWorkspaceController.gestureEnd({
                             direction: _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
                         });
+                    } else if (state.isTap) {
+                        // @ts-ignore
+                        windowPreview._activate();
                     }
 
                     decidedOnGesture = null;
