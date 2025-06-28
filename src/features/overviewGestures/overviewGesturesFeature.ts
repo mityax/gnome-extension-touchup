@@ -218,7 +218,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             let windowsVisible = Main.sessionMode.hasWindows && !this._inOverview;
 
             global.window_group.opacity = windowsVisible ? 255 : 0;  // <-- this is the only changed line
-            // global.window_group.visible = windowsVisible;  // <-- This was the original line
+            // global.window_group.visible = windowsVisible;         // <-- This was the original line
 
             global.top_window_group.visible = windowsVisible;
             this._trackedActors.forEach(this._updateActorVisibility.bind(this));
