@@ -265,9 +265,8 @@ class _TouchPadActor extends Widgets.Column {
         }
 
         if (state.hasGestureJustEnded && state.totalFingerCount === 3) {
-            const d = state.lastMotionDirection;
             this.overviewAndWorkspaceController.gestureEnd({
-                direction: d?.direction ?? null,
+                direction: state.lastMotionDirection?.direction ?? null,
             });
         }
     }

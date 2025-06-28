@@ -2,7 +2,7 @@ import GObject from "gi://GObject";
 //@ts-ignore
 import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
-import {assert, debugLog} from "$src/utils/logging";
+import {assert, debugLog, repr} from "$src/utils/logging";
 import {Ref} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 
@@ -81,6 +81,18 @@ export class PatchManager {
             const signalId = instance.connect(signal, handler);
             return () => instance.disconnect(signalId);
         }, debugName ?? `connectTo(${instance.constructor.name}:${signal})`);
+    }
+
+    /**
+     * Set an objects property to a certain value and automatically reset it to the original value upon
+     * [PatchManager] destruction or disabling.
+     */
+    setProperty<A extends object, P extends keyof A>(o: A, prop: P, value: A[P], debugName?: string) {
+        return this.patch(() => {
+            const originalValue = o[prop];
+            o[prop] = value;
+            return () => o[prop] = originalValue;
+        }, debugName ?? `setProperty(${o.constructor?.name ?? repr(o)}, '${prop.toString()}', ${repr(value)})`);
     }
 
     /**

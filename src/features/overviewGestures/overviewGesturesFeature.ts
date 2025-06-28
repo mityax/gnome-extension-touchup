@@ -9,26 +9,24 @@ import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspa
 import {Workspace} from "@girs/gnome-shell/ui/workspace";
 import {WindowPreview} from "@girs/gnome-shell/ui/windowPreview";
 import Graphene from "gi://Graphene";
+import {BackgroundManager} from "@girs/gnome-shell/ui/background";
+import {LayoutManager} from "@girs/gnome-shell/ui/layout";
 
 
 export class OverviewGesturesFeature extends ExtensionFeature {
-    private overviewActor: any;
-    private controlsManagerLayout: any;
     private overviewAndWorkspaceController: OverviewAndWorkspaceGestureController;
 
     constructor(pm: PatchManager) {
         super(pm);
 
-        this.overviewActor = Main.overview._overview;
-        this.controlsManagerLayout = Main.overview._overview._controls.layout_manager;
-
         this.overviewAndWorkspaceController = new OverviewAndWorkspaceGestureController();
 
-        this.setupBackgroundGestures();
-        this.setupWindowGestures();
+        this._setupOverviewBackgroundGestures();
+        this._setupDesktopBackgroundGestures();
+        this._setupWindowPreviewGestures();
     }
 
-    private setupBackgroundGestures() {
+    private _setupOverviewBackgroundGestures() {
         const recognizer = new GestureRecognizer({
             scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
         });
@@ -64,7 +62,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         }
     }
 
-    private setupWindowGestures() {
+    private _setupWindowPreviewGestures() {
         this.pm.appendToMethod(Workspace.prototype, '_addWindowClone', function(this: Workspace) {
             const newWindow = this._windows.at(-1)!;
 
@@ -76,7 +74,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                 scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor
             });
 
-            let decidedOnGesture: 'drag' | 'swipe-vertically' | 'swipe-horizontally' | null = null;
+            let decidedOnGesture: 'drag' | 'swipe-up' | 'swipe-down' | 'swipe-horizontally' | null = null;
 
             this.pm.connectTo(windowPreview, 'captured-event', (_, raw_event: Clutter.Event) => {
                 if (!GestureRecognizerEvent.isTouch(raw_event)) {
@@ -93,26 +91,41 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                     if (decidedOnGesture === 'drag' || state.startsWithHold) {
                         if (decidedOnGesture !== 'drag') {
                             // @ts-ignore
-                            windowPreview._draggable.startDrag(evt.x, evt.y, evt.time, raw_event.get_event_sequence(), raw_event.get_device());
+                            windowPreview._draggable.startDrag(evt.x, evt.y, evt.time,
+                                raw_event.get_event_sequence(), raw_event.get_device());
                             decidedOnGesture = 'drag';
                         } else {
                             // @ts-ignore
                             windowPreview._draggable._updateDragPosition.call(windowPreview._draggable, raw_event);
                         }
-                    } else if (decidedOnGesture === 'swipe-vertically' || state.isCertainlyMovement) {
-                        if (state.firstMotionDirection?.axis === 'vertical') {
-                            windowPreview.translationY = state.totalMotionDelta.y;
-                            decidedOnGesture = 'swipe-vertically';
+                    } else if (state.isCertainlyMovement) {
+                        if (decidedOnGesture === 'swipe-up'
+                            || state.firstMotionDirection?.direction === 'up') {
+                            windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
+                            decidedOnGesture = 'swipe-up';
+                        } else if (decidedOnGesture === 'swipe-down'
+                            || state.firstMotionDirection?.direction === 'down') {
+                            this.overviewAndWorkspaceController.gestureUpdate({
+                                overviewProgress: -state.totalMotionDelta.y / (
+                                    this.overviewAndWorkspaceController.baseDistY * 0.35)
+                            });
+                            decidedOnGesture = 'swipe-down';
+                        } else if (decidedOnGesture === 'swipe-horizontally'
+                            || state.firstMotionDirection?.axis === 'horizontal') {
+                            this.overviewAndWorkspaceController.gestureUpdate({
+                                workspaceProgress: -state.totalMotionDelta.x / (
+                                    this.overviewAndWorkspaceController.baseDistX * 0.62)
+                            });
+                            decidedOnGesture = 'swipe-horizontally';
                         }
                     }
-                    // TODO: implement 'swipe-horizontally'
                 }
 
                 if (state.hasGestureJustEnded) {
                     if (decidedOnGesture === 'drag') {
                         // @ts-ignore
                         windowPreview._onDragEnd();
-                    } else if (decidedOnGesture === 'swipe-vertically') {
+                    } else if (decidedOnGesture === 'swipe-up') {
                         if (state.finalMotionDirection?.direction === 'up') {
                             windowPreview.pivotPoint = new Graphene.Point({x: 0.5, y: 0});
                             // @ts-ignore
@@ -123,10 +136,8 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                                 scaleY: 0.95,
                                 duration: 100,
                                 mode: Clutter.AnimationMode.EASE_OUT,
-                                onComplete: () => {
-                                    // @ts-ignore
-                                    windowPreview._deleteAll();  // same as `windowPreview._closeButton.emit('click')`
-                                }
+                                // @ts-ignore
+                                onComplete: () => windowPreview._deleteAll(),  // same as `windowPreview._closeButton.emit('click')`
                             });
                         } else {
                             // @ts-ignore
@@ -136,8 +147,15 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                                 mode: Clutter.AnimationMode.EASE_OUT_BACK,
                             });
                         }
+                    } else if (decidedOnGesture === 'swipe-horizontally') {
+                        this.overviewAndWorkspaceController.gestureEnd({
+                            direction: _oneOf(state.finalMotionDirection?.direction, ['left', 'right']) ?? null,
+                        });
+                    } else if (decidedOnGesture === 'swipe-down') {
+                        this.overviewAndWorkspaceController.gestureEnd({
+                            direction: _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
+                        });
                     }
-                    // TODO: implement 'swipe-horizontally'
 
                     decidedOnGesture = null;
                 }
@@ -145,6 +163,66 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                 return Clutter.EVENT_STOP;
             });
         }
+    }
+
+    private _setupDesktopBackgroundGestures() {
+        const patchBgManager = (bgManager: BackgroundManager) => {
+            const recognizer = new GestureRecognizer({
+                scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
+            });
+
+            this.pm.setProperty(bgManager.backgroundActor, 'reactive', true);
+            this.pm.connectTo(bgManager.backgroundActor, 'touch-event', (_, evt) => {
+                const state = recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
+
+                if (state.isDuringGesture && state.isCertainlyMovement) {
+                    if (state.firstMotionDirection?.axis === 'vertical') {
+                        this.overviewAndWorkspaceController.gestureUpdate({
+                            overviewProgress: -state.totalMotionDelta.y / (
+                                this.overviewAndWorkspaceController.baseDistY * 0.35)
+                        });
+                    } else if (state.firstMotionDirection?.axis === 'horizontal') {
+                        this.overviewAndWorkspaceController.gestureUpdate({
+                            workspaceProgress: -state.totalMotionDelta.x / (
+                                this.overviewAndWorkspaceController.baseDistX * 0.62)
+                        });
+                    }
+                }
+
+                if (state.hasGestureJustEnded) {
+                    this.overviewAndWorkspaceController.gestureEnd({
+                        direction: state.firstMotionDirection?.axis === 'horizontal'
+                            ? _oneOf(state.finalMotionDirection?.direction, ['left', 'right']) ?? null
+                            : _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
+                    });
+                }
+            });
+        }
+
+        // @ts-ignore
+        Main.layoutManager._bgManagers.forEach((m: BackgroundManager) => patchBgManager(m));
+
+        this.pm.appendToMethod(LayoutManager.prototype, '_updateBackgrounds', function (this: LayoutManager) {
+            // @ts-ignore
+            this._bgManagers.forEach((m: BackgroundManager) => patchBgManager(m));
+        });
+
+        // We have to overwrite the function responsible for updating the visibility of the several actors
+        // managed by the Shell's [LayoutManager] during the overview-opening transition.
+        // This is because the function hides the `window_group` actor of which the background actor, which
+        // we listen to touch events of, is a descendent. When the actor is hidden however, it emits no
+        // touch events anymore, which makes it impossible to continue the overview swipe gesture.
+        // As a trick to circumvent this, we replace the line hiding that actor such that it instead sets it's
+        // opacity to zero. The functions code otherwise remains unchanged.
+        this.pm.patchMethod(LayoutManager.prototype, '_updateVisibility', function (this: LayoutManager, originalMethod, args) {
+            let windowsVisible = Main.sessionMode.hasWindows && !this._inOverview;
+
+            global.window_group.opacity = windowsVisible ? 255 : 0;  // <-- this is the only changed line
+            // global.window_group.visible = windowsVisible;  // <-- This was the original line
+
+            global.top_window_group.visible = windowsVisible;
+            this._trackedActors.forEach(this._updateActorVisibility.bind(this));
+        });
     }
 
     get _scaleFactor(): number {
