@@ -5,12 +5,12 @@ import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {debugLog, log} from "$src/utils/logging";
+import {log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 
 
@@ -245,66 +245,66 @@ class NavigationBarGestureManager {
 
         this.recognizer = new GestureRecognizer({
             scaleFactor: this.scaleFactor,
+            onGestureStarted: state => this._onGestureStarted(state),
+            onGestureProgress: state => this._onGestureProgress(state),
+            onGestureCompleted: state => this._onGestureCompleted(state),
         });
 
-        this.idleRunner = new IdleRunner((_, dt) => this.onIdleRun(dt ?? undefined));
+        this.idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
 
-        this.actor.connect('touch-event', (_, e) => this.onTouchEvent(e));
+        this.actor.connect('touch-event', (_, e) => {
+            this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
+        });
         this.actor.connect('destroy', () => this.idleRunner.stop());
     }
 
-    private onTouchEvent(e: Clutter.Event) {
-        const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
-        const totalMotionDelta = state.totalMotionDelta;
+    private _onGestureStarted(state: GestureState) {
+        this.controller.gestureBegin();
+        this.targetOverviewProgress = this.controller.initialOverviewProgress;
+        this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress;
+        this.idleRunner.start();
 
-        if (state.hasGestureJustStarted) {
-            this.controller.gestureBegin();
-            this.targetOverviewProgress = this.controller.initialOverviewProgress;
-            this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress;
-            this.idleRunner.start();
-
-            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
-                Main.keyboard._keyboard.gestureBegin();
-            }
-
-            if (Main.keyboard.visible) {
-                Main.keyboard._keyboard
-                    ? Main.keyboard._keyboard.close(true)
-                    : Main.keyboard.close();
-            }
+        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            Main.keyboard._keyboard.gestureBegin();
         }
 
-        if (state.isDuringGesture) {
-            this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress
-                - (totalMotionDelta.x / this.controller.baseDistX) * 1.6;
-
-            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
-                Main.keyboard._keyboard.gestureProgress(-totalMotionDelta.y / this.controller.baseDistY);
-            } else {
-                this.targetOverviewProgress = this.controller.initialOverviewProgress
-                    + (-totalMotionDelta.y / (this.controller.baseDistY * 0.2));
-            }
-        } else if (state.hasGestureJustEnded) {
-            this.idleRunner.stop();
-
-            const direction = state.lastMotionDirection?.direction ?? null;
-
-            debugLog("Last motion direction: ", state.lastMotionDirection);
-
-            if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
-                //@ts-ignore
-                Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
-                this.controller.gestureEnd({ direction: null });
-            } else {
-                this.controller.gestureEnd({ direction });
-            }
-
-            this.targetOverviewProgress = null;
-            this.targetWorkspaceProgress = null;
+        if (Main.keyboard.visible) {
+            Main.keyboard._keyboard
+                ? Main.keyboard._keyboard.close(true)
+                : Main.keyboard.close();
         }
     }
 
-    private onIdleRun(dt: number = 0) {
+    private _onGestureProgress(state: GestureState) {
+        this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress
+            - (state.totalMotionDelta.x / this.controller.baseDistX) * 1.6;
+
+        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y / this.controller.baseDistY);
+        } else {
+            this.targetOverviewProgress = this.controller.initialOverviewProgress
+                + (-state.totalMotionDelta.y / (this.controller.baseDistY * 0.2));
+        }
+    }
+
+    private _onGestureCompleted(state: GestureState) {
+        this.idleRunner.stop();
+
+        const direction = state.lastMotionDirection?.direction ?? null;
+
+        if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            //@ts-ignore
+            Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
+            this.controller.gestureEnd({ direction: null });
+        } else {
+            this.controller.gestureEnd({ direction });
+        }
+
+        this.targetOverviewProgress = null;
+        this.targetWorkspaceProgress = null;
+    }
+
+    private _onIdleRun(dt: number = 0) {
         let overviewProg = this.controller.currentOverviewProgress;
         let workspaceProg = this.controller.currentWorkspaceProgress;
 
