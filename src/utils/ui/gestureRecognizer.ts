@@ -1,4 +1,5 @@
 import Clutter from "gi://Clutter";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 const MAX_HOLD_MOVEMENT = 10;  // in logical pixels
@@ -105,15 +106,30 @@ export type MotionDirection = {
 }
 
 
-export class GestureRecognizer {
+export class GestureRecognizer extends EventEmitter<{
+    'gesture-started': [GestureState],
+    'gesture-progress': [GestureState],
+    'gesture-completed': [GestureState],
+}> {
     private _state: GestureState;
     private readonly _scaleFactor: number;
 
-    constructor(props: {scaleFactor: number}) {
+    constructor(props: {
+        scaleFactor: number,
+        onGestureStarted?: (state: GestureState) => void,
+        onGestureProgress?: (state: GestureState) => void,
+        onGestureCompleted?: (state: GestureState) => void,
+    }) {
+        super();
+
         this._scaleFactor = props.scaleFactor;
         this._state = GestureState.initial({
             scaleFactor: this._scaleFactor,
         });
+
+        if (props.onGestureStarted)   this.connect('gesture-started', props.onGestureStarted);
+        if (props.onGestureProgress)  this.connect('gesture-progress', props.onGestureProgress);
+        if (props.onGestureCompleted) this.connect('gesture-completed', props.onGestureCompleted);
     }
 
     push(event: GestureRecognizerEvent): GestureState {
@@ -122,8 +138,14 @@ export class GestureRecognizer {
                 firstEvent: event,
                 scaleFactor: this._scaleFactor
             });
+            this.emit('gesture-started', this._state);
         } else {
             this._state = this._state.copyWith(event);
+            if (this._state.isDuringGesture) {
+                this.emit('gesture-progress', this._state);
+            } else {
+                this.emit('gesture-completed', this._state);
+            }
         }
 
         return this._state;
