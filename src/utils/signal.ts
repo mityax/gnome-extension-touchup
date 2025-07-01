@@ -3,6 +3,9 @@ import {assert} from "$src/utils/logging";
 type HandlerT<T> = (args: T) => void;
 
 
+/**
+ * @deprecated New classes should extend [EventEmitter] instead of using this class
+ */
 export default class Signal<T> {
     private readonly listeners: Map<number, (args: T) => void> = new Map();
     private _signalIdCounter = 0;

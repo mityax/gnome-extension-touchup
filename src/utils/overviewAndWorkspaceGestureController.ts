@@ -79,9 +79,9 @@ export default class OverviewAndWorkspaceGestureController {
         // Overview toggling:
         if (this._isOverviewGestureRunning) {
             if (props.direction === 'up') {  // `null` means user holds still at the end
-                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.1), 1, 2));
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.5), 1, 2));
             } else if (props.direction === 'down') {
-                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.1), 0, 1));
+                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.5), 0, 1));
             } else {
                 Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
             }
