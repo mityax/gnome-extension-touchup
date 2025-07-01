@@ -30,14 +30,13 @@ export class MiscPage extends Adw.PreferencesPage {
 
         BETA: this.add(buildPreferencesGroup({
             title: "Overview Gestures",
-            description: "Overview gestures contain nuanced improvements to the touch-interaction with " +
-                "the opened overview. For example: swipe-close the overview, allow starting swiping also " +
-                "on application icons.",
+            description: "Control overview and app list or close apps using intuitive swipe gestures " +
+                "on your desktop background and in the overview.",
             children: [
                 buildSwitchRow({
                     title: "Enable Overview Gestures",
                     subtitle: "Toggle to enable or disable the overview gestures feature",
-                    setting: settings.notificationGestures.enabled
+                    setting: settings.overviewGestures.enabled
                 })
             ]
         }));

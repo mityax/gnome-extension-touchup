@@ -39,11 +39,11 @@ very frequently – you can help speed up progress by [donating](#support).
  - [x] Floating temporary screen rotation button when auto-rotation
        is disabled but device is being rotated (as in android)
  - [ ] Pattern unlock
- - [ ] Improved swipe gestures in the overview
-   - [ ] Swipe up windows in overview to close them
-   - [ ] Single-finger swipe left/right to switch workspace
-   - [ ] Hold and move to drag and drop windows
-   - [ ] Single-finger swipe up/down outside a window to app list/close overview
+ - [x] Improved swipe gestures in the overview
+   - [x] Swipe up windows in overview to close them
+   - [x] Single-finger swipe left/right to switch workspace
+   - [x] Hold and move to drag and drop windows
+   - [x] Single-finger swipe up/down to open/close overview/app list
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
  - [ ] Option to display individual windows instead of workspaces when navigating
