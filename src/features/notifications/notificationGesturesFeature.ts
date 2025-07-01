@@ -125,7 +125,11 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 onHoverEnd: () => message.remove_style_pseudo_class('hover'),
                 onMoveHorizontally: (x) => {
                     horizontalMoveActor = notificationGroup.expanded || isTray ? message : notificationGroup;
-                    horizontalMoveActor.translationX = x;
+                    if (message.canClose()) {
+                        horizontalMoveActor.translationX = x;
+                    } else {
+                        horizontalMoveActor.translationX = Math.sign(x) * Math.log(Math.abs(x)) ** 3;
+                    }
                 },
                 onMoveVertically: (y) => {
                     if (isTray) {
@@ -161,14 +165,18 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                     }
                 },
                 onClose: (swipeDirection) => {
-                    // @ts-ignore
-                    horizontalMoveActor?.ease({
-                        translationX: swipeDirection == 'right' ? message.width : -message.width,
-                        opacity: 0,
-                        duration: 150,
-                        mode: Clutter.AnimationMode.EASE_OUT,
-                        onComplete: () => message.emit("close"),
-                    });
+                    if (message.canClose()) {
+                        // @ts-ignore
+                        horizontalMoveActor?.ease({
+                            translationX: swipeDirection == 'right' ? message.width : -message.width,
+                            opacity: 0,
+                            duration: 150,
+                            mode: Clutter.AnimationMode.EASE_OUT,
+                            onComplete: () => message.emit("close"),
+                        });
+                    } else {
+                        gestureHelper.easeBackPositionOf(horizontalMoveActor!);
+                    }
                 },
             });
 
