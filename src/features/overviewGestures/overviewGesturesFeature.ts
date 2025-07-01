@@ -11,6 +11,7 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import {Delay} from "$src/utils/delay";
 
 
 export class OverviewGesturesFeature extends ExtensionFeature {
@@ -62,9 +63,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
 
     private _setupWindowPreviewGestures() {
         this.pm.appendToMethod(Workspace.prototype, '_addWindowClone', function(this: Workspace) {
-            const newWindow = this._windows.at(-1)!;
-
-            patchWindowPreview(newWindow);
+            patchWindowPreview(this._windows.at(-1)!);
         });
 
         const patchWindowPreview = (windowPreview: WindowPreview)=>  {
@@ -87,8 +86,27 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                                 scaleY: 0.95,
                                 duration: 100,
                                 mode: Clutter.AnimationMode.EASE_OUT,
-                                // @ts-ignore
-                                onComplete: () => windowPreview._deleteAll(),  // same as `windowPreview._closeButton.emit('click')`
+                                onComplete: () => {
+                                    // @ts-ignore
+                                    windowPreview._deleteAll();  // same as `windowPreview._closeButton.emit('click')`
+
+                                    // If the window has not been marked as destroyed after a short delay, undo all
+                                    // transformations and ease the preview back into view:
+                                    Delay.ms(10).then(() => {
+                                        // @ts-ignore
+                                        if (!windowPreview._destroyed) {
+                                            // @ts-ignore
+                                            windowPreview.ease({
+                                                translationY: 0,
+                                                opacity: 255,
+                                                scaleX: 1,
+                                                scaleY: 1,
+                                                duration: 250,
+                                                mode: Clutter.AnimationMode.EASE_OUT,
+                                            });
+                                        }
+                                    });
+                                },
                             });
                         } else {
                             // @ts-ignore
