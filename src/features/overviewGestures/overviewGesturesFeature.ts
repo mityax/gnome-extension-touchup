@@ -35,7 +35,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                     const d = state.totalMotionDelta;
                     this.overviewAndWorkspaceController.gestureUpdate({
                         overviewProgress: state.firstMotionDirection?.axis === 'vertical'
-                            ? -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.35)
+                            ? -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.25)
                             : undefined,
                         workspaceProgress: state.firstMotionDirection?.axis === 'horizontal'
                             ? -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62)
@@ -191,7 +191,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                     if (state.firstMotionDirection?.axis === 'vertical') {
                         this.overviewAndWorkspaceController.gestureUpdate({
                             overviewProgress: -state.totalMotionDelta.y / (
-                                this.overviewAndWorkspaceController.baseDistY * 0.35)
+                                this.overviewAndWorkspaceController.baseDistY * 0.25)
                         });
                     } else if (state.firstMotionDirection?.axis === 'horizontal') {
                         this.overviewAndWorkspaceController.gestureUpdate({
