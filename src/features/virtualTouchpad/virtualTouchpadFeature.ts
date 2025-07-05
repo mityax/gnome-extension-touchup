@@ -12,7 +12,7 @@ import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay";
 import Mtk from "gi://Mtk";
 import {clamp} from "$src/utils/utils";
 import {Delay} from "$src/utils/delay";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
 import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
@@ -109,11 +109,6 @@ class _TouchPadActor extends Widgets.Column {
         GObject.registerClass(this);
     }
 
-    static readonly eventTypes = [
-        Clutter.EventType.TOUCH_BEGIN, Clutter.EventType.TOUCH_UPDATE, Clutter.EventType.TOUCH_CANCEL,
-        Clutter.EventType.TOUCH_END, Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
-    ];
-
     private readonly _onClose: () => void;
 
     private readonly _virtualInputDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
@@ -121,9 +116,7 @@ class _TouchPadActor extends Widgets.Column {
     );
     private readonly overviewAndWorkspaceController = new OverviewAndWorkspaceGestureController();
     private _monitorIndex: number = 0;
-    private readonly _recognizer = new GestureRecognizer({
-        scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
-    });
+    private readonly _recognizer: GestureRecognizer;
     private _lastPos: [number, number] | null = null;
 
     constructor(props: {onClose: () => void}) {
@@ -165,6 +158,13 @@ class _TouchPadActor extends Widgets.Column {
 
         this._onClose = props.onClose;
 
+        this._recognizer = new GestureRecognizer({
+            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
+            onGestureStarted: state => this._onGestureStarted(),
+            onGestureProgress: state => this._onGestureProgress(state),
+            onGestureCompleted: state => this._onGestureCompleted(state),
+        });
+
         DEBUG: {
             // In debug mode, add a little bit of transparency to make the logs below visible:
             this.opacity = 0.7 * 255;
@@ -177,6 +177,50 @@ class _TouchPadActor extends Widgets.Column {
             });
             label.clutterText.lineWrap = true;
             this.add_child(label);
+        }
+    }
+
+    private _onGestureStarted() {
+        const [x, y, _] = global.get_pointer();
+        this._lastPos = [x, y];
+    }
+
+    private _onGestureProgress(state: GestureState) {
+        if (state.isCertainlyMovement) {
+            if (state.totalFingerCount === 1) {
+                const d = state.currentMotionDelta;
+                const [dx, dy] = this._clampMovementToMonitor(d.x, d.y);
+                this._lastPos = [dx, dy];
+                this._virtualInputDevice.notify_absolute_motion(state.events.at(-1)!.timeUS, dx, dy);
+            } else if (state.totalFingerCount === 2) {
+                // TODO: support pinch gestures
+
+                const d = state.currentMotionDelta;
+                this._virtualInputDevice.notify_scroll_continuous(
+                    state.events.at(-1)!.timeUS, -d.x, -d.y, Clutter.ScrollSource.FINGER, null
+                );
+            } else if (state.totalFingerCount === 3) {
+                const d = state.totalMotionDelta;
+                this.overviewAndWorkspaceController.gestureUpdate({
+                    overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.35),
+                    workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
+                });
+            }
+        }
+    }
+
+    private async _onGestureCompleted(state: GestureState) {
+        if (state.totalFingerCount === 3) {
+            this.overviewAndWorkspaceController.gestureEnd({
+                direction: state.lastMotionDirection?.direction ?? null,
+            });
+        } else if (state.isTap) {
+            this._virtualInputDevice.notify_absolute_motion(state.events.at(-1)!.timeUS, this._lastPos![0], this._lastPos![1]);
+
+            const button = state.totalFingerCount === 2 ? Clutter.BUTTON_SECONDARY : Clutter.BUTTON_PRIMARY;
+            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
+            await Delay.ms(100);
+            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
         }
     }
 
@@ -215,60 +259,15 @@ class _TouchPadActor extends Widgets.Column {
         }
     }
 
-    // FIXME: Find a way to make events on the touchpad no close other modals (e.g. popup menus
+    // FIXME: Find a way to make events on the touchpad not close other modals (e.g. popup menus
     //  from applications or the shell itself).
     // vfunc_captured_event(event: Clutter.Event): boolean {
     vfunc_touch_event(event: Clutter.Event): boolean {
-        if (_TouchPadActor.eventTypes.includes(event.type())) {
-            void this._onEvent(event);
+        if (GestureRecognizerEvent.isTouch(event)) {
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(event))
         }
 
         return Clutter.EVENT_STOP;
-    }
-
-    private async _onEvent(e: Clutter.Event) {
-        const evt = GestureRecognizerEvent.fromClutterEvent(e);
-        const state = this._recognizer.push(evt);
-
-        if (state.hasGestureJustStarted) {
-            const [x, y, _] = global.get_pointer();
-            this._lastPos = [x, y];
-        }
-
-        if (state.isDuringGesture && state.isCertainlyMovement) {
-            if (state.totalFingerCount === 1) {
-                const d = state.currentMotionDelta;
-                const [dx, dy] = this._clampMovementToMonitor(d.x, d.y);
-                this._lastPos = [dx, dy];
-                this._virtualInputDevice.notify_absolute_motion(evt.timeUS, dx, dy);
-            } else if (state.totalFingerCount === 2) {
-                // TODO: support pinch gestures
-
-                const d = state.currentMotionDelta;
-                this._virtualInputDevice.notify_scroll_continuous(
-                    evt.timeUS, -d.x, -d.y, Clutter.ScrollSource.FINGER, null
-                );
-            } else if (state.totalFingerCount === 3) {
-                const d = state.totalMotionDelta;
-                this.overviewAndWorkspaceController.gestureUpdate({
-                    overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.35),
-                    workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
-                });
-            }
-        } else if (state.isTap) {
-            this._virtualInputDevice.notify_absolute_motion(evt.timeUS, this._lastPos![0], this._lastPos![1]);
-
-            const button = state.totalFingerCount === 2 ? Clutter.BUTTON_SECONDARY : Clutter.BUTTON_PRIMARY;
-            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
-            await Delay.ms(100);
-            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
-        }
-
-        if (state.hasGestureJustEnded && state.totalFingerCount === 3) {
-            this.overviewAndWorkspaceController.gestureEnd({
-                direction: state.lastMotionDirection?.direction ?? null,
-            });
-        }
     }
 
     /**
