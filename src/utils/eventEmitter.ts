@@ -48,6 +48,12 @@ export default class EventEmitter<A extends Record<string, [...any]>> {
         return false;
     }
 
+    protected _hasListenersFor<N extends keyof A>(signal: N) {
+        return this._listeners
+            .find((l) => l.signal === signal)
+            ?.callbacks.length ?? 0 > 0;
+    }
+
     private _connect<N extends keyof A>(signal: N, callback: (...args: A[N]) => void, opts?: _ConnectionOpts) {
         const id = this._idCounter++;
         let array = this._listeners

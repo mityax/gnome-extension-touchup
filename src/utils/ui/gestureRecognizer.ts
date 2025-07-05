@@ -2,7 +2,7 @@ import Clutter from "gi://Clutter";
 import EventEmitter from "$src/utils/eventEmitter";
 
 
-const MAX_HOLD_MOVEMENT = 10;  // in logical pixels
+const MAX_HOLD_MOVEMENT = 6;  // in logical pixels
 const MIN_HOLD_TIME_US = 500 * 1000;  // in microseconds (1000us = 1ms)
 const MIN_MOTION_DIRECTION_DETECTION_DISTANCE = 7;  // in logical pixels
 

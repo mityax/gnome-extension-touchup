@@ -5,13 +5,15 @@ import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {log} from "$src/utils/logging";
+import {debugLog, log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
 import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
+import {Delay} from "$src/utils/delay";
+import GObject from "gi://GObject";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -19,7 +21,7 @@ import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 const LEFT_EDGE_OFFSET = 100;
 
 
-export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
+export default class GestureNavigationBar extends BaseNavigationBar<_GestureNavigationBarActor> {
     declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
@@ -38,8 +40,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
         });
     }
 
-    protected _buildActor(): St.Bin {
-        return new Widgets.Bin({
+    protected _buildActor(): _GestureNavigationBarActor {
+        return new _GestureNavigationBarActor({
             name: 'touchup-navbar',
             styleClass: 'touchup-navbar touchup-navbar--transparent bottom-panel',
             reactive: true,
@@ -225,112 +227,193 @@ export default class GestureNavigationBar extends BaseNavigationBar<St.Bin> {
 
 
 class NavigationBarGestureManager {
-    private controller: OverviewAndWorkspaceGestureController;
-    private recognizer: GestureRecognizer;
-    private idleRunner: IdleRunner;
+    private static readonly _overviewMaxSpeed = 0.005;
+    private static readonly _workspaceMaxSpeed = 0.0016;
 
-    private targetWorkspaceProgress: number | null = 0;
-    private targetOverviewProgress: number | null = null;
+    private _controller: OverviewAndWorkspaceGestureController;
+    private _recognizer: GestureRecognizer;
+    private _idleRunner: IdleRunner;
 
-    private readonly overviewMaxSpeed = 0.005;
-    private readonly workspaceMaxSpeed = 0.0016;
-    private readonly scaleFactor: number;
+    private _targetWorkspaceProgress: number | null = 0;
+    private _targetOverviewProgress: number | null = null;
 
-    constructor(private actor: Clutter.Actor, private monitor?: Monitor) {
-        this.scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+    /**
+     * This virtual input device is used to emulate touch events in click-through-navbar scenarios.
+     */
+    private readonly _virtualTouchscreenDevice: Clutter.VirtualInputDevice;
+    private readonly _scaleFactor: number;
 
-        this.controller = new OverviewAndWorkspaceGestureController({
+    private _hasStarted: boolean = false;
+
+    constructor(private actor: _GestureNavigationBarActor, private monitor?: Monitor) {
+        this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+
+        this._controller = new OverviewAndWorkspaceGestureController({
             monitorIndex: monitor?.index ?? Main.layoutManager.primaryIndex,
         });
 
-        this.recognizer = new GestureRecognizer({
-            scaleFactor: this.scaleFactor,
-            onGestureStarted: state => this._onGestureStarted(state),
+        this._recognizer = new GestureRecognizer({
+            scaleFactor: this._scaleFactor,
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),
         });
 
-        this.idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
+        this._idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
 
         this.actor.connect('touch-event', (_, e) => {
-            this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
         });
-        this.actor.connect('destroy', () => this.idleRunner.stop());
+        this.actor.connect('destroy', () => this._idleRunner.stop());
+
+        this._virtualTouchscreenDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
+            Clutter.InputDeviceType.TOUCHSCREEN_DEVICE
+        );
     }
 
-    private _onGestureStarted(state: GestureState) {
-        this.controller.gestureBegin();
-        this.targetOverviewProgress = this.controller.initialOverviewProgress;
-        this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress;
-        this.idleRunner.start();
+    private _onGestureProgress(state: GestureState) {
+        if (state.isCertainlyMovement) {
+            if (!this._hasStarted) {
+                this._startGestures(state);
+            }
 
-        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+            this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress
+                - (state.totalMotionDelta.x / this._controller.baseDistX) * 1.6;
+
+            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
+                Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y / this._controller.baseDistY);
+            } else {
+                this._targetOverviewProgress = this._controller.initialOverviewProgress
+                    + (-state.totalMotionDelta.y / (this._controller.baseDistY * 0.2));
+            }
+        }
+    }
+
+    private _startGestures(state: GestureState) {
+        this._hasStarted = true;
+
+        this._controller.gestureBegin();
+        this._targetOverviewProgress = this._controller.initialOverviewProgress;
+        this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress;
+        this._idleRunner.start();
+
+        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
             Main.keyboard._keyboard.gestureBegin();
         }
 
         if (Main.keyboard.visible) {
             Main.keyboard._keyboard
-                ? Main.keyboard._keyboard.close(true)
+                ? Main.keyboard._keyboard.close(true)  // immediate = true
                 : Main.keyboard.close();
         }
     }
 
-    private _onGestureProgress(state: GestureState) {
-        this.targetWorkspaceProgress = this.controller.initialWorkspaceProgress
-            - (state.totalMotionDelta.x / this.controller.baseDistX) * 1.6;
-
-        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
-            Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y / this.controller.baseDistY);
-        } else {
-            this.targetOverviewProgress = this.controller.initialOverviewProgress
-                + (-state.totalMotionDelta.y / (this.controller.baseDistY * 0.2));
-        }
-    }
-
-    private _onGestureCompleted(state: GestureState) {
-        this.idleRunner.stop();
+    private async _onGestureCompleted(state: GestureState) {
+        this._idleRunner.stop();
+        this._hasStarted = false;
 
         const direction = state.lastMotionDirection?.direction ?? null;
 
-        if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this.scaleFactor) {
+        if (state.isTap) {
+            this._controller.gestureEnd({ direction: null });
+
+            // Find the event target actor below the navigation bar:
+            const windows = global.get_window_actors();
+            const receiver = windows.find(w => w.allocation.contains(state.events[0].x, state.events[0].y));
+
+            debugLog("Emitting fake click on actor", receiver, receiver?.name, receiver?.metaWindow.title);
+
+            if (receiver) {
+                this.actor.passthrough = true;
+                this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
+                    state.events[0].x, state.events[0].y);
+                await Delay.ms(25);
+                this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
+                this.actor.passthrough = false;
+            }
+        } else if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
+            this._controller.gestureEnd({ direction: null });
+
             //@ts-ignore
             Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
-            this.controller.gestureEnd({ direction: null });
         } else {
-            this.controller.gestureEnd({ direction });
+            this._controller.gestureEnd({ direction });
         }
 
-        this.targetOverviewProgress = null;
-        this.targetWorkspaceProgress = null;
+        this._targetOverviewProgress = null;
+        this._targetWorkspaceProgress = null;
     }
 
     private _onIdleRun(dt: number = 0) {
-        let overviewProg = this.controller.currentOverviewProgress;
-        let workspaceProg = this.controller.currentWorkspaceProgress;
+        let overviewProg = this._controller.currentOverviewProgress;
+        let workspaceProg = this._controller.currentWorkspaceProgress;
 
-        if (this.targetOverviewProgress !== null
-            && Math.abs(this.targetOverviewProgress - overviewProg) > 5 * this.overviewMaxSpeed) {
-            let d = this.targetOverviewProgress - overviewProg;
-            overviewProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * this.overviewMaxSpeed);
+        if (this._targetOverviewProgress !== null
+            && Math.abs(this._targetOverviewProgress - overviewProg) > 5 * NavigationBarGestureManager._overviewMaxSpeed) {
+            let d = this._targetOverviewProgress - overviewProg;
+            overviewProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * NavigationBarGestureManager._overviewMaxSpeed);
         }
 
-        if (this.targetWorkspaceProgress !== null
-            && Math.abs(this.targetWorkspaceProgress - workspaceProg) > 5 * this.workspaceMaxSpeed) {
-            let d = this.targetWorkspaceProgress - workspaceProg;
-            workspaceProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * this.workspaceMaxSpeed);
+        if (this._targetWorkspaceProgress !== null
+            && Math.abs(this._targetWorkspaceProgress - workspaceProg) > 5 * NavigationBarGestureManager._workspaceMaxSpeed) {
+            let d = this._targetWorkspaceProgress - workspaceProg;
+            workspaceProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * NavigationBarGestureManager._workspaceMaxSpeed);
         }
 
-        this.controller.gestureUpdate({
-            overviewProgress: overviewProg - this.controller.initialOverviewProgress,
-            workspaceProgress: workspaceProg - this.controller.initialWorkspaceProgress,
+        this._controller.gestureUpdate({
+            overviewProgress: overviewProg - this._controller.initialOverviewProgress,
+            workspaceProgress: workspaceProg - this._controller.initialWorkspaceProgress,
         });
     }
 
     setMonitor(monitorIndex: number) {
-        this.controller.monitorIndex = monitorIndex;
+        this._controller.monitorIndex = monitorIndex;
     }
 }
 
+
+class _GestureNavigationBarActor extends Widgets.Bin {
+    private _passthrough: boolean = false;
+
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(props: {
+        name: string;
+        styleClass: string;
+        reactive: boolean;
+        trackHover: boolean;
+        canFocus: boolean;
+        layoutManager: Clutter.BinLayout;
+        onRealize: () => void;
+        child: St.Widget
+    }) {
+        super(props);
+    }
+
+    vfunc_pick(pick_context: Clutter.PickContext) {
+        if (this._passthrough) {
+            debugLog("Pick passing though");
+            this.pick_box(pick_context, new Clutter.ActorBox({
+                x1: 0, x2: 0, y1: 0, y2: 0
+            }));
+        } else {
+            debugLog("Pick captured");
+            super.vfunc_pick(pick_context);
+        }
+    }
+
+    /**
+     * Whether this actor passes through events or captures them.
+     */
+    set passthrough(v: boolean) {
+        this._passthrough = v;
+    }
+
+    get passthrough(): boolean {
+        return this._passthrough;
+    }
+}
 
 
 
