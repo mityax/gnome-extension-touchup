@@ -11,6 +11,7 @@ import {debugLog} from "$src/utils/logging";
 import Mtk from "gi://Mtk";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/utils/patchManager";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
@@ -85,7 +86,7 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
 
         const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         const buttonSize = 40 * sf;
-        const margin = 40 * sf;
+        const margin = Main.panel.allocation.y2 + 5 * sf;
 
         let btn: Widgets.Button | null = this.pm.autoDestroy(new Widgets.Button({
             ref: this.floatingButton,
