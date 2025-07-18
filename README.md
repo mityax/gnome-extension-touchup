@@ -34,16 +34,18 @@ very frequently – you can help speed up progress by [donating](#support).
    - [x] Key popups
    - [ ] Bigger keys
    - [ ] Compatibility with the "GJS OSK" extension (?)
+   - [ ] Swipe-close keyboard
  - [ ] Virtual Touchpad (use device as touchpad when connected to a
    second monitor) \[WIP]
  - [x] Floating temporary screen rotation button when auto-rotation
        is disabled but device is being rotated (as in android)
  - [ ] Pattern unlock
- - [x] Improved swipe gestures in the overview
+ - [ ] Improved swipe gestures in the overview
    - [x] Swipe up windows in overview to close them
    - [x] Single-finger swipe left/right to switch workspace
    - [x] Hold and move to drag and drop windows
    - [x] Single-finger swipe up/down to open/close overview/app list
+   - [ ] Move windows to another screen via dragging to the corner
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
  - [ ] Option to display individual windows instead of workspaces when navigating

@@ -8,7 +8,6 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/virtualTouchpadQuickSettingsItem";
 import {css} from "$src/utils/ui/css";
 import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
-import {CursorOverlay} from "$src/features/virtualTouchpad/cursorOverlay";
 import Mtk from "gi://Mtk";
 import {clamp} from "$src/utils/utils";
 import {Delay} from "$src/utils/delay";
@@ -21,7 +20,6 @@ import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspa
 export class VirtualTouchpadFeature extends ExtensionFeature {
     private readonly actor: _TouchPadActor;
     private readonly openButton: VirtualTouchpadQuickSettingsItem;
-    private _cursorOverlay?: CursorOverlay;
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -56,13 +54,10 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
 
     open() {
         this.actor.show();
-        this._cursorOverlay = new CursorOverlay(this.pm.fork('cursor-overlay'));
     }
 
     close() {
         this.actor.hide();
-        this._cursorOverlay?.destroy();
-        this._cursorOverlay = undefined;
     }
 
     toggle() {
@@ -92,13 +87,12 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         // FIXME: Find a way to get the touch-enabled monitor instead of builtin monitor
 
         const state = await DisplayConfigState.getCurrent();
-        const idx = state.monitors.findIndex(m => m.isBuiltin) ?? global.display.get_primary_monitor();
+        const idx = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector) ?? global.display.get_primary_monitor();
 
         this.actor.setMonitor(idx);
     }
 
     destroy() {
-        this._cursorOverlay?.destroy();
         super.destroy();
     }
 }
@@ -117,6 +111,7 @@ class _TouchPadActor extends Widgets.Column {
     private readonly overviewAndWorkspaceController = new OverviewAndWorkspaceGestureController();
     private _monitorIndex: number = 0;
     private readonly _recognizer: GestureRecognizer;
+    private _eventFilterId: number | null = null;
     private _lastPos: [number, number] | null = null;
 
     constructor(props: {onClose: () => void}) {
@@ -178,6 +173,35 @@ class _TouchPadActor extends Widgets.Column {
             label.clutterText.lineWrap = true;
             this.add_child(label);
         }
+
+        this.connect('show',  () => this._addEventFilter());
+        this.connect('hide', () => this._removeEventFilter())
+        this.connect('destroy', () => this._removeEventFilter());
+    }
+
+    /**
+     * A global event filter is registered instead of just listening to touch events on the virtual
+     * touchpad actor as you'd normally do it – this allows us to not interact with the virtual
+     * touchpad without immediately affecting other actors (e.g. closing popup menus).
+     *
+     * The event filter is registered whenever the touchpad becomes visible and unregistered when it
+     * is hidden or destroyed.
+     */
+    private _addEventFilter() {
+        this._eventFilterId = Clutter.event_add_filter(global.stage, (event, event_actor) => {
+            if (event_actor === this && GestureRecognizerEvent.isTouch(event)) {
+                this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(event));
+
+                return Clutter.EVENT_STOP;
+            }
+
+            return Clutter.EVENT_PROPAGATE;
+        });
+    }
+
+    private _removeEventFilter() {
+        if (this._eventFilterId !== null) Clutter.event_remove_filter(this._eventFilterId!);
+        this._eventFilterId = null;
     }
 
     private _onGestureStarted() {
@@ -221,6 +245,12 @@ class _TouchPadActor extends Widgets.Column {
             this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
             await Delay.ms(100);
             this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
+        } else if (state.totalFingerCount === 1) {
+            // After pointer movements have finished, we emit a (shortly delayed) pointer event to ensure that
+            // the shell continues showing the cursor – as otherwise, the last touch event (touch release) would
+            // come after the previously emitted pointer events and hide the cursor.
+            await Delay.ms(20);
+            this._virtualInputDevice.notify_relative_motion(state.events.at(-1)!.timeUS, 0, 0);
         }
     }
 
@@ -257,17 +287,6 @@ class _TouchPadActor extends Widgets.Column {
                 );
             }
         }
-    }
-
-    // FIXME: Find a way to make events on the touchpad not close other modals (e.g. popup menus
-    //  from applications or the shell itself).
-    // vfunc_captured_event(event: Clutter.Event): boolean {
-    vfunc_touch_event(event: Clutter.Event): boolean {
-        if (GestureRecognizerEvent.isTouch(event)) {
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(event))
-        }
-
-        return Clutter.EVENT_STOP;
     }
 
     /**
