@@ -38,16 +38,39 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         });
         this.value = props?.initialValue ?? true;
 
-        //@ts-ignore
-        Main.layoutManager._bgManagers.forEach(this._addLogDisplay.bind(this));
-        this._onPressed(props?.initialValue ?? true);  // update initial visibility
-
         this.logCallbackId = addLogCallback((t) => {
             this.logAddedCallbacks.forEach((c) => c(t))
         });
+
+        this._addDisplays();
+
+        this._onPressed(props?.initialValue ?? true);  // update initial visibility
     }
 
-    private _addLogDisplay(bgManager: any): void {
+    private _addDisplays() {
+        // At the moment we only create one log display and keep it on the primary monitor, however
+        // should one want to add multiple log displays mirroring the same content, this is the
+        // only method that needs to be changed.
+
+        const display = this._createLogDisplay();
+        global.window_group.add_child(display);
+        // @ts-ignore
+        global.window_group.set_child_above_sibling(display, Main.layoutManager._backgroundGroup);
+
+        const updatePos = () => {
+            const monitor = Main.layoutManager.primaryMonitor!;
+            const margin = 15 * St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+
+            display.set_position(monitor.x + margin, monitor.y + Main.panel.height + margin);
+        }
+
+        updatePos();
+
+        const id = global.backend.get_monitor_manager().connect('monitors-changed', () => updatePos());
+        display.connect('destroy', () => global.backend.get_monitor_manager().disconnect(id))
+    }
+
+    private _createLogDisplay(): St.Widget {
         const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
 
         const col = new Ref<Widgets.Column>();
@@ -65,17 +88,9 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 padding: '15px',
                 borderRadius: '10px',
             }),
-            constraints: [
-                new Clutter.BindConstraint({
-                    source: bgManager._container,
-                    coordinate: Clutter.BindCoordinate.POSITION,
-                    offset: Main.panel.height + 25
-                }),
-            ],
         });
-        bgManager._container.add_child(display);
 
-        this.logAddedCallbacks.push((t) => {
+        const callback = (t: string) => {
             // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
             const a = display.get_vadjustment();
             if (a.value < a.upper - display.contentBox.get_height() - 25 * scaleFactor) {
@@ -91,9 +106,9 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
 
             if (col.current?.get_last_child() != null) {
                 const text = findActorBy(col.current.get_last_child()!,
-                        e => (e as St.Widget).styleClass === 'log-item-text') as Widgets.Label;
+                    e => (e as St.Widget).styleClass === 'log-item-text') as Widgets.Label;
                 const counter = findActorBy(col.current.get_last_child()!,
-                        e => (e as St.Widget).styleClass === 'log-item-duplicates-counter') as Widgets.Label;
+                    e => (e as St.Widget).styleClass === 'log-item-duplicates-counter') as Widgets.Label;
 
                 if (text.text === t) {
                     counter.text = `${Number.parseInt(counter.text) + 1}`;
@@ -105,8 +120,15 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
 
             // Add the log message:
             col.current?.add_child(this._buildNewLogMessage(t));
-        });
+        };
+
+        this.logAddedCallbacks.push(callback);
+        display.connect('destroy', () =>
+            this.logAddedCallbacks.splice(this.logAddedCallbacks.findIndex(c => c === callback), 1));
+
         this.logDisplays.push(display);
+
+        return display;
     }
 
     private _buildNewLogMessage(t: string) {
