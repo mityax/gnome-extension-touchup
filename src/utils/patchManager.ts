@@ -5,6 +5,7 @@ import {UnknownClass} from "$src/utils/utils";
 import {assert, debugLog, repr} from "$src/utils/logging";
 import {Ref} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
+import {Setting} from "$src/features/preferences/backend";
 
 
 type PatchFunc = () => (() => any);
@@ -77,22 +78,58 @@ export class PatchManager {
     connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string): Patch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
-        return this.patch(() => {
-            const signalId = instance.connect(signal, handler);
-            return () => instance.disconnect(signalId);
+        const patch = this.patch(() => {
+            const signalIds = [
+                instance.connect(signal, handler)
+            ];
+
+            // If the given instance is a [Clutter.Actor], we drop this patch on actor destruction as it is
+            // an error to disconnect from a signal on a destroyed actor (which we would do if we would disable
+            // the patch):
+            if (instance instanceof Clutter.Actor) {
+                signalIds.push(instance.connect('destroy', () => this.drop(patch)));
+            }
+
+            return () => signalIds.forEach(s => instance.disconnect(s));
         }, debugName ?? `connectTo(${instance.constructor.name}:${signal})`);
+
+        return patch;
     }
 
     /**
      * Set an objects property to a certain value and automatically reset it to the original value upon
      * [PatchManager] destruction or disabling.
      */
-    setProperty<A extends object, P extends keyof A>(o: A, prop: P, value: A[P], debugName?: string) {
-        return this.patch(() => {
-            const originalValue = o[prop];
-            o[prop] = value;
-            return () => o[prop] = originalValue;
-        }, debugName ?? `setProperty(${o.constructor?.name ?? repr(o)}, '${prop.toString()}', ${repr(value)})`);
+    setProperty<A extends object, P extends keyof A>(instance: A, prop: P, value: A[P], debugName?: string) {
+        const patch = this.patch(() => {
+            const originalValue = instance[prop];
+            instance[prop] = value;
+
+            // If the given instance is a [Clutter.Actor], we drop this patch on actor destruction as it is
+            // an error to set a property on a destroyed actor (which we would do if we would disable the patch):
+            let destroySignalId: number | null = null;
+            if (instance instanceof Clutter.Actor) {
+                destroySignalId = instance.connect('destroy', () => this.drop(patch));
+            }
+
+            return () => {
+                instance[prop] = originalValue;
+
+                if (destroySignalId !== null) {
+                    (instance as GObject.Object).disconnect(destroySignalId);
+                }
+            };
+        }, debugName ?? `setProperty(${instance.constructor?.name ?? repr(instance)}, '${prop.toString()}', ${repr(value)})`);
+
+        return patch;
+    }
+
+    /**
+     * Call the given [callback] with the given [setting]'s value and then whenever it is changed.
+     */
+    bindSetting<T>(setting: Setting<T>, callback: (v: T) => void) {
+        callback(setting.get());
+        return this.connectTo(setting, 'changed', () => callback(setting.get()));
     }
 
     /**
@@ -274,6 +311,24 @@ export class PatchManager {
     }
 
     /**
+     * Drops a patch from the list of patches maintained by this [PatchManager] without
+     * disabling it. This is required in rare cases.
+     *
+     * Only use this when you are certain you know what you're doing.
+     *
+     * Returns the dropped patch or `null` if it is not managed by this PatchManager.
+     */
+    drop(patch: Patch): Patch | null {
+        const idx = this._patches.findIndex(p => p === patch);
+
+        DEBUG: assert(idx !== -1, `Could not find patch to remove: ${repr(patch)}`);
+
+        if (idx === -1) return null;
+
+        return this._patches.splice(idx, 1)[0];
+    }
+
+    /**
      * Create a descendent [PatchManager].
      *
      * This child [PatchManager] will react to any call to [destroy], [disable] and [enable]
@@ -323,6 +378,14 @@ export class Patch {
         debugLog(` - Enabling patch ${this.debugName}`);
         this._disableCallback = this._enableCallback();
         this._isEnabled = true;
+    }
+
+    setEnabled(enabled: boolean, force: boolean = false) {
+        if (enabled) {
+            this.enable(force);
+        } else {
+            this.disable(force);
+        }
     }
 
     get isEnabled(): boolean {

@@ -1,10 +1,15 @@
 import Clutter from "gi://Clutter";
 import EventEmitter from "$src/utils/eventEmitter";
+import {assert} from "$src/utils/logging";
 
 
 const MAX_HOLD_MOVEMENT = 6;  // in logical pixels
 const MIN_HOLD_TIME_US = 500 * 1000;  // in microseconds (1000us = 1ms)
-const MIN_MOTION_DIRECTION_DETECTION_DISTANCE = 7;  // in logical pixels
+const MIN_MOTION_DIRECTION_DETECTION_DISTANCE = 6;  // in logical pixels; must be <= MAX_HOLD_MOVEMENT
+
+
+DEBUG: assert(MAX_HOLD_MOVEMENT <= MIN_MOTION_DIRECTION_DETECTION_DISTANCE,
+    'MAX_HOLD_MOVEMENT must be less than or equal to MIN_MOTION_DIRECTION_DETECTION_DISTANCE');
 
 
 export enum EventType {

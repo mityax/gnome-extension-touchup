@@ -1,6 +1,6 @@
 import {PatchManager} from "$src/utils/patchManager";
 import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
-import OskKeyPopupsFeature from "$src/features/osk/oskKeyPopupsFeature";
+import OskFeature from "$src/features/osk/oskFeature";
 import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
 import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
@@ -103,9 +103,8 @@ export default class TouchUpExtension extends Extension {
         );
 
         this.defineFeature(
-            'osk-key-popups',
-            pm => new OskKeyPopupsFeature(pm),
-            settings.oskKeyPopups.enabled,
+            'osk',
+            pm => new OskFeature(pm),
         );
 
         this.defineFeature(

@@ -89,8 +89,10 @@ export default class OverviewAndWorkspaceGestureController {
 
         // Workspace switching:
         if (this._isWorkspaceGestureRunning) {
+            // TODO: debug occasional cases of non-ending gesture
+
             if (props.direction === 'left' || props.direction === 'right') {
-                this._wsController._switchWorkspaceEnd({}, 500, this._currentWorkspaceProgress + (props.direction == 'left' ? 0.5 : -0.5));
+                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress + (props.direction == 'left' ? 0.5 : -0.5)));
             } else {
                 this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress));
             }

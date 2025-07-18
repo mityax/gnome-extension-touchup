@@ -123,8 +123,10 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         };
 
         this.logAddedCallbacks.push(callback);
-        display.connect('destroy', () =>
-            this.logAddedCallbacks.splice(this.logAddedCallbacks.findIndex(c => c === callback), 1));
+        display.connect('destroy', () => {
+            this.logAddedCallbacks.splice(this.logAddedCallbacks.findIndex(c => c === callback), 1);
+            this.logDisplays.splice(this.logDisplays.findIndex(d => d === display), 1);
+        });
 
         this.logDisplays.push(display);
 

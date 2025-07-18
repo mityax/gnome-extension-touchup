@@ -100,15 +100,35 @@ export const settings = {
         enabled: new BoolSetting('overview-gestures-enabled', true),
     },
 
-    oskKeyPopups: {
-        /**
-         * Whether to enable the OSK key popup feature or not.
-         */
-        enabled: new BoolSetting('osk-key-popups-enabled', true),
-        /**
-         * How long to show the OSK key popups for (in milliseconds).
-         */
-        duration: new IntSetting('osk-key-popups-duration', 35, 15, 250),
+    osk: {
+        keyPopups: {
+            /**
+             * Whether to enable the OSK key popup feature or not.
+             */
+            enabled: new BoolSetting('osk-key-popups-enabled', true),
+
+            /**
+             * How long to show the OSK key popups for (in milliseconds).
+             */
+            duration: new IntSetting('osk-key-popups-duration', 35, 15, 250),
+        },
+
+        gestures: {
+            swipeToClose: {
+                /**
+                 * Whether to enable the swipe-to-close OSK gesture or not.
+                 */
+                enabled: new BoolSetting('osk-gestures-swipe-to-close-enabled', true),
+            },
+
+            extendKeys: {
+                /**
+                 * Whether to (virtually, not visibly) extend keys, i.e. allow taps close by an
+                 * OSK key to also be registered as a key press.
+                 */
+                enabled: new BoolSetting('osk-gestures-extend-keys-enabled', true),
+            }
+        }
     },
 
     screenRotateUtils: {

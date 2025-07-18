@@ -244,6 +244,7 @@ class NavigationBarGestureManager {
     private readonly _scaleFactor: number;
 
     private _hasStarted: boolean = false;
+    private _isKeyboardGesture: boolean = false;
 
     constructor(private actor: _GestureNavigationBarActor, private monitor?: Monitor) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
@@ -276,12 +277,11 @@ class NavigationBarGestureManager {
                 this._startGestures(state);
             }
 
-            this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress
-                - (state.totalMotionDelta.x / this._controller.baseDistX) * 1.6;
-
-            if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
-                Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y / this._controller.baseDistY);
+            if (this._isKeyboardGesture) {
+                Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
             } else {
+                this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress
+                    - (state.totalMotionDelta.x / this._controller.baseDistX) * 1.6;
                 this._targetOverviewProgress = this._controller.initialOverviewProgress
                     + (-state.totalMotionDelta.y / (this._controller.baseDistY * 0.2));
             }
@@ -290,20 +290,27 @@ class NavigationBarGestureManager {
 
     private _startGestures(state: GestureState) {
         this._hasStarted = true;
-
-        this._controller.gestureBegin();
-        this._targetOverviewProgress = this._controller.initialOverviewProgress;
-        this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress;
-        this._idleRunner.start();
-
-        if (Main.keyboard._keyboard && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
-            Main.keyboard._keyboard.gestureBegin();
-        }
+        this._isKeyboardGesture = false;
 
         if (Main.keyboard.visible) {
+            // Close the keyboard if it's visible:
             Main.keyboard._keyboard
                 ? Main.keyboard._keyboard.close(true)  // immediate = true
                 : Main.keyboard.close();
+
+        } else if (Main.keyboard._keyboard
+            && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor
+            && state.firstMotionDirection?.axis === 'vertical') {
+
+            this._isKeyboardGesture = true;
+        }
+
+        if (!this._isKeyboardGesture) {
+            // Start navigation gestures:
+            this._controller.gestureBegin();
+            this._targetOverviewProgress = this._controller.initialOverviewProgress;
+            this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress;
+            this._idleRunner.start();
         }
     }
 
@@ -330,11 +337,13 @@ class NavigationBarGestureManager {
                 this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
                 this.actor.passthrough = false;
             }
-        } else if (Main.keyboard._keyboard && direction === 'up' && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor) {
-            this._controller.gestureEnd({ direction: null });
-
-            //@ts-ignore
-            Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
+        } else if (this._isKeyboardGesture) {
+            if (direction === 'up') {
+                //@ts-ignore
+                Main.keyboard._keyboard?.gestureActivate(Main.layoutManager.bottomIndex);
+            } else {
+                Main.keyboard._keyboard?.gestureCancel();
+            }
         } else {
             this._controller.gestureEnd({ direction });
         }
@@ -393,12 +402,10 @@ class _GestureNavigationBarActor extends Widgets.Bin {
 
     vfunc_pick(pick_context: Clutter.PickContext) {
         if (this._passthrough) {
-            debugLog("Pick passing though");
             this.pick_box(pick_context, new Clutter.ActorBox({
                 x1: 0, x2: 0, y1: 0, y2: 0
             }));
         } else {
-            debugLog("Pick captured");
             super.vfunc_pick(pick_context);
         }
     }

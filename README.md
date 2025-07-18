@@ -32,9 +32,9 @@ very frequently – you can help speed up progress by [donating](#support).
        codes or links
  - [x] Onscreen Keyboard (OSK)
    - [x] Key popups
-   - [ ] Bigger keys
+   - [x] "Extended" keys (make padding between keys reactive)
    - [ ] Compatibility with the "GJS OSK" extension (?)
-   - [ ] Swipe-close keyboard
+   - [x] Swipe-close keyboard
  - [ ] Virtual Touchpad (use device as touchpad when connected to a
    second monitor) \[WIP]
  - [x] Floating temporary screen rotation button when auto-rotation

@@ -2,7 +2,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {findActorBy, UnknownClass} from "$src/utils/utils";
+import {UnknownClass} from "$src/utils/utils";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import St from "gi://St";
 import {log} from "$src/utils/logging";
@@ -12,9 +12,10 @@ import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/utils/patchManager";
 import Clutter from "gi://Clutter";
 
+import {extractKeyPrototype} from "./_oskUtils";
 
-export default class OskKeyPopupsFeature extends ExtensionFeature {
-    private keyPrototype: any;
+
+export default class OSKKeyPopupFeature extends ExtensionFeature {
     private boxPointers: Map<Clutter.Actor, BoxPointer.BoxPointer> = new Map();
 
     constructor(pm: PatchManager) {
@@ -22,17 +23,16 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
 
         const self = this;
 
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
-            // Only do this once (this patch is only responsible for retrieving the `Key` prototype,
-            // which is key (pun intended) to create the OSK popups):
-            if (!self.keyPrototype) {
-                self.keyPrototype = self._extractKeyPrototype(this);
+        const openListener = this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
+            let proto = extractKeyPrototype(this);
 
-                if (!self.keyPrototype) {
-                    log("Could not extract Key prototype, thus not patching OSK key popups.");
-                } else {
-                    self._patchKeyMethods(self.keyPrototype);
-                }
+            if (proto === null) {
+                log("Could not extract Key prototype, thus not patching OSK key popups.");
+            } else {
+                self._patchKeyMethods(proto);
+
+                // Only run this patch once:
+                openListener.disable();
             }
         });
     }
@@ -43,12 +43,15 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
         // Show the key popup on key press:
         this.pm.appendToMethod(keyProto, '_press', function (this: Clutter.Actor, button, commitString) {
             if (!self.boxPointers.get(this) && commitString && commitString.trim().length > 0) {
-                self.pm.patch(() => {
+                const bpPatch = self.pm.patch(() => {
                     const bp = self._buildBoxPointer(this, commitString);
                     Main.layoutManager.addTopChrome(bp);
                     self.boxPointers.set(this, bp);
                     // @ts-ignore
-                    bp.connect('destroy', () => self.boxPointers.delete(this));
+                    bp.connect('destroy', () => {
+                        self.boxPointers.delete(this);
+                        self.pm.drop(bpPatch);
+                    });
 
                     return () => bp.destroy();
                 });
@@ -65,7 +68,7 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
 
         // Hide the key popup a few ms after a key has been released:
         this.pm.appendToMethod(keyProto, '_release', function (this: Clutter.Actor, button, commitString) {
-            Delay.ms(settings.oskKeyPopups.duration.get()).then(() => {
+            Delay.ms(settings.osk.keyPopups.duration.get()).then(() => {
                 // @ts-ignore
                 self.boxPointers.get(this)?.close(BoxPointer.PopupAnimation.FULL);
             })
@@ -107,16 +110,5 @@ export default class OskKeyPopupsFeature extends ExtensionFeature {
             }));
         }
         return bp;
-    }
-
-    private _extractKeyPrototype(keyboard: Keyboard.Keyboard) {
-        let r = findActorBy(
-            keyboard._aspectContainer,
-            a => a.constructor.name === 'Key' && !!Object.getPrototypeOf(a),
-        );
-
-        return r !== null
-            ? Object.getPrototypeOf(r)
-            : null;
     }
 }

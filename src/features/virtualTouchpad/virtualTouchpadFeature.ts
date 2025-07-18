@@ -210,6 +210,8 @@ class _TouchPadActor extends Widgets.Column {
     }
 
     private _onGestureProgress(state: GestureState) {
+        // TODO: evaluate supressing global.backend::'last-device-changed' events to avoid pointer blinking
+
         if (state.isCertainlyMovement) {
             if (state.totalFingerCount === 1) {
                 const d = state.currentMotionDelta;
