@@ -44,13 +44,15 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                 }),
                 this.buildAlwaysShowOnMonitorRow({
                     title: "Always show on monitor",
-                    subtitle: "Select a monitor to always show the navigation bar on.",
-                    tooltipText: "When a monitor is selected, the navigation bar is shown on it regardless of whether Gnome's \"touch mode\" is enabled or supported on this device. You can select the built-in monitor to make the navigation bar always show up.",
+                    subtitle: "Select a monitor to always show the navigation bar on",
+                    tooltipText: "When a monitor is selected, the navigation bar is shown on it regardless of " +
+                        "whether Gnome's \"touch mode\" is enabled or supported on this device. You can select the " +
+                        "built-in monitor to make the navigation bar always show up.",
                     setting: settings.navigationBar.alwaysShowOnMonitor,
                 }),
                 buildSwitchRow({
                     title: "Primary monitor follows navigation bar",
-                    subtitle: "Change the primary monitor to the one the navigation bar appears on, whenever it's visible.",
+                    subtitle: "Change the primary monitor to the one the navigation bar appears on, whenever it's visible",
                     setting: settings.navigationBar.primaryMonitorFollowsNavbar,
                 }),
             ]

@@ -11,8 +11,8 @@ export class OskKeyPopupPage extends Adw.PreferencesPage {
 
     constructor() {
         super({
-            name: 'osk-key-popups',
-            title: "OSK Key Popups",
+            name: 'osk',
+            title: "OSK",
             icon_name: "input-keyboard-symbolic",
         });
 
@@ -23,20 +23,39 @@ export class OskKeyPopupPage extends Adw.PreferencesPage {
                 buildSwitchRow({
                     title: "Enable OSK Key Popups",
                     subtitle: "Toggle to enable or disable the OSK key popup feature",
-                    setting: settings.oskKeyPopups.enabled
+                    setting: settings.osk.keyPopups.enabled
                 }),
                 buildSpinRow({
                     title: "Popup Duration",
-                    subtitle: "Set how long (in milliseconds) to show the OSK key popups.",
-                    setting: settings.oskKeyPopups.duration,
+                    subtitle: "Set how long (in milliseconds) to show the OSK key popups",
+                    setting: settings.osk.keyPopups.duration,
                     adjustment: new Gtk.Adjustment({
-                        lower: settings.oskKeyPopups.duration.min,
-                        upper: settings.oskKeyPopups.duration.max,
+                        lower: settings.osk.keyPopups.duration.min,
+                        upper: settings.osk.keyPopups.duration.max,
                         step_increment: 1,
                         page_increment: 10,
                     }),
                 })
             ]
         }));
+
+        this.add(buildPreferencesGroup({
+            title: "OSK Gestures",
+            description: "Fine-tune how the OSK reacts to touch events.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable Swipe-To-Close",
+                    subtitle: "Enable this if you'd like to swipe down on the empty space in the OSK to smoothly " +
+                        "close it",
+                    setting: settings.osk.gestures.swipeToClose.enabled,
+                }),
+                buildSwitchRow({
+                    title: "Enable Extended Keys",
+                    subtitle: "When enabled, the empty space between keys on the on-screen keyboard will also be " +
+                        "responsive, making it easier to hit the intended keys",
+                    setting: settings.osk.gestures.extendKeys.enabled,
+                }),
+            ]
+        }))
     }
 }
