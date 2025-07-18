@@ -67,7 +67,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         updatePos();
 
         const id = global.backend.get_monitor_manager().connect('monitors-changed', () => updatePos());
-        display.connect('destroy', () => global.backend.get_monitor_manager().disconnect(id))
+        display.connect('destroy', () => global.backend.get_monitor_manager().disconnect(id));
     }
 
     private _createLogDisplay(): St.Widget {
