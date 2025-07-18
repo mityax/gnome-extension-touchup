@@ -314,7 +314,7 @@ class NavigationBarGestureManager {
         }
     }
 
-    private async _onGestureCompleted(state: GestureState) {
+    private _onGestureCompleted(state: GestureState) {
         this._idleRunner.stop();
         this._hasStarted = false;
 
@@ -333,9 +333,10 @@ class NavigationBarGestureManager {
                 this.actor.passthrough = true;
                 this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
                     state.events[0].x, state.events[0].y);
-                await Delay.ms(25);
-                this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
-                this.actor.passthrough = false;
+                Delay.ms(25).then(() => {
+                    this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
+                    this.actor.passthrough = false;
+                });
             }
         } else if (this._isKeyboardGesture) {
             if (direction === 'up') {

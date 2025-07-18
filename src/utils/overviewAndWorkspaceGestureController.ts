@@ -1,6 +1,7 @@
 import {clamp, UnknownClass} from "./utils";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
+import {debugLog} from "$src/utils/logging";
 
 
 export default class OverviewAndWorkspaceGestureController {
@@ -35,7 +36,7 @@ export default class OverviewAndWorkspaceGestureController {
     }
 
     gestureUpdate(props: {overviewProgress?: number, workspaceProgress?: number}) {
-        if (typeof props.overviewProgress !== 'undefined') {
+        if (props.overviewProgress) {
             if (!this._isOverviewGestureRunning) {
                 Main.overview._gestureBegin({
                     confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
@@ -56,7 +57,7 @@ export default class OverviewAndWorkspaceGestureController {
             }
         }
 
-        if (typeof props.workspaceProgress !== 'undefined') {
+        if (props.workspaceProgress) {
             if (!this._isWorkspaceGestureRunning) {
                 this._wsController._switchWorkspaceBegin({
                     confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
@@ -77,13 +78,22 @@ export default class OverviewAndWorkspaceGestureController {
 
     gestureEnd(props: {direction: 'left' | 'right' | 'up' | 'down' | null}) {
         // Overview toggling:
-        if (this._isOverviewGestureRunning) {
-            if (props.direction === 'up') {  // `null` means user holds still at the end
-                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.5), 1, 2));
-            } else if (props.direction === 'down') {
-                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.5), 0, 1));
-            } else {
-                Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
+        try {
+            if (this._isOverviewGestureRunning) {
+                if (props.direction === 'up') {
+                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.5), 1, 2));
+                } else if (props.direction === 'down') {
+                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.5), 0, 1));
+                } else {
+                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
+                }
+            }
+        } catch (e: any) {
+            DEBUG: {
+                if (!e.toString().includes('Invalid overview shown transition from HIDDEN to HIDING')) {
+                    debugLog("Error during overview gesture termination: ", e);
+                    throw e;
+                }
             }
         }
 
