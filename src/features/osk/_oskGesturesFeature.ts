@@ -9,7 +9,6 @@ import Clutter from "@girs/clutter-16";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
-import {debugLog} from "$src/utils/logging";
 
 
 export default class OSKGesturesFeature extends ExtensionFeature {
@@ -66,13 +65,6 @@ export default class OSKGesturesFeature extends ExtensionFeature {
                     }
                 });
             }
-        });
-
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_animateShow', () => {
-            debugLog("_animateShow finished");
-        });
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', () => {
-            debugLog("open finished");
         });
     }
 
