@@ -72,7 +72,7 @@ export default class OSKGesturesFeature extends ExtensionFeature {
         const self = this;
         const patched = new Set();  // keep track of all already patched keys
 
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: Keyboard.Keyboard & St.BoxLayout) {
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', function (this: Keyboard.Keyboard & St.BoxLayout) {
             const patch = self.pm.patch(() => {
                 const keys = findAllActorsBy(this, (a) => (
                     a.constructor.name === 'Key' && !patched.has(a)
