@@ -9,6 +9,7 @@ import Clutter from "@girs/clutter-16";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
+import {debugLog} from "$src/utils/logging";
 
 
 export default class OSKGesturesFeature extends ExtensionFeature {
@@ -41,8 +42,14 @@ export default class OSKGesturesFeature extends ExtensionFeature {
                 if (state.lastMotionDirection?.direction === 'down') {
                     Main.keyboard._keyboard.gestureCancel();
                 } else {
-                    //@ts-ignore
-                    Main.keyboard._keyboard.gestureActivate(Main.layoutManager.bottomIndex);
+                    // The following line is a required hack to make the keyboard animate back up; since the
+                    // keyboard's gesture functionality is only intended for opening the keyboard, not for closing,
+                    // let alone canceling closing it. Thus, when the swipe-to-close gesture is cancelled, we tell the
+                    // keyboard it's not open yet, which perfectly imitates the state it'd be in had we opened it
+                    // using the gesture as normal instead of swipe-closing and then cancelling.
+                    Main.keyboard._keyboard._keyboardVisible = false;
+
+                    Main.keyboard._keyboard.gestureActivate();
                 }
             },
         });
@@ -51,6 +58,8 @@ export default class OSKGesturesFeature extends ExtensionFeature {
         let patchedKeyboard: Keyboard.Keyboard | null = null;
 
         this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: Keyboard.Keyboard & St.BoxLayout) {
+            debugLog("open finished, now ", patchedKeyboard === this ? 'not patching' : 'patching');
+
             if (patchedKeyboard !== this) {
                 patchedKeyboard = this;
                 self.pm.connectTo(this, 'touch-event', (_, e) => {
@@ -59,6 +68,13 @@ export default class OSKGesturesFeature extends ExtensionFeature {
                     }
                 });
             }
+        });
+
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_animateShow', () => {
+            debugLog("_animateShow finished");
+        });
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', () => {
+            debugLog("_open finished");
         });
     }
 

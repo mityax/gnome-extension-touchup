@@ -340,8 +340,7 @@ class NavigationBarGestureManager {
             }
         } else if (this._isKeyboardGesture) {
             if (direction === 'up') {
-                //@ts-ignore
-                Main.keyboard._keyboard?.gestureActivate(Main.layoutManager.bottomIndex);
+                Main.keyboard._keyboard?.gestureActivate();
             } else {
                 Main.keyboard._keyboard?.gestureCancel();
             }
