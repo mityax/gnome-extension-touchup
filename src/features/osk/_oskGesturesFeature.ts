@@ -57,9 +57,7 @@ export default class OSKGesturesFeature extends ExtensionFeature {
         const self = this;
         let patchedKeyboard: Keyboard.Keyboard | null = null;
 
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: Keyboard.Keyboard & St.BoxLayout) {
-            debugLog("open finished, now ", patchedKeyboard === this ? 'not patching' : 'patching');
-
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', function (this: Keyboard.Keyboard & St.BoxLayout) {
             if (patchedKeyboard !== this) {
                 patchedKeyboard = this;
                 self.pm.connectTo(this, 'touch-event', (_, e) => {
@@ -73,8 +71,8 @@ export default class OSKGesturesFeature extends ExtensionFeature {
         this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_animateShow', () => {
             debugLog("_animateShow finished");
         });
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', () => {
-            debugLog("_open finished");
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', () => {
+            debugLog("open finished");
         });
     }
 
