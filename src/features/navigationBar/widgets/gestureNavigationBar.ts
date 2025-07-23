@@ -298,7 +298,7 @@ class NavigationBarGestureManager {
                 : Main.keyboard.close();
 
         } else if (Main.keyboard._keyboard
-            && state.events[0].x < LEFT_EDGE_OFFSET * this._scaleFactor
+            && state.pressCoordinates.x < LEFT_EDGE_OFFSET * this._scaleFactor
             && state.firstMotionDirection?.axis === 'vertical') {
 
             this._isKeyboardGesture = true;
@@ -324,14 +324,14 @@ class NavigationBarGestureManager {
 
             // Find the event target actor below the navigation bar:
             const windows = global.get_window_actors();
-            const receiver = windows.find(w => w.allocation.contains(state.events[0].x, state.events[0].y));
+            const receiver = windows.find(w => w.allocation.contains(state.pressCoordinates.x, state.pressCoordinates.y));
 
             debugLog("Emitting fake click on actor", receiver, receiver?.name, receiver?.metaWindow.title);
 
             if (receiver) {
                 this.actor.passthrough = true;
                 this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
-                    state.events[0].x, state.events[0].y);
+                    state.pressCoordinates.x, state.pressCoordinates.y);
                 Delay.ms(25).then(() => {
                     this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
                     this.actor.passthrough = false;

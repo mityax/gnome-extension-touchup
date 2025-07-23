@@ -230,6 +230,16 @@ export class GestureState {
     }
 
     /**
+     * Returns the position where the first event of this gesture occurred.
+     */
+    get pressCoordinates(): {x: number, y: number} {
+        return {
+            x: this.events[0].x,
+            y: this.events[0].y,
+        }
+    }
+
+    /**
      * Returns true if it's certain already that this gesture involves motion.
      */
     get isCertainlyMovement(): boolean {
