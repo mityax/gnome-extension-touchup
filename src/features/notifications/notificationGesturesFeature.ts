@@ -16,7 +16,6 @@ import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import Ref = Widgets.Ref;
-import Stage = Clutter.Stage;
 
 
 export class NotificationGesturesFeature extends ExtensionFeature {
@@ -279,9 +278,7 @@ class SwipeGesturesHelper {
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
         // Track and recognize touch and mouse events:
-        this.recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor,
-        });
+        this.recognizer = new GestureRecognizer();
 
         // Setup event handlers:
         this._signalIds = [

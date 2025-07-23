@@ -1,4 +1,3 @@
-import St from "gi://St";
 import {MonitorConstraint} from "resource:///org/gnome/shell/ui/layout.js";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
@@ -154,7 +153,6 @@ class _TouchPadActor extends Widgets.Column {
         this._onClose = props.onClose;
 
         this._recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
             onGestureStarted: state => this._onGestureStarted(),
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),

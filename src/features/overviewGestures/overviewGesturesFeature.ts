@@ -29,7 +29,6 @@ export class OverviewGesturesFeature extends ExtensionFeature {
 
     private _setupOverviewBackgroundGestures() {
         const recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
             onGestureProgress: state => {
                 if (state.isCertainlyMovement) {
                     const d = state.totalMotionDelta;
@@ -70,7 +69,6 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             let decidedOnGesture: 'drag' | 'swipe-up' | 'swipe-down' | 'swipe-horizontally' | null = null;
 
             const recognizer = new GestureRecognizer({
-                scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
                 onGestureCompleted: state => {
                     if (decidedOnGesture === 'drag') {
                         // @ts-ignore
@@ -185,7 +183,6 @@ export class OverviewGesturesFeature extends ExtensionFeature {
 
     private _setupDesktopBackgroundGestures() {
         const recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
             onGestureProgress: state => {
                 if (state.isCertainlyMovement) {
                     if (state.firstMotionDirection?.axis === 'vertical') {

@@ -254,7 +254,6 @@ class NavigationBarGestureManager {
         });
 
         this._recognizer = new GestureRecognizer({
-            scaleFactor: this._scaleFactor,
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),
         });

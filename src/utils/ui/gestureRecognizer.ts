@@ -1,6 +1,7 @@
 import Clutter from "gi://Clutter";
 import EventEmitter from "$src/utils/eventEmitter";
 import {assert} from "$src/utils/logging";
+import St from "gi://St";
 
 
 const MAX_HOLD_MOVEMENT = 6;  // in logical pixels
@@ -119,22 +120,22 @@ export class GestureRecognizer extends EventEmitter<{
     private _state: GestureState;
     private readonly _scaleFactor: number;
 
-    constructor(props: {
-        scaleFactor: number,
+    constructor(props?: {
+        scaleFactor?: number,
         onGestureStarted?: (state: GestureState) => void,
         onGestureProgress?: (state: GestureState) => void,
         onGestureCompleted?: (state: GestureState) => void,
     }) {
         super();
 
-        this._scaleFactor = props.scaleFactor;
+        this._scaleFactor = props?.scaleFactor ?? St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         this._state = GestureState.initial({
             scaleFactor: this._scaleFactor,
         });
 
-        if (props.onGestureStarted)   this.connect('gesture-started', props.onGestureStarted);
-        if (props.onGestureProgress)  this.connect('gesture-progress', props.onGestureProgress);
-        if (props.onGestureCompleted) this.connect('gesture-completed', props.onGestureCompleted);
+        if (props?.onGestureStarted)   this.connect('gesture-started', props.onGestureStarted);
+        if (props?.onGestureProgress)  this.connect('gesture-progress', props.onGestureProgress);
+        if (props?.onGestureCompleted) this.connect('gesture-completed', props.onGestureCompleted);
     }
 
     push(event: GestureRecognizerEvent): GestureState {
