@@ -19,8 +19,8 @@ export const settings = {
         enabled: new BoolSetting('navigation-bar-enabled', true),
 
         /**
-         * If true, the navigation bar will be shown even if Gnome is not in touch mode. If false, the navigation
-         * bar will be shown only in touch mode.
+         * If true, the navigation bar will be shown even if the Shell is not in touch mode. If false, the
+         * navigation bar will be shown only in touch mode.
          */
         alwaysVisible: new BoolSetting('navigation-bar-always-visible', false),
 
