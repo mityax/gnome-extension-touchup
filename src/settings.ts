@@ -19,11 +19,16 @@ export const settings = {
         enabled: new BoolSetting('navigation-bar-enabled', true),
 
         /**
-         * When set, and the chosen monitor is connected, the navigation bar is show on that monitor
-         * regardless of whether Gnome's touch mode is currently active. Can also be set to the built-in
-         * monitor to facilitate an "always show navigation bar" behavior.
+         * If true, the navigation bar will be shown even if Gnome is not in touch mode. If false, the navigation
+         * bar will be shown only in touch mode.
          */
-        alwaysShowOnMonitor: new JSONSetting<{name: string, id: string} | null>('navigation-bar-always-show-on-monitor', null),
+        alwaysVisible: new BoolSetting('navigation-bar-always-visible', false),
+
+        /**
+         * When set, and the chosen monitor is connected, the navigation bar is shown on that monitor instead
+         * of the built-in monitor. When the chosen monitor is not connected, no navigation bar will be shown.
+         */
+        monitor: new JSONSetting<{name: string, id: string} | null>('navigation-bar-monitor', null),
 
         /**
          * When enabled, the primary monitor is automatically changed to the monitor the navigation bar

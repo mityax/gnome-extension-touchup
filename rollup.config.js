@@ -61,7 +61,7 @@ export default {
         'src/prefs.ts',
     ],
     treeshake: {
-        moduleSideEffects: false, //'no-external'
+        moduleSideEffects: false, // 'no-external'
     },
     external: [/gi:\/\/.*/, /resource:\/\/.*/],
     output: {

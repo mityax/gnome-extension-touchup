@@ -44,7 +44,9 @@ export default class NavigationBarFeature extends ExtensionFeature {
         // Connect to settings:
         this.pm.connectTo(settings.navigationBar.mode, 'changed', (mode) =>
             this.setMode(mode));
-        this.pm.connectTo(settings.navigationBar.alwaysShowOnMonitor, 'changed', () =>
+        this.pm.connectTo(settings.navigationBar.alwaysVisible, 'changed', () =>
+            this._updateVisibility());
+        this.pm.connectTo(settings.navigationBar.monitor, 'changed', () =>
             this._updateVisibility());
         this.pm.connectTo(settings.navigationBar.primaryMonitorFollowsNavbar, 'changed', (enabled) => {
             if (!enabled) {
@@ -58,6 +60,7 @@ export default class NavigationBarFeature extends ExtensionFeature {
             }
         });
 
+        // Remove the OSK bottom drag action from the shell:
         this._removeOskActionPatch = this.pm.patch(() => {
             let oskAction = global.stage.get_action('osk')!;
             if (oskAction) global.stage.remove_action(oskAction);
@@ -163,15 +166,18 @@ export default class NavigationBarFeature extends ExtensionFeature {
      */
     private async _getNavigationBarTargetMonitor() {
         const touchMode = TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive;
-        const alwaysShowOnMonitor = settings.navigationBar.alwaysShowOnMonitor.get();
+        const alwaysVisible = settings.navigationBar.alwaysVisible.get();
+        const selectedMonitor = settings.navigationBar.monitor.get();
+
+        if (!alwaysVisible && !touchMode) return null;
 
         const state = await DisplayConfigState.getCurrent();
         let monitorIndex: number = -1;  // `-1` is also used by `global.backend.get_monitor_manager().get_monitor_for_connector()`, which is used below, as null-value
 
-        if (alwaysShowOnMonitor && state.monitors.some(m => m.constructMonitorId() === alwaysShowOnMonitor.id)) {
-            const monitor = state.monitors.find(m => m.constructMonitorId() === alwaysShowOnMonitor.id)!;
+        if (selectedMonitor && state.monitors.some(m => m.constructMonitorId() === selectedMonitor.id)) {
+            const monitor = state.monitors.find(m => m.constructMonitorId() === selectedMonitor.id)!;
             monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitor.connector);
-        } else if (touchMode) {
+        } else {
             monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector);
         }
  

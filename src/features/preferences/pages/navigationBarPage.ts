@@ -34,7 +34,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                     setting: settings.navigationBar.enabled,
                 }),
                 buildToggleButtonRow<'gestures' | 'buttons'>({
-                    title: "Navigation Bar Mode",
+                    title: "Mode",
                     subtitle: "Choose which kind of navigation experience you prefer",
                     items: [
                         { label: "Gestures", value: "gestures" },
@@ -42,17 +42,23 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                     ],
                     setting: settings.navigationBar.mode,
                 }),
-                this.buildAlwaysShowOnMonitorRow({
-                    title: "Always show on monitor",
-                    subtitle: "Select a monitor to always show the navigation bar on",
-                    tooltipText: "When a monitor is selected, the navigation bar is shown on it regardless of " +
-                        "whether Gnome's \"touch mode\" is enabled or supported on this device. You can select the " +
-                        "built-in monitor to make the navigation bar always show up.",
-                    setting: settings.navigationBar.alwaysShowOnMonitor,
+                buildSwitchRow({
+                    title: "Always Show",
+                    subtitle: "Enable to always show the navigation bar regardless of whether Gnome's touch mode " +
+                        "is enabled or supported on this device",
+                    setting: settings.navigationBar.alwaysVisible,
+                }),
+                this.buildMonitorRow({
+                    title: "Monitor",
+                    subtitle: "Select a monitor to show the navigation bar on",
+                    tooltipText: "Select a monitor you'd like the navigation bar to appear on. The navigation bar " +
+                        "will only show up when the selected monitor is connected.",
+                    setting: settings.navigationBar.monitor,
                 }),
                 buildSwitchRow({
-                    title: "Primary monitor follows navigation bar",
-                    subtitle: "Change the primary monitor to the one the navigation bar appears on, whenever it's visible",
+                    title: "Primary Monitor Follows Navigation Bar",
+                    subtitle: "Change the primary monitor to the one the navigation bar appears on, whenever it's " +
+                        "visible",
                     setting: settings.navigationBar.primaryMonitorFollowsNavbar,
                 }),
             ]
@@ -272,11 +278,11 @@ export class NavigationBarPage extends Adw.PreferencesPage {
         });
     }
 
-    private buildAlwaysShowOnMonitorRow(props: {
+    private buildMonitorRow(props: {
         title: string,
         subtitle: string,
         tooltipText?: string,
-        setting: typeof settings.navigationBar.alwaysShowOnMonitor,
+        setting: typeof settings.navigationBar.monitor,
     }) {
         let monitors: ({name: string, id: string} | null)[] = [];
         const initiallySelected = props.setting.get();
@@ -319,19 +325,21 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                 newMonitors.push(initiallySelected);
             }
 
-            // Add all currently connected monitors:
+            // Add all currently connected external monitors:
             for (let monitor of state.monitors) {
-                newMonitors.push({
-                    name: `${monitor.vendorName} (${monitor.productSerial})`,
-                    id: monitor.constructMonitorId(),
-                })
+                if (!monitor.isBuiltin) {
+                    newMonitors.push({
+                        name: `${monitor.vendorName} (${monitor.productSerial})`,
+                        id: monitor.constructMonitorId(),
+                    });
+                }
             }
 
             // Derive a list of dropdown item labels from the monitors:
             const newComboboxItems: string[] = [];
             for (let monitor of newMonitors) {
                 if (monitor === null) {
-                    newComboboxItems.push("None");
+                    newComboboxItems.push("Built-in display");
                 } else if (!state.monitors.some(m => m.constructMonitorId() === monitor.id)) {
                     newComboboxItems.push(`${monitor.name} (disconnected)`);
                 } else if (state.monitors.find(m => m.constructMonitorId() === monitor.id)?.isBuiltin) {

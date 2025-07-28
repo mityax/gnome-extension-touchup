@@ -3,12 +3,12 @@ import fs from 'fs';
 import path from 'path';
 
 /**
- * A (primitive) rollup plugin that automatically generates a gsettings schema from a
+ * A (primitive) rollup plugin that automatically generates a GSettings schema from a
  * settings typescript file, of the structure specific to this project.
  *
  * The purposes of this plugin are:
  *  - having a single source of truth for the settings schema,
- *  - avoiding the extra work of keeping the schema in sync with the.ts side, and therefore
+ *  - avoiding the extra work of keeping the schema in sync with the ts side, and therefore
  *  - having a lower hurdle to implement new settings.
  *
  * This plugin uses the typescript compiler API to parse the given settings file - thus there
@@ -71,8 +71,8 @@ function generateXMLForSetting(node, sourceFile, source) {
     const comments = ts.getLeadingCommentRanges(source, node.pos) || [];
     for (const comment of comments) {
         const commentText = source.slice(comment.pos, comment.end)
-            .replace(/^\/\*\*|\*\/$/g, '')  // remove "//**" and "*/"
-            .replace(/\s*\n\s*\*\s*/g, ' ')  // remove leading asterisk in each line
+            .replace(/^\/\*\*|\*\/$/g, '')   // remove "//**" and "*/"
+            .replace(/\s*\n\s*\*\s*/g, ' ')  // remove line breaks and leading asterisk in each line
             .trim();
         summary += commentText;
     }
