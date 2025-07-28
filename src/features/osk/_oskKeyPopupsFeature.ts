@@ -62,7 +62,7 @@ export default class OSKKeyPopupFeature extends ExtensionFeature {
             })
         });
 
-        // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown:
+        // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown or the keypress is cancelled:
         this.pm.appendToMethod(keyProto, ['_showSubkeys', 'cancel'], function (this: Clutter.Actor) {
             // @ts-ignore
             self.boxPointers.get(this)?.close();
