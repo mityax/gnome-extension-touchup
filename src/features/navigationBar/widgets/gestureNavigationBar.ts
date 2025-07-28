@@ -271,7 +271,7 @@ class NavigationBarGestureManager {
     }
 
     private _onGestureProgress(state: GestureState) {
-        if (state.isCertainlyMovement) {
+        if (state.hasMovement) {
             if (!this._hasStarted) {
                 this._startGestures(state);
             }

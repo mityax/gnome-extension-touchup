@@ -30,7 +30,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
     private _setupOverviewBackgroundGestures() {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
-                if (state.isCertainlyMovement) {
+                if (state.hasMovement) {
                     const d = state.totalMotionDelta;
                     this.overviewAndWorkspaceController.gestureUpdate({
                         overviewProgress: state.firstMotionDirection?.axis === 'vertical'
@@ -153,7 +153,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                             // @ts-ignore
                             windowPreview._draggable._updateDragPosition.call(windowPreview._draggable, raw_event);
                         }
-                    } else if (state.isCertainlyMovement) {
+                    } else if (state.hasMovement) {
                         if (decidedOnGesture === 'swipe-up'
                             || state.firstMotionDirection?.direction === 'up') {
                             windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
@@ -184,7 +184,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
     private _setupDesktopBackgroundGestures() {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
-                if (state.isCertainlyMovement) {
+                if (state.hasMovement) {
                     if (state.firstMotionDirection?.axis === 'vertical') {
                         this.overviewAndWorkspaceController.gestureUpdate({
                             overviewProgress: -state.totalMotionDelta.y / (

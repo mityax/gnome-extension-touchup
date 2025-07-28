@@ -1,40 +1,28 @@
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
-
-import {UnknownClass} from "$src/utils/utils";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
+import Clutter from "gi://Clutter";
 import St from "gi://St";
+
 import {log} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/utils/patchManager";
-import Clutter from "gi://Clutter";
-
 import {extractKeyPrototype} from "./_oskUtils";
 
 
 export default class OSKKeyPopupFeature extends ExtensionFeature {
     private boxPointers: Map<Clutter.Actor, BoxPointer.BoxPointer> = new Map();
+    private _hasPatchedKeyProto: boolean = false;
 
-    constructor(pm: PatchManager) {
+    constructor(pm: PatchManager, keyboard: Keyboard.Keyboard | null) {
         super(pm);
 
-        const self = this;
-
-        const openListener = this.pm.appendToMethod(Keyboard.Keyboard.prototype, 'open', function (this: UnknownClass, ..._) {
-            let proto = extractKeyPrototype(this);
-
-            if (proto === null) {
-                log("Could not extract Key prototype, thus not patching OSK key popups.");
-            } else {
-                self._patchKeyMethods(proto);
-
-                // Only run this patch once:
-                openListener.disable();
-            }
-        });
+        if (keyboard !== null) {
+            this.onNewKeyboard(keyboard);
+        }
     }
 
     private _patchKeyMethods(keyProto: any) {
@@ -75,7 +63,7 @@ export default class OSKKeyPopupFeature extends ExtensionFeature {
         });
 
         // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown:
-        this.pm.appendToMethod(keyProto, '_showSubkeys', function (this: Clutter.Actor) {
+        this.pm.appendToMethod(keyProto, ['_showSubkeys', 'cancel'], function (this: Clutter.Actor) {
             // @ts-ignore
             self.boxPointers.get(this)?.close();
         });
@@ -110,5 +98,18 @@ export default class OSKKeyPopupFeature extends ExtensionFeature {
             }));
         }
         return bp;
+    }
+
+    public onNewKeyboard(keyboard: Keyboard.Keyboard) {
+        if (!this._hasPatchedKeyProto) {
+            let proto = extractKeyPrototype(keyboard);
+
+            if (proto !== null) {
+                this._patchKeyMethods(proto);
+                this._hasPatchedKeyProto = true;
+            } else {
+                log("Could not extract Key prototype, thus not patching OSK key popups.");
+            }
+        }
     }
 }

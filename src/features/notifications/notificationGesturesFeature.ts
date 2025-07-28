@@ -307,7 +307,7 @@ class SwipeGesturesHelper {
                 const dy = state.currentMotionDelta.y;
                 if (!state.startsWithHold && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
                     this.onScrollScrollView?.(dy);
-                    if (state.isCertainlyMovement) {
+                    if (state.hasMovement) {
                         this.isScrollGesture = true;
                     }
                 } else {

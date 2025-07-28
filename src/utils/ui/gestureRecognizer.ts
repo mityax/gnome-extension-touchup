@@ -4,13 +4,14 @@ import {assert} from "$src/utils/logging";
 import St from "gi://St";
 
 
-const MAX_HOLD_MOVEMENT = 6;  // in logical pixels
+const MOVEMENT_THRESHOLD = 8;  // in logical pixels
+const STRONG_MOVEMENT_THRESHOLD = 25;  // in logical pixels
 const MIN_HOLD_TIME_US = 500 * 1000;  // in microseconds (1000us = 1ms)
-const MIN_MOTION_DIRECTION_DETECTION_DISTANCE = 6;  // in logical pixels; must be <= MAX_HOLD_MOVEMENT
+const MIN_MOTION_DIRECTION_DETECTION_DISTANCE = 6;  // in logical pixels; must be <= MOVEMENT_THRESHOLD
 
 
-DEBUG: assert(MAX_HOLD_MOVEMENT <= MIN_MOTION_DIRECTION_DETECTION_DISTANCE,
-    'MAX_HOLD_MOVEMENT must be less than or equal to MIN_MOTION_DIRECTION_DETECTION_DISTANCE');
+DEBUG: assert(MIN_MOTION_DIRECTION_DETECTION_DISTANCE <= MOVEMENT_THRESHOLD,
+    'MIN_MOTION_DIRECTION_DETECTION_DISTANCE must be less than or equal to MOVEMENT_THRESHOLD');
 
 
 export enum EventType {
@@ -197,7 +198,7 @@ export class GestureState {
                 if (this._events.length < 2 || !this.hasGestureJustEnded) return false;
 
                 const hold = _matchHold(this._events, {
-                    maxMovement: MAX_HOLD_MOVEMENT * this._scaleFactor,
+                    maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                     minTimeUS: 0,
                 });
 
@@ -219,7 +220,7 @@ export class GestureState {
                 if (this._events.length < 2 || !this.hasGestureJustEnded) return false;
 
                 const hold = _matchHold(this._events, {
-                    maxMovement: MAX_HOLD_MOVEMENT * this._scaleFactor,
+                    maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                 });
 
                 if (!hold) return false;
@@ -240,16 +241,40 @@ export class GestureState {
     }
 
     /**
-     * Returns true if it's certain already that this gesture involves motion.
+     * Returns true if it's certain already that this gesture involves motion – use this to decide whether to
+     * start animations like actor-following.
      */
-    get isCertainlyMovement(): boolean {
+    get hasMovement(): boolean {
         return this._cachedValue(
-            'is-certainly-movement',
+            'has-movement',
             () => {
                 if (this._events.length < 2) return false;
 
                 const hold = _matchHold(this._events, {
-                    maxMovement: MAX_HOLD_MOVEMENT * this._scaleFactor,
+                    maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
+                    minTimeUS: 0,
+                });
+
+                if (!hold) return false;
+
+                return hold.lastIncludedEventIdx + 1 < this._events.length;
+            }
+        );
+    }
+
+    /**
+     * Returns true if it's certain already that this gesture involves motion, using a higher
+     * threshold for motion detection than [hasMovement] – use this on actors that could be
+     * tapped also.
+     */
+    get hasStrongMovement(): boolean {
+        return this._cachedValue(
+            'has-movement',
+            () => {
+                if (this._events.length < 2) return false;
+
+                const hold = _matchHold(this._events, {
+                    maxMovement: STRONG_MOVEMENT_THRESHOLD * this._scaleFactor,
                     minTimeUS: 0,
                 });
 
@@ -268,7 +293,7 @@ export class GestureState {
         return this._cachedValue(
             `initial-hold`,
             () => _matchHold(this._events, {
-                maxMovement: MAX_HOLD_MOVEMENT * this._scaleFactor,
+                maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
             })?.pattern ?? null,
         );
     }
@@ -281,7 +306,7 @@ export class GestureState {
         return this._cachedValue(
             `final-hold`,
             () => _matchHold(this._events, {
-                maxMovement: MAX_HOLD_MOVEMENT * this._scaleFactor,
+                maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                 matchFromEnd: true,
             })?.pattern ?? null,
         );

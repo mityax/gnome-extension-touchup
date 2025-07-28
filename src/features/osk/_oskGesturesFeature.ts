@@ -1,113 +1,130 @@
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
+import St from "gi://St";
+import Clutter from "gi://Clutter";
 
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {EventType, GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
-import St from "gi://St";
-import Clutter from "@girs/clutter-16";
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
+import Graphene from "gi://Graphene";
+import {debugLog} from "$src/utils/logging";
+
+
+/** Maximum distance around a key that's still pressable */
+const KEY_PRESS_MAX_DISTANCE = 8;  // in logical pixels
 
 
 export default class OSKGesturesFeature extends ExtensionFeature {
-    declare private _enableSwipeToClose: boolean;
-    declare private _enableExtendKeys: boolean;
-
-    constructor(pm: PatchManager) {
+    constructor(pm: PatchManager, keyboard: Keyboard.Keyboard | null) {
         super(pm);
 
-        this._setupSwipeToClose();
-        this._setupExtendKeys();
-
-        // Sync relevant settings to class attributes for performance during the gesture and code
-        // readability below:
-        this.pm.bindSetting(settings.osk.gestures.swipeToClose.enabled,
-            (v) => this._enableSwipeToClose = v);
-        this.pm.bindSetting(settings.osk.gestures.extendKeys.enabled,
-            (v) => this._enableExtendKeys = v);
+        if (keyboard) {
+            this.onNewKeyboard(keyboard);
+        }
     }
 
-    private _setupSwipeToClose() {
+    public onNewKeyboard(keyboard: Keyboard.Keyboard) {
         const recognizer = new GestureRecognizer({
-            scaleFactor: St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor,
             onGestureProgress: state => {
-                if (state.firstMotionDirection?.direction === 'down') {
-                    Main.keyboard._keyboard.gestureProgress(Main.keyboard._keyboard.height - state.totalMotionDelta.y);
+                if (state.hasStrongMovement
+                    && state.firstMotionDirection?.direction === 'down') {
+                    debugLog("Down progress!");
+
+                    keyboard.gestureProgress(keyboard.height - state.totalMotionDelta.y);
                 }
             },
             onGestureCompleted: state => {
-                if (state.lastMotionDirection?.direction === 'down') {
-                    Main.keyboard._keyboard.gestureCancel();
-                } else {
+                if (state.hasStrongMovement
+                    && state.firstMotionDirection?.direction === 'down'
+                    && state.lastMotionDirection?.direction === 'down') {
+                    keyboard.gestureCancel();
+                } else if (keyboard._gestureInProgress) {
                     // The following line is a required hack to make the keyboard animate back up; since the
                     // keyboard's gesture functionality is only intended for opening the keyboard, not for closing,
                     // let alone canceling closing it. Thus, when the swipe-to-close gesture is cancelled, we tell the
                     // keyboard it's not open yet, which perfectly imitates the state it'd be in had we opened it
                     // using the gesture as normal instead of swipe-closing and then cancelling.
-                    Main.keyboard._keyboard._keyboardVisible = false;
+                    keyboard._keyboardVisible = false;
 
-                    Main.keyboard._keyboard.gestureActivate();
+                    keyboard.gestureActivate();
                 }
             },
         });
 
-        const self = this;
-        let patchedKeyboard: Keyboard.Keyboard | null = null;
+        let currentKey: Keyboard.Key | null = null;
 
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', function (this: Keyboard.Keyboard & St.BoxLayout) {
-            if (patchedKeyboard !== this) {
-                patchedKeyboard = this;
-                self.pm.connectTo(this, 'touch-event', (_, e) => {
-                    if (self._enableSwipeToClose) {
-                        recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
-                    }
-                });
+        const onEvent = (evt: Clutter.Event) => {
+            const state = recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
+
+            if (state.hasGestureJustStarted) {
+                currentKey = this._selectKey(keyboard, state.pressCoordinates);
+
+                if (currentKey
+                    && settings.osk.gestures.extendKeys.enabled.get()
+                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))) {
+                    // @ts-ignore
+                    currentKey?.keyButton.emit("touch-event", evt);
+                }
+            } else if (state.hasStrongMovement) {
+                // Cancel keypress:
+                if (currentKey) {
+                    // @ts-ignore
+                    currentKey._pressed = false;  // this prevents the key from being activated
+                    currentKey.cancel();  // this is used by the shell when swiping the emoji pager to cancel keypress; basically exactly what we want here
+
+                    currentKey = null;
+                }
+            } else if (state.hasGestureJustEnded) {
+                if (currentKey
+                    && settings.osk.gestures.extendKeys.enabled.get()
+                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))) {
+                    currentKey?.keyButton.emit("touch-event", evt);
+                }
+
+                currentKey = null;
             }
+        }
+
+        this.pm.connectTo(keyboard, 'captured-event', (_, evt: Clutter.Event) => {
+            if (!GestureRecognizerEvent.isTouch(evt)) {
+                return Clutter.EVENT_PROPAGATE;
+            }
+
+            onEvent(evt);
+            return Clutter.EVENT_PROPAGATE; // Clutter.EVENT_STOP;
         });
     }
 
-    private _setupExtendKeys() {
-        const self = this;
-        const patched = new Set();  // keep track of all already patched keys
+    /**
+     * Returns the key on the keyboard closest to the given position, unless the position is more than
+     * [KEY_PRESS_MAX_DISTANCE] off the key.
+     */
+    private _selectKey(keyboard: Keyboard.Keyboard, point: { x: number; y: number }): Clutter.Actor | null {
+        const maxDist = KEY_PRESS_MAX_DISTANCE * St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+        const graphenePoint = new Graphene.Point(point);
 
-        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_open', function (this: Keyboard.Keyboard & St.BoxLayout) {
-            const patch = self.pm.patch(() => {
-                const keys = findAllActorsBy(this, (a) => (
-                    a.constructor.name === 'Key' && !patched.has(a)
-                ));
-                const disconnects: (() => void)[] = [];
+        const visibleKeys = findAllActorsBy(
+            keyboard,
+            (k) => k.mapped && k.constructor.name === 'Key',  // the 'Key' class is not exported, so we have to resort to this
+        );
 
-                for (let key of keys) {
-                    patched.add(key);
+        const hitKey = visibleKeys.find(
+            key => key
+                .get_transformed_extents()
+                .contains_point(graphenePoint),
+        );
 
-                    key.reactive = true;
-                    const signalId = key.connect('touch-event', (_, e) => {
-                        const evt = GestureRecognizerEvent.fromClutterEvent(e);
+        if (hitKey) return hitKey;
 
-                        if (evt.type === EventType.start) {
-                            // @ts-ignore
-                            key.keyButton.emit("touch-event", e);
-                        } else if (evt.type === EventType.end) {
-                            // @ts-ignore
-                            key.keyButton.emit("touch-event", e);
-                        }
-                    });
+        const nearestKey = visibleKeys.find(
+            key => key
+                .get_transformed_extents()
+                .inset(-maxDist, -maxDist)  // enlarge ("outset") the rectangle by [maxDist] in all directions
+                .contains_point(graphenePoint),
+        );
 
-                    disconnects.push(() => key.disconnect(signalId));
-                }
-
-                return () => {
-                    keys.forEach(k => k.reactive = false);
-                    disconnects.forEach(d => d());
-                };
-            });
-
-            // When the keyboard is destroyed, there's no use anymore in unpatching the keys (in fact,
-            // it would lead to errors – disconnecting from an already destroyed actor). Thus, we drop
-            // the patch when they keyboard is destroyed:
-            this.connect('destroy', () => self.pm.drop(patch));
-        });
+        return nearestKey ?? null;
     }
 }
