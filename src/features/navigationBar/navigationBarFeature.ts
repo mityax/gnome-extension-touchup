@@ -193,9 +193,17 @@ export default class NavigationBarFeature extends ExtensionFeature {
      * below it.
      */
     private _updateGlobalStyleClasses() {
-        this._removeGlobalStyleClasses();
-        Main.layoutManager.uiGroup.add_style_class_name(`touchup-navbar--${this.mode}`);
-        Main.layoutManager.uiGroup.add_style_class_name(`touchup-navbar--visible`);
+        const styleClasses: Record<string, boolean> = {
+            'touchup-navbar--visible': true,
+            'touchup-navbar--gestures': this.mode === 'gestures',
+            'touchup-navbar--buttons': this.mode === 'buttons',
+        };
+
+        for (let cls in styleClasses) {
+            styleClasses[cls]
+                ? Main.layoutManager.uiGroup.add_style_class_name(cls)
+                : Main.layoutManager.uiGroup.remove_style_class_name(cls);
+        }
     }
 
     /**
