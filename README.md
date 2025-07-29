@@ -12,7 +12,7 @@ challenges or limits and has a steep learning curve.
 
 ## Installation
 
-<a href="https://extensions.gnome.org/extension/8102/touchup/" target="_blank"><img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/refs/heads/master/get-it-on-ego.png" height="90" alt="Get it on GNOME Extensions"></a>
+<a href="https://extensions.gnome.org/extension/8102/touchup/" target="_blank"><img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" height="90" alt="Get it on GNOME Extensions" align="middle"></a>
 
 🛠️ or build and install from source: `npm run enable:release`
 
