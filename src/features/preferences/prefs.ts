@@ -1,7 +1,7 @@
 import Adw from "gi://Adw";
 import {initSettings} from "$src/features/preferences/backend";
 import {NavigationBarPage} from "$src/features/preferences/pages/navigationBarPage";
-import {OskKeyPopupPage} from "$src/features/preferences/pages/oskKeyPopupPage";
+import {OskPage} from "$src/features/preferences/pages/oskPage";
 import {ExtensionPreferences} from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 import {DonationsPage} from "$src/features/preferences/pages/donationsPage";
 import Gtk from "gi://Gtk";
@@ -25,7 +25,7 @@ export default class TouchUpPreferences extends ExtensionPreferences {
 
         const pages = [
             new NavigationBarPage(),
-            new OskKeyPopupPage(),
+            new OskPage(),
             new MiscPage(),
             new DonationsPage(),
         ];

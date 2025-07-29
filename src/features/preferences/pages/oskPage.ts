@@ -4,7 +4,7 @@ import {settings} from "$src/settings";
 import Gtk from "gi://Gtk";
 import {buildPreferencesGroup, buildSpinRow, buildSwitchRow} from "$src/features/preferences/uiUtils";
 
-export class OskKeyPopupPage extends Adw.PreferencesPage {
+export class OskPage extends Adw.PreferencesPage {
     static {
         GObject.registerClass(this);
     }
@@ -45,14 +45,13 @@ export class OskKeyPopupPage extends Adw.PreferencesPage {
             children: [
                 buildSwitchRow({
                     title: "Enable Swipe-To-Close",
-                    subtitle: "Enable this if you'd like to swipe down on the empty space in the OSK to smoothly " +
-                        "close it",
+                    subtitle: "Enable this if you'd like to swipe down the OSK to smoothly close it",
                     setting: settings.osk.gestures.swipeToClose.enabled,
                 }),
                 buildSwitchRow({
                     title: "Enable Extended Keys",
-                    subtitle: "When enabled, the empty space between keys on the on-screen keyboard will also be " +
-                        "responsive, making it easier to hit the intended keys",
+                    subtitle: "Taps near to or between keys will register as keypresses, helping you avoid missed " +
+                        "keys",
                     setting: settings.osk.gestures.extendKeys.enabled,
                 }),
             ]

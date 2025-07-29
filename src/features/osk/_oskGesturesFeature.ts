@@ -9,7 +9,6 @@ import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRe
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
 import Graphene from "gi://Graphene";
-import {debugLog} from "$src/utils/logging";
 
 
 /** Maximum distance around a key that's still pressable */
@@ -28,19 +27,26 @@ export default class OSKGesturesFeature extends ExtensionFeature {
     public onNewKeyboard(keyboard: Keyboard.Keyboard) {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
-                if (state.hasStrongMovement
-                    && state.firstMotionDirection?.direction === 'down') {
-                    debugLog("Down progress!");
-
+                if (
+                    state.hasStrongMovement
+                    && state.firstMotionDirection?.direction === 'down'
+                    && settings.osk.gestures.swipeToClose.enabled.get()
+                ) {
                     keyboard.gestureProgress(keyboard.height - state.totalMotionDelta.y);
                 }
             },
             onGestureCompleted: state => {
-                if (state.hasStrongMovement
+                if (
+                    state.hasStrongMovement
                     && state.firstMotionDirection?.direction === 'down'
-                    && state.lastMotionDirection?.direction === 'down') {
+                    && state.lastMotionDirection?.direction === 'down'
+                    && settings.osk.gestures.swipeToClose.enabled.get())
+                {
                     keyboard.gestureCancel();
-                } else if (keyboard._gestureInProgress) {
+                } else if (
+                    keyboard._gestureInProgress
+                    && settings.osk.gestures.swipeToClose.enabled.get())
+                {
                     // The following line is a required hack to make the keyboard animate back up; since the
                     // keyboard's gesture functionality is only intended for opening the keyboard, not for closing,
                     // let alone canceling closing it. Thus, when the swipe-to-close gesture is cancelled, we tell the
@@ -61,9 +67,11 @@ export default class OSKGesturesFeature extends ExtensionFeature {
             if (state.hasGestureJustStarted) {
                 currentKey = this._selectKey(keyboard, state.pressCoordinates);
 
-                if (currentKey
+                if (
+                    currentKey
                     && settings.osk.gestures.extendKeys.enabled.get()
-                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))) {
+                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
+                ) {
                     // @ts-ignore
                     currentKey?.keyButton.emit("touch-event", evt);
                 }
@@ -77,9 +85,11 @@ export default class OSKGesturesFeature extends ExtensionFeature {
                     currentKey = null;
                 }
             } else if (state.hasGestureJustEnded) {
-                if (currentKey
+                if (
+                    currentKey
                     && settings.osk.gestures.extendKeys.enabled.get()
-                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))) {
+                    && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
+                ) {
                     currentKey?.keyButton.emit("touch-event", evt);
                 }
 
