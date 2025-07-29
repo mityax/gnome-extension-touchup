@@ -9,7 +9,15 @@ seamless interface. However, please be aware that this is not always
 possible nor easy since Gnome extension development does not come without 
 challenges or limits and has a steep learning curve.
 
-### Roadmap &amp; Implementation Status
+
+## Installation
+
+<a href="https://extensions.gnome.org/extension/8102/touchup/" target="_blank"><img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/refs/heads/master/get-it-on-ego.png" height="90" alt="Get it on GNOME Extensions"></a>
+
+🛠️ or build and install from source: `npm run enable:release`
+
+
+## Roadmap &amp; Implementation Status
 
 This is a rough overview over this extension's implemented features and goals
 (in no particular order). It's a lot, and it's changing, mostly due to 
@@ -60,7 +68,7 @@ don't hesitate
 to [create an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so we can
 discuss it!
 
-### Why an extension?
+## Why an extension?
 
 Developing this functionality in the form of a Gnome extension allows a seamless
 interplay between a touch-centered usage and one based on keyboard and mouse. It
@@ -89,6 +97,7 @@ time).
 Should you want to contribute, which I'd greatly appreciate, please first
 have a look at [CONTRIBUTING.md](./CONTRIBUTING.md). This is especially
 important if you plan to contribute more than just a simple typo- or bugfix.
+
 
 ## Support
 
