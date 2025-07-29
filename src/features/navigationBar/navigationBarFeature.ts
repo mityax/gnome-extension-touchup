@@ -174,9 +174,11 @@ export default class NavigationBarFeature extends ExtensionFeature {
         const state = await DisplayConfigState.getCurrent();
         let monitorIndex: number = -1;  // `-1` is also used by `global.backend.get_monitor_manager().get_monitor_for_connector()`, which is used below, as null-value
 
-        if (selectedMonitor && state.monitors.some(m => m.constructMonitorId() === selectedMonitor.id)) {
-            const monitor = state.monitors.find(m => m.constructMonitorId() === selectedMonitor.id)!;
-            monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitor.connector);
+        if (selectedMonitor) {
+            const monitor = state.monitors.find(m => m.constructMonitorId() === selectedMonitor.id);
+            monitorIndex = monitor !== undefined
+                ? global.backend.get_monitor_manager().get_monitor_for_connector(monitor.connector)
+                : -1;
         } else {
             monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector);
         }
