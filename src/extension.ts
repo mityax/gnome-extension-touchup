@@ -149,8 +149,8 @@ export default class TouchUpExtension extends Extension {
     create: (pm: PatchManager) => Promise<T>,
     setting?: BoolSetting,
   ) {
-    let resolve: () => void;
-    let promise = new Promise((r) => resolve = () => r(null));
+    let resolve: (..._: any) => void;
+    let promise = new Promise((r) => resolve = r);
 
     let p = this.pm!.registerPatch(() => {
       // Create the feature:
