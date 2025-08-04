@@ -8,7 +8,7 @@ import {PatchManager} from "../utils/patchManager";
 import {assert} from "$src/utils/logging";
 
 
-export default class NotificationService extends ExtensionFeature {
+export class NotificationService extends ExtensionFeature {
     private notificationSource: MessageTray.Source | null = null;
 
     constructor(pm: PatchManager) {

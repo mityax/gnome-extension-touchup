@@ -7,11 +7,11 @@ import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {Delay} from "$src/utils/delay";
 import {assetsGResourceFile, devMode} from "$src/config";
-import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
+import ExtensionFeature from "$src/utils/extensionFeature";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
-import NotificationService from "$src/services/notificationService";
+import {NotificationService} from "$src/services/notificationService";
 
 
 export default class TouchUpExtension extends Extension {
