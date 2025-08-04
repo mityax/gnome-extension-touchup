@@ -5,7 +5,7 @@ import {Source, Urgency} from "resource:///org/gnome/shell/ui/messageTray.js";
 import {NotificationDestroyedReason} from "@girs/gnome-shell/ui/messageTray";
 import {randomChoice} from "$src/utils/utils";
 import TouchUpExtension from "$src/extension";
-import NotificationService from "$src/services/notificationService";
+import {NotificationService} from "$src/services/notificationService";
 
 
 export class SendTestNotificationsButton extends DevToolButton {

@@ -9,7 +9,7 @@ import {MessageDialogContent} from "resource:///org/gnome/shell/ui/dialog.js";
 
 import * as Widgets from "./ui/widgets";
 import TouchUpExtension from "../extension";
-import NotificationService from "../services/notificationService";
+import {NotificationService} from "../services/notificationService";
 
 
 export function showFeatureInitializationFailedNotification(featureName: string, error: any) {

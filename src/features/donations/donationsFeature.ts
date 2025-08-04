@@ -11,7 +11,7 @@ import TouchUpExtension from "$src/extension";
 import * as Widgets from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
-import NotificationService from "$src/services/notificationService";
+import {NotificationService} from "$src/services/notificationService";
 
 
 type InstallationData = {
