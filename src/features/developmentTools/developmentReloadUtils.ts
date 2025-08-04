@@ -8,6 +8,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import GObject from "gi://GObject";
+import Pango from "gi://Pango";
 import PolicyType = St.PolicyType;
 
 
@@ -152,7 +153,6 @@ export async function _rebuildExtension(opts: {showDialogOnError: boolean, build
 export function _showBuildFailedDialog(exitStatus: number, stdout: string | null, stderr: string | null) {
     const d = new ModalDialog({
         destroyOnClose: true,
-        width: 0.7 * global.screenWidth,
     });
 
     const content = new MessageDialogContent({
@@ -160,21 +160,23 @@ export function _showBuildFailedDialog(exitStatus: number, stdout: string | null
         description: `Rebuilding the extension failed with exit code ${exitStatus}`,
     });
 
-    const outputText = new St.Label({
-        text: `Exit code: ${exitStatus}\n\nOutput:` + stdout + "\n\nError output:\n" + stderr,
-        style: 'font-family: monospace; cursor: text;',
-        reactive: true,
-        canFocus: true,
-        trackHover: true,
-    });
-    outputText.clutterText.selectable = true;
-    outputText.clutterText.reactive = true;
-
     content.add_child(new Widgets.ScrollView({
         height: 0.45 * global.screenHeight,
+        width: 0.7 * global.screenWidth,
         hscrollbarPolicy: PolicyType.ALWAYS,
         vscrollbarPolicy: PolicyType.AUTOMATIC,
-        child: outputText,
+        child: new Widgets.Label({
+            text: `Exit code: ${exitStatus}\n\nOutput:` + stdout + "\n\nError output:\n" + stderr,
+            style: 'font-family: monospace; cursor: text;',
+            reactive: true,
+            canFocus: true,
+            trackHover: true,
+            onCreated: text => {
+                text.clutterText.selectable = true;
+                text.clutterText.reactive = true;
+                text.clutterText.ellipsize = Pango.EllipsizeMode.NONE;
+            }
+        }),
     }));
 
     d.contentLayout.add_child(content);

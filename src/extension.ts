@@ -1,3 +1,5 @@
+import Gio from "gi://Gio";
+
 import {PatchManager} from "$src/utils/patchManager";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
@@ -7,7 +9,6 @@ import {Delay} from "$src/utils/delay";
 import {assetsGResourceFile, devMode} from "$src/config";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
-import Gio from "gi://Gio";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import NotificationService from "$src/services/notificationService";
@@ -165,7 +166,10 @@ export default class TouchUpExtension extends Extension {
                     this.features.push(f);
                 })
                 .catch(e => {
-                    debugLog(`Error while activating feature "${featureName}":`, e);
+                    log(`Error while activating feature "${featureName}":`, e);
+                    // setting?.set(false);  // Disable the feature for future launches
+                    import('$src/utils/showFeatureInitializationErrorNotification')
+                        .then(m => m.showFeatureInitializationFailedNotification(featureName, e));
                 })
                 .then(_ => resolve());
 
