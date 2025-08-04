@@ -79,18 +79,28 @@ export class GestureRecognizerEvent {
     }
 
     static isPointer(event: Clutter.Event) {
-        return [
-            Clutter.EventType.BUTTON_PRESS, Clutter.EventType.BUTTON_RELEASE,
-            Clutter.EventType.MOTION, Clutter.EventType.PAD_BUTTON_PRESS,
-            Clutter.EventType.PAD_BUTTON_RELEASE,
-        ].includes(event.type());
+        switch (event.type()) {
+            case Clutter.EventType.BUTTON_PRESS:
+            case Clutter.EventType.BUTTON_RELEASE:
+            case Clutter.EventType.MOTION:
+            case Clutter.EventType.PAD_BUTTON_PRESS:
+            case Clutter.EventType.PAD_BUTTON_RELEASE:
+                return true;
+            default:
+                return false;
+        }
     }
 
     static isTouch(event: Clutter.Event) {
-        return [
-            Clutter.EventType.TOUCH_BEGIN, Clutter.EventType.TOUCH_UPDATE,
-            Clutter.EventType.TOUCH_END, Clutter.EventType.TOUCH_CANCEL,
-        ].includes(event.type());
+        switch (event.type()) {
+            case Clutter.EventType.TOUCH_BEGIN:
+            case Clutter.EventType.TOUCH_UPDATE:
+            case Clutter.EventType.TOUCH_END:
+            case Clutter.EventType.TOUCH_CANCEL:
+                return true;
+            default:
+                return false;
+        }
     }
 }
 

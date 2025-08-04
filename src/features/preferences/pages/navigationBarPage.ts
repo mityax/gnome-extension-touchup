@@ -44,8 +44,8 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                 }),
                 buildSwitchRow({
                     title: "Always Show",
-                    subtitle: "Enable to always show the navigation bar regardless of whether Gnome's touch mode " +
-                        "is enabled or supported on this device",
+                    subtitle: "Enable to show the navigation bar regardless of whether Gnome's touch mode is enabled " +
+                        "or supported on this device",
                     setting: settings.navigationBar.alwaysVisible,
                 }),
                 this.buildMonitorRow({
@@ -73,6 +73,11 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                         "the navigation bar is shown on top of overlapping windows and adjusts its color dynamically.",
                     setting: settings.navigationBar.gesturesReserveSpace,
                 }),
+                buildSwitchRow({
+                    title: "Invisible Mode",
+                    subtitle: "Enable to make the navigation bar invisible while retaining its functionality",
+                    setting: settings.navigationBar.gesturesInvisibleMode,
+                })
             ],
             // Only show this group when mode is set to "gestures":
             onCreated: (group) => {

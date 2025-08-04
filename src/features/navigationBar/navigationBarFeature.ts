@@ -4,7 +4,6 @@ import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings";
 import Clutter from "gi://Clutter";
-import Signal from "$src/utils/signal";
 import {log} from "$src/utils/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {Patch, PatchManager} from "$src/utils/patchManager";
@@ -19,8 +18,6 @@ export type NavbarMode = 'gestures' | 'buttons';
 
 
 export default class NavigationBarFeature extends ExtensionFeature {
-    readonly onVisibilityChanged = new Signal<boolean>();
-
     declare private _currentNavBar: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
     private _removeOskActionPatch: Patch;
@@ -59,6 +56,11 @@ export default class NavigationBarFeature extends ExtensionFeature {
                 this._currentNavBar.setReserveSpace(value);
             }
         });
+        this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', (value) => {
+            if (this._mode === 'gestures') {
+                (this._currentNavBar as GestureNavigationBar).setInvisibleMode(value);
+            }
+        });
 
         // Remove the OSK bottom drag action from the shell:
         this._removeOskActionPatch = this.pm.patch(() => {
@@ -90,21 +92,25 @@ export default class NavigationBarFeature extends ExtensionFeature {
             return;
         }
 
-        this._mode = mode;
         this._currentNavBar?.destroy();
 
         switch (mode) {
             case 'gestures':
-                this._currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
+                this._currentNavBar = new GestureNavigationBar({
+                    reserveSpace: settings.navigationBar.gesturesReserveSpace.get(),
+                    invisibleMode: settings.navigationBar.gesturesInvisibleMode.get(),
+                });
                 break;
             case 'buttons':
                 this._currentNavBar = new ButtonsNavigationBar();
                 break;
             default:
                 log(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
-                this._mode = 'gestures';
-                this._currentNavBar = new GestureNavigationBar({reserveSpace: settings.navigationBar.gesturesReserveSpace.get()});
+                await this.setMode('gestures');
+                return;
         }
+
+        this._mode = mode;
 
         await this._updateVisibility();
 
@@ -136,7 +142,6 @@ export default class NavigationBarFeature extends ExtensionFeature {
             // Show the navbar if it's not visible already, and trigger signal handlers:
             if (!this.isVisible) {
                 this._currentNavBar.show();
-                this.onVisibilityChanged.emit(true);
             }
 
             // Update style classes to reflect the current state:
@@ -145,7 +150,6 @@ export default class NavigationBarFeature extends ExtensionFeature {
             // If the navbar is visible, hide it and trigger signal handlers:
             if (this.isVisible) {
                 this._currentNavBar.hide();
-                this.onVisibilityChanged.emit(false);
             }
 
             // Restore the original primary monitor if it has been changed before:
@@ -193,8 +197,13 @@ export default class NavigationBarFeature extends ExtensionFeature {
      * below it.
      */
     private _updateGlobalStyleClasses() {
+        const isInInvisibleMode = (
+            settings.navigationBar.mode.get() === 'gestures' &&
+            settings.navigationBar.gesturesInvisibleMode.get()
+        );
+
         const styleClasses: Record<string, boolean> = {
-            'touchup-navbar--visible': true,
+            'touchup-navbar--visible': this._currentNavBar.isVisible && !isInInvisibleMode,
             'touchup-navbar--gestures': this.mode === 'gestures',
             'touchup-navbar--buttons': this.mode === 'buttons',
         };

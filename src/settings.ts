@@ -49,6 +49,11 @@ export const settings = {
         gesturesReserveSpace: new BoolSetting('navigation-bar-gestures-reserve-space', true),
 
         /**
+         * Whether to hide to navigation bar gesture hint entirely.
+         */
+        gesturesInvisibleMode: new BoolSetting('navigation-bar-invisible-mode', false),
+
+        /**
          * Which buttons to show on the left side of the button navigation bar
          *
          * Available choices are:

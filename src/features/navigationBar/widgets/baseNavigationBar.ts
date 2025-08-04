@@ -3,13 +3,16 @@ import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
 import Meta from "gi://Meta";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
-import Signal from "$src/utils/signal";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 /**
  * Class that handles commons for all navigation bar types
  */
-export default abstract class BaseNavigationBar<A extends St.Widget> {
+export default abstract class BaseNavigationBar<A extends St.Widget> extends EventEmitter<{
+    'notify::visible': [boolean],
+    'notify::reserve-space': [boolean],
+}> {
     private windowPositionTracker?: WindowPositionTracker;
     declare private _monitor: Monitor;
     private _visible: boolean = false;
@@ -17,10 +20,9 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
 
     protected readonly actor: A;
 
-    readonly onVisibilityChanged = new Signal<boolean>();
-    readonly onReserveSpaceChanged = new Signal<boolean>();
-
     protected constructor({reserveSpace}: {reserveSpace: boolean}) {
+        super();
+
         this._reserveSpace = reserveSpace;
 
         this.actor = this._buildActor();
@@ -50,7 +52,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
 
         this._addActor();
         this._visible = true;
-        this.onVisibilityChanged.emit(true);
+        this.emit('notify::visible', true);
         this.reallocate();
         this._createWindowPositionTracker();
     }
@@ -63,7 +65,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
         this.windowPositionTracker = undefined;
 
         this._visible = false;
-        this.onVisibilityChanged.emit(false);
+        this.emit('notify::visible', false);
     }
 
     setMonitor(monitorIndex: number) {
@@ -76,7 +78,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> {
             this._reserveSpace = reserveSpace;
             this._removeActor();
             this._addActor();
-            this.onReserveSpaceChanged.emit(reserveSpace);
+            this.emit('notify::reserve-space', reserveSpace);
         }
     }
 

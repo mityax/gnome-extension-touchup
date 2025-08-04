@@ -14,6 +14,7 @@ import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/util
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
+import Mtk from "gi://Mtk";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -21,27 +22,29 @@ import GObject from "gi://GObject";
 const LEFT_EDGE_OFFSET = 100;
 
 
-export default class GestureNavigationBar extends BaseNavigationBar<_GestureNavigationBarActor> {
+export default class GestureNavigationBar extends BaseNavigationBar<_EventPassthroughActor> {
     declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
     private readonly gestureManager: NavigationBarGestureManager;
 
-    constructor({reserveSpace} : {reserveSpace: boolean}) {
-        super({ reserveSpace: reserveSpace });
+    constructor(props: {reserveSpace: boolean, invisibleMode: boolean}) {
+        super({ reserveSpace: props.reserveSpace });
+
+        this.setInvisibleMode(props.invisibleMode);
 
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
         this.gestureManager = new NavigationBarGestureManager(this.actor);
 
-        this.onVisibilityChanged.connect('changed', () => this._updateStyleClassIntervalActivity());
-        this.onReserveSpaceChanged.connect('changed', (reserveSpace) => {
+        this.connect('notify::visible', _ => this._updateStyleClassIntervalActivity());
+        this.connect('notify::reserve-space', _ => {
             this._updateStyleClassIntervalActivity();
             void this.updateStyleClasses();
         });
     }
 
-    protected _buildActor(): _GestureNavigationBarActor {
-        return new _GestureNavigationBarActor({
+    protected _buildActor(): _EventPassthroughActor {
+        return new _EventPassthroughActor({
             name: 'touchup-navbar',
             styleClass: 'touchup-navbar touchup-navbar--transparent bottom-panel',
             reactive: true,
@@ -219,6 +222,12 @@ export default class GestureNavigationBar extends BaseNavigationBar<_GestureNavi
         this.styleClassUpdateInterval.setActive(this.isVisible && !this.reserveSpace);
     }
 
+    setInvisibleMode(invisible: boolean) {
+        // We use opacity here instead of the actors `visible` property since [LayoutManager.addTopChrome] uses the
+        // visibility property itself and interferes with this.
+        this.actor.opacity = invisible ? 0 : 255;
+    }
+
     destroy() {
         this.styleClassUpdateInterval.stop();
         super.destroy();
@@ -246,25 +255,45 @@ class NavigationBarGestureManager {
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
 
-    constructor(private actor: _GestureNavigationBarActor, private monitor?: Monitor) {
+    constructor(private actor: _EventPassthroughActor, private monitor?: Monitor) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
+        // The controller used to actually perform the navigation gestures:
         this._controller = new OverviewAndWorkspaceGestureController({
             monitorIndex: monitor?.index ?? Main.layoutManager.primaryIndex,
         });
 
+        // Use an [IdleRunner] to make the gestures asynchronously follow the users' finger:
+        this._idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
+
+        // Our [GestureRecognizer] to interprete the gestures:
         this._recognizer = new GestureRecognizer({
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),
         });
 
-        this._idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
-
-        this.actor.connect('touch-event', (_, e) => {
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
+        // Action that listens to appropriate events on the stage:
+        const action = new GestureNavigationBarAction({
+            edgeThreshold: actor.get_transformed_size()[1]
         });
-        this.actor.connect('destroy', () => this._idleRunner.stop());
+        action.connect('progress', (_, evt: Clutter.Event) => {
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
+        });
+        action.connect('end', (_, evt: Clutter.Event) => {
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
+        });
+        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, action);
 
+        // Bind the actors allocation to the actions edgeThreshold:
+        this.actor.connect('notify::allocation', () => action.setEdgeThreshold(actor.get_transformed_size()[1]));
+
+        this.actor.connect('notify::mapped', () => action.enabled = actor.mapped)
+        this.actor.connect('destroy', () => {
+            global.stage.remove_action(action);
+            this._idleRunner.stop();
+        });
+
+        // To emit virtual events:
         this._virtualTouchscreenDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
             Clutter.InputDeviceType.TOUCHSCREEN_DEVICE
         );
@@ -322,21 +351,13 @@ class NavigationBarGestureManager {
         if (state.isTap) {
             this._controller.gestureEnd({ direction: null });
 
-            // Find the event target actor below the navigation bar:
-            const windows = global.get_window_actors();
-            const receiver = windows.find(w => w.allocation.contains(state.pressCoordinates.x, state.pressCoordinates.y));
+            debugLog("Emitting virtual tap");
 
-            debugLog("Emitting fake click on actor", receiver, receiver?.name, receiver?.metaWindow.title);
-
-            if (receiver) {
-                this.actor.passthrough = true;
-                this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
-                    state.pressCoordinates.x, state.pressCoordinates.y);
-                Delay.ms(25).then(() => {
-                    this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
-                    this.actor.passthrough = false;
-                });
-            }
+            this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
+                state.pressCoordinates.x, state.pressCoordinates.y);
+            Delay.ms(45).then(() => {
+                this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
+            });
         } else if (this._isKeyboardGesture) {
             if (direction === 'up') {
                 Main.keyboard._keyboard?.gestureActivate();
@@ -379,48 +400,100 @@ class NavigationBarGestureManager {
 }
 
 
-class _GestureNavigationBarActor extends Widgets.Bin {
-    private _passthrough: boolean = false;
-
+/**
+ * An actor that is invisible to events, i.e. passes them through to any actors below.
+ */
+class _EventPassthroughActor extends Widgets.Bin {
     static {
         GObject.registerClass(this);
     }
 
-    constructor(props: {
-        name: string;
-        styleClass: string;
-        reactive: boolean;
-        trackHover: boolean;
-        canFocus: boolean;
-        layoutManager: Clutter.BinLayout;
-        onRealize: () => void;
-        child: St.Widget
-    }) {
-        super(props);
-    }
-
     vfunc_pick(pick_context: Clutter.PickContext) {
-        if (this._passthrough) {
-            this.pick_box(pick_context, new Clutter.ActorBox({
-                x1: 0, x2: 0, y1: 0, y2: 0
-            }));
-        } else {
-            super.vfunc_pick(pick_context);
-        }
-    }
-
-    /**
-     * Whether this actor passes through events or captures them.
-     */
-    set passthrough(v: boolean) {
-        this._passthrough = v;
-    }
-
-    get passthrough(): boolean {
-        return this._passthrough;
+        // By not making any call to this.pick_box(...) here, we make this actor pass through all events to
+        // any actor potentially below it. Therefore, this actor is only a visuals and does not react to
+        // events.
+        return;
     }
 }
 
+
+/**
+ * To handle navigation bar events, we register a [GestureNavigationBarAction] on the stage. This class
+ * emit gesture progress and end events when events occur in the lower edge of the screen, i.e. in the
+ * lowest area the height of which is defined by [edgeThreshold]. The signals emitted just propagate the
+ * raw [Clutter.Event] instances to their listeners, such that they can then analyze them using a
+ * [GestureRecognizer] which contains all the logic we need to interprete gestures.
+ *
+ * Therefore, the task of this class is not recognizing any gestures but instead merely filtering out
+ * the events that we want to act on and integrate as an outermost layer with the shell.
+ */
+class GestureNavigationBarAction extends Clutter.GestureAction {
+    static {
+        GObject.registerClass({
+            Signals: {
+                'end': {param_types: [Clutter.Event.$gtype]},
+                'progress': {param_types: [Clutter.Event.$gtype]},
+                'begin': {param_types: [Clutter.Event.$gtype]}
+            },
+        }, this);
+    }
+
+    declare private _edgeThreshold: number;
+    declare private _allowedModes: Shell.ActionMode;
+
+    constructor(props: { edgeThreshold: number, allowedModes?: Shell.ActionMode }) {
+        // Note: This constructor is only to make typescript happy. DON'T put any logic in here – use `_init` below.
+
+        // @ts-ignore
+        super(props);
+    }
+
+    // @ts-ignore
+    _init(props: { edgeThreshold: number, allowedModes?: Shell.ActionMode }) {
+        super._init();
+        this._allowedModes = props.allowedModes ?? Shell.ActionMode.ALL;
+        this._edgeThreshold = props.edgeThreshold;
+        this.set_n_touch_points(1);
+        this.set_threshold_trigger_edge(Clutter.GestureTriggerEdge.AFTER);
+    }
+
+    setEdgeThreshold(edgeThreshold: number) {
+        this._edgeThreshold = edgeThreshold;
+    }
+
+    _getMonitorRect(x: number, y: number) {
+        const rect = new Mtk.Rectangle({x: x - 1, y: y - 1, width: 1, height: 1});
+        let monitorIndex = global.display.get_monitor_index_for_rect(rect);
+
+        return global.display.get_monitor_geometry(monitorIndex);
+    }
+
+    vfunc_gesture_prepare(actor: Clutter.Actor) {
+        if (this.get_n_current_points() === 0)
+            return false;
+
+        if (!(this._allowedModes & Main.actionMode))
+            return false;
+
+        let [x, y] = this.get_press_coords(0);
+        let monitorRect = this._getMonitorRect(x, y);
+
+        const res = y > monitorRect.y + monitorRect.height - this._edgeThreshold;
+        if (res) {
+            this.emit('begin', this.get_last_event(0));
+        }
+        return res;
+    }
+
+    vfunc_gesture_progress(actor: Clutter.Actor) {
+        this.emit('progress', this.get_last_event(0));
+        return true;
+    }
+
+    vfunc_gesture_end(actor: Clutter.Actor) {
+        this.emit('end', this.get_last_event(0));
+    }
+}
 
 
 
@@ -444,3 +517,5 @@ class _GestureNavigationBarActor extends Widgets.Bin {
 //     }
 // }
 //
+
+

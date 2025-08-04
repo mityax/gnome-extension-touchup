@@ -29,7 +29,7 @@ very frequently – you can help speed up progress by [donating](#support).
  - [x] Navigation bar, as known from Android/iOS
    - [x] Gesture mode
    - [x] Buttons mode
-   - [ ] Invisible gestures mode
+   - [x] Invisible gestures mode
    - [x] Compatibility with the "Dash to Dock" extension (move the dock up)
  - [ ] Edge swipe actions (left/right edge: back, top/bottom edge:
        show panel and navigation bar)
