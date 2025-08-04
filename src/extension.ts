@@ -137,14 +137,10 @@ export default class TouchUpExtension extends Extension {
 
   /**
    * A utility method to define [ExtensionFeature]s that are optionally automatically enabled/disabled
-   * depending on the given [setting] and are mapped to a class attribute using [assign].
+   * depending on the given [setting].
    *
-   * Note that the [assign] callback can (and will upon feature or extension disabling) be
-   * called with `undefined' as its value; this is intended behavior and the callback should
-   * unset the reference it assigned before in this case.
-   *
-   * All features are created in a patch and are therefore automatically disabled and set to
-   * `undefined` when the extension is disabled.
+   * All features are created in a patch and are therefore automatically disabled when the extension is
+   * disabled.
    *
    * For example usages see [defineFeatures] above.
    */
