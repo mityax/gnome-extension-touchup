@@ -22,7 +22,7 @@ export default class TouchUpExtension extends Extension {
 
   async enable() {
     debugLog("*************************************************")
-    debugLog(`          StartingTouchUp v. ${this.metadata.version}          `)
+    debugLog(`          Starting TouchUp v. ${this.metadata.version}          `)
     debugLog("*************************************************")
     debugLog()
 
