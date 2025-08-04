@@ -77,8 +77,9 @@ export default {
         }),
         strip({
             labels: [
-                IS_DEBUG_MODE ? null : 'DEBUG',
-                IS_DEBUG_MODE ? null : 'BETA',
+                IS_DEBUG_MODE ? null   : 'DEBUG',
+                IS_DEBUG_MODE ? null   : 'BETA',
+                IS_DEBUG_MODE ? 'PROD' : null,
             ].filter(e => !!e),
             functions: [
                 IS_DEBUG_MODE ? null : 'debugLog',

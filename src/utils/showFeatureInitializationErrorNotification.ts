@@ -34,7 +34,10 @@ export function showFeatureInitializationFailedNotification(featureName: string,
     const shellInfo = `${Config.PACKAGE_NAME} ${Config.PACKAGE_VERSION}`
     let errorInfo = `${error.constructor.name}${error.message ? ': ' + error.message : ' (no error message)'}`;
     if (error.stack) {
-        errorInfo += "\n\n" + error.stack.replaceAll(/(file:\/\/)?\/home\/.*?\//g, '~/').trim();
+        errorInfo += "\n\n" + error.stack
+            .replaceAll(TouchUpExtension.instance!.metadata.dir.get_uri() + '/', '')
+            .replaceAll(/(file:\/\/)?\/home\/.*?\//g, '~/')
+            .trim();
     }
 
     // Show a modal dialog with the error information:
