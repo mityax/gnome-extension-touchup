@@ -17,7 +17,7 @@ import {debounce} from "$src/utils/debounce";
 export type NavbarMode = 'gestures' | 'buttons';
 
 
-export default class NavigationBarFeature extends ExtensionFeature {
+export class NavigationBarFeature extends ExtensionFeature {
     declare private _currentNavBar: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
     private _removeOskActionPatch: Patch;

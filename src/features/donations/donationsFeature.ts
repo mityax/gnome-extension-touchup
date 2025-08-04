@@ -22,7 +22,7 @@ type InstallationData = {
 };
 
 
-export default class DonationsFeature extends ExtensionFeature {
+export class DonationsFeature extends ExtensionFeature {
     // Time to wait before showing a donation; this is to not show the donation immediately upon login because
     // the user at that point probably is busy, and we don't want to uselessly annoy them:
     private static NOTIFICATION_DELAY: number = 20;  // in minutes

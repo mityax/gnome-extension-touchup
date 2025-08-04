@@ -11,7 +11,7 @@ import OSKGesturesFeature from "./_oskGesturesFeature";
 import {debugLog} from "$src/utils/logging";
 
 
-export default class OskFeature extends ExtensionFeature {
+export class OskFeature extends ExtensionFeature {
     constructor(pm: PatchManager) {
         super(pm);
 

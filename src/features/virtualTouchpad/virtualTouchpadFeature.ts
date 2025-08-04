@@ -14,6 +14,8 @@ import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/util
 import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import TouchUpExtension from "$src/extension";
+import {TouchModeService} from "$src/services/touchModeService";
 
 
 export class VirtualTouchpadFeature extends ExtensionFeature {
@@ -27,9 +29,16 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             onClose: () => this.close(),
         });
 
-        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.updateMonitor());
-
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed',
+            () => this.updateMonitor());
         void this.updateMonitor();
+
+        this.pm.connectTo(TouchUpExtension.instance!.getFeature(TouchModeService)!.onChanged, 'changed',
+            touchMode => {
+                // TODO: depend on monitor number
+                this.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
+            })
+        this.setCanOpen(TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive);
 
         this.pm.patch(() => {
             Main.layoutManager.addTopChrome(this.actor, {

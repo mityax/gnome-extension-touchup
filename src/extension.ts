@@ -1,21 +1,16 @@
 import {PatchManager} from "$src/utils/patchManager";
-import NavigationBarFeature from "$src/features/navigationBar/navigationBarFeature";
-import OskFeature from "$src/features/osk/oskFeature";
-import {VirtualTouchpadFeature} from "$src/features/virtualTouchpad/virtualTouchpadFeature";
-import {NotificationGesturesFeature} from "$src/features/notifications/notificationGesturesFeature";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
-import {FloatingScreenRotateButtonFeature} from "$src/features/screenRotateUtils/floatingScreenRotateButtonFeature";
 import {Delay} from "$src/utils/delay";
 import {assetsGResourceFile, devMode} from "$src/config";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
 import Gio from "gi://Gio";
-import DonationsFeature from "$src/features/donations/donationsFeature";
 import {TouchModeService} from "$src/services/touchModeService";
-import {OverviewGesturesFeature} from "$src/features/overviewGestures/overviewGesturesFeature";
+import {DonationsFeature} from "$src/features/donations/donationsFeature";
+
 
 export default class TouchUpExtension extends Extension {
     static instance?: TouchUpExtension;
@@ -23,7 +18,7 @@ export default class TouchUpExtension extends Extension {
     pm?: PatchManager;
     features: ExtensionFeature[] = [];
 
-    enable() {
+    async enable() {
         debugLog("*************************************************")
         debugLog(`          StartingTouchUp v. ${this.metadata.version}          `)
         debugLog("*************************************************")
@@ -49,80 +44,89 @@ export default class TouchUpExtension extends Extension {
 
         // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
         // features need to work):
-        this.defineServices();
+        await this.defineServices();
 
         // This is the entry point for all features of this extension:
-        this.defineFeatures();
-
-        // Sync ui on touch-mode and monitor changes:
-        this.getFeature(TouchModeService)?.onChanged.connect(() => this.syncUI());
-        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => this.syncUI());
-
-        this.syncUI();
+        await this.defineFeatures();
     }
 
-    syncUI() {
-        let touchMode = this.getFeature(TouchModeService)!.isTouchModeActive;
-
-        // TODO: uncomment:
-        BETA: this.getFeature(VirtualTouchpadFeature)?.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
-    }
-
-
-    private defineServices() {
-        this.defineFeature(
+    private async defineServices() {
+        await this.defineFeature(
             'touch-mode-service',
-            pm => new TouchModeService(pm)
+            async pm => new TouchModeService(pm)
         );
     }
 
-    private defineFeatures() {
+    private async defineFeatures() {
         DEBUG: if (devMode) {
-            this.defineFeature(
+            await this.defineFeature(
                 'development-tools',
-                (pm) => new DevelopmentTools(pm),
+                async (pm) => new DevelopmentTools(pm),
             );
         }
 
-        this.defineFeature(
+        // Optional features (that can be toggled on or off via a setting) are imported dynamically, for two reasons:
+        //  - make the extension as slim as possible (users only "pay" for what they use)
+        //  - make the extension more compatible with modified shells (e.g. Ubuntu or Gnome Mobile): turned off
+        //    features cannot cause errors
+
+        await this.defineFeature(
             'navigation-bar',
-            pm => new NavigationBarFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/navigationBar/navigationBarFeature'));
+                return new m.NavigationBarFeature(pm);
+            },
             settings.navigationBar.enabled,
         );
 
-        BETA: this.defineFeature(
+        await this.defineFeature(
             'overview-gestures',
-            pm => new OverviewGesturesFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/overviewGestures/overviewGesturesFeature'));
+                return new m.OverviewGesturesFeature(pm);
+            },
             settings.overviewGestures.enabled,
         )
 
-        this.defineFeature(
+        await this.defineFeature(
             'notification-gestures',
-            pm => new NotificationGesturesFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/notifications/notificationGesturesFeature'));
+                return new m.NotificationGesturesFeature(pm);
+            },
             settings.notificationGestures.enabled,
         );
 
-        this.defineFeature(
+        await this.defineFeature(
             'osk',
-            pm => new OskFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/osk/oskFeature'));
+                return new m.OskFeature(pm);
+            },
         );
 
-        this.defineFeature(
+        await this.defineFeature(
             'floating-screen-rotate-button',
-            pm => new FloatingScreenRotateButtonFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/screenRotateUtils/floatingScreenRotateButtonFeature'));
+                return new m.FloatingScreenRotateButtonFeature(pm);
+            },
             settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
         );
 
-        BETA: this.defineFeature(
+        BETA: await this.defineFeature(
             'virtual-touchpad',
-            pm => new VirtualTouchpadFeature(pm),
+            async pm => {
+                const m = (await import('$src/features/virtualTouchpad/virtualTouchpadFeature'));
+                return new m.VirtualTouchpadFeature(pm);
+            },
             settings.virtualTouchpad.enabled,
         );
 
-        this.defineFeature(
+        await this.defineFeature(
             'donations',
-            pm => new DonationsFeature(pm),
-        )
+            async pm => new DonationsFeature(pm),
+        );
     }
 
     /**
@@ -138,32 +142,48 @@ export default class TouchUpExtension extends Extension {
      *
      * For example usages see [defineFeatures] above.
      */
-    private defineFeature<T extends ExtensionFeature>(
+    private async defineFeature<T extends ExtensionFeature>(
         featureName: string,
-        create: (pm: PatchManager) => T,
+        create: (pm: PatchManager) => Promise<T>,
         setting?: BoolSetting,
     ) {
+        let resolve: () => void;
+        let promise = new Promise((r) => resolve = () => r(null));
+
         let p = this.pm!.registerPatch(() => {
             // Create the feature:
-            let feature: T | undefined = create(this.pm!.fork(featureName));
-            this.features.push(feature);
+            let feature: T | undefined;
+
+            create(this.pm!.fork(featureName))
+                .then(f => {
+                    feature = f;
+                    this.features.push(f);
+                })
+                .catch(e => {
+                    debugLog(`Error while activating feature "${featureName}":`, e);
+                })
+                .then(_ => resolve());
 
             return () => {
                 // Destroy the feature on unpatch:
-                this.features = this.features.filter(f => f != feature);
+                this.features = this.features.filter(f => f !== feature);
                 feature?.destroy();
             }
         }, `enable-feature(${featureName})`);
 
         if (setting) {
             // Enable the feature initially if setting is set to true:
-            if (setting.get()) p.enable();
+            if (setting.get()) {
+                p.enable();
+            } else {
+                // @ts-ignore
+                resolve();  // if the setting is not enabled, just resolve without enabling the feature
+            }
 
             // Connect to setting changes:
             this.pm!.connectTo(setting, 'changed', value => {
                 if (value) {
                     p.enable();
-                    this.syncUI();
                 } else {
                     p.disable();
                 }
@@ -171,6 +191,8 @@ export default class TouchUpExtension extends Extension {
         } else {
             p.enable();
         }
+
+        return promise;
     }
 
     disable() {

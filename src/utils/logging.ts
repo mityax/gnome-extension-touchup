@@ -9,6 +9,8 @@ import {logFile} from "$src/config";
  * Note: This function is **not** optimized for speed (!)
  */
 export function log(...text: any[]): string {
+    if (text.length < 1) return '';
+
     console.log("[touchup] ", ...text.map(item => {
         if (item && item instanceof Error) {
             console.error(item, item.message || '', "\n", item.stack)
@@ -17,11 +19,16 @@ export function log(...text: any[]): string {
         return repr(item);
     }));
 
-    const msg = text.map(item => {
+    let msg = text.map(item => {
         return item && item instanceof Error
             ? `Error (${item}): ` + (item.message || '')
             : repr(item);
     }).join(" ");
+
+    // If the last item is an error, we append its stack trace to the log message:
+    if (text.at(-1) instanceof Error && text.at(-1).stack) {
+        msg += '\n' + text.at(-1).stack.trim();
+    }
 
     if (logFile) {
         const stream = Gio.File.new_for_path(logFile).append_to(Gio.FileCreateFlags.NONE, null);
