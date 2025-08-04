@@ -1,12 +1,11 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
 import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
-import {Notification, Source, Urgency} from "resource:///org/gnome/shell/ui/messageTray.js";
-import Gio from "gi://Gio";
-import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {AssetIcon} from "$src/utils/ui/assetIcon";
+import {Source, Urgency} from "resource:///org/gnome/shell/ui/messageTray.js";
+import {NotificationDestroyedReason} from "@girs/gnome-shell/ui/messageTray";
 import {randomChoice} from "$src/utils/utils";
+import TouchUpExtension from "$src/extension";
+import NotificationService from "$src/services/notificationService";
 
 
 export class SendTestNotificationsButton extends DevToolButton {
@@ -28,37 +27,16 @@ export class SendTestNotificationsButton extends DevToolButton {
     }
 
     private async _onPressed() {
-        const notification = new Notification({
-            source: this.getNotificationSource(),
+        const notificationService = TouchUpExtension.instance!.getFeature(NotificationService)!;
+        const notification = notificationService.create({
             title: randomChoice(["A test!", "Test Notification", "Just a Test", "A Quick Test"]),
             body: randomChoice([
                 "This is a notification to test something in TouchUp.",
                 "This notification to test something in TouchUp has an expandable body text. It has been " +
                 "triggered using the TouchUp DevTools which can only be used during development."]),
-            gicon: new AssetIcon('positive-feedback-symbolic'),
             urgency: Urgency.NORMAL,
         });
-        this.getNotificationSource()?.addNotification(notification);
-    }
-
-    private getNotificationSource(): Source | null {
-        if (!SendTestNotificationsButton.notificationSource) {
-            SendTestNotificationsButton.notificationSource = new Source({
-                title: 'TouchUp DevTools',
-                // An icon for the source, used a fallback by notifications
-                icon: new Gio.ThemedIcon({name: 'dialog-information'}),
-                iconName: 'dialog-information',
-                policy: new NotificationGenericPolicy(),
-            });
-
-            Main.messageTray.add(SendTestNotificationsButton.notificationSource!);
-
-            // Reset the notification source if it's destroyed
-            SendTestNotificationsButton.notificationSource.connect('destroy', _source =>
-                SendTestNotificationsButton.notificationSource = undefined);
-        }
-
-        return SendTestNotificationsButton.notificationSource ?? null;
+        notificationService.show(notification);
     }
 
     vfunc_destroy() {
