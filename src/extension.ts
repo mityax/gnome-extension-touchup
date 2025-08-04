@@ -167,7 +167,8 @@ export default class TouchUpExtension extends Extension {
                 })
                 .catch(e => {
                     log(`Error while activating feature "${featureName}":`, e);
-                    // setting?.set(false);  // Disable the feature for future launches
+                    setting?.set(false);  // Disable the feature for future launches
+                    DEBUG: setting?.set(true);  // In debug mode, we don't disable the feature
                     import('$src/utils/showFeatureInitializationErrorNotification')
                         .then(m => m.showFeatureInitializationFailedNotification(featureName, e));
                 })
