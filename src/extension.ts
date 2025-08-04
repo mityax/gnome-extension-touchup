@@ -10,6 +10,7 @@ import {settings} from "$src/settings";
 import Gio from "gi://Gio";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
+import NotificationService from "$src/services/notificationService";
 
 
 export default class TouchUpExtension extends Extension {
@@ -54,6 +55,10 @@ export default class TouchUpExtension extends Extension {
         await this.defineFeature(
             'touch-mode-service',
             async pm => new TouchModeService(pm)
+        );
+        await this.defineFeature(
+            'notification-service',
+            async pm => new NotificationService(pm)
         );
     }
 

@@ -6,13 +6,12 @@ import {debugLog} from "$src/utils/logging";
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import {randomChoice} from "$src/utils/utils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
-import {NotificationDestroyedReason, NotificationGenericPolicy} from "@girs/gnome-shell/ui/messageTray";
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {settings} from "$src/settings";
 import TouchUpExtension from "$src/extension";
 import * as Widgets from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
+import NotificationService from "$src/services/notificationService";
 
 
 type InstallationData = {
@@ -29,8 +28,6 @@ export class DonationsFeature extends ExtensionFeature {
 
     // Time between donation prompt notifications:
     private static NOTIFICATION_INTERVAL: number = 90 * 24 * 60 * 60 * 1000;  // in ms; 90 days (~ quarter of a year)
-
-    private notificationSource?: MessageTray.Source;
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -49,7 +46,7 @@ export class DonationsFeature extends ExtensionFeature {
             return data;
         } catch (e) {
             DEBUG: if (!(e instanceof Gio.IOErrorEnum && e.code == Gio.IOErrorEnum.NOT_FOUND)) {
-                debugLog("Error while trying to read installations data: ", e instanceof Gio.IOErrorEnum ? [e.code, e.message] : e);
+                debugLog("Error while trying to read installations data: ", e);
             }
             const data = {
                 installedAt: Date.now(),
@@ -74,10 +71,10 @@ export class DonationsFeature extends ExtensionFeature {
      * Show a panel notification asking the user to donate.
      */
     private async showDonationNotification(data?: InstallationData): Promise<void> {
+        const notificationService = TouchUpExtension.instance!.getFeature(NotificationService)!;
         const n = randomChoice(NOTIFICATION_VARIANTS);
 
-        const notification = new MessageTray.Notification({
-            source: this.getNotificationSource(),
+        const notification = notificationService.create({
             title: n.title,
             body: n.body,
             gicon: new AssetIcon('positive-feedback-symbolic'),
@@ -102,7 +99,7 @@ export class DonationsFeature extends ExtensionFeature {
             ]);
         });
 
-        this.notificationSource?.addNotification(notification);
+        notificationService.show(notification);
 
         await this._writeInstallationData({
             ...(data ?? await this._readInstallationData()),
@@ -138,30 +135,6 @@ export class DonationsFeature extends ExtensionFeature {
         if (data.dontAskAgain != null && !['boolean', 'undefined'].includes(typeof data.dontAskAgain)) {
             throw new Error(`Invalid data type in installation data field 'dontAskAgain': ${typeof data.dontAskAgain}`);
         }
-    }
-
-    private getNotificationSource(): MessageTray.Source | null {
-        if (!this.notificationSource) {
-            this.notificationSource = new MessageTray.Source({
-                title: 'TouchUp',
-                // An icon for the source, used a fallback by notifications
-                icon: new Gio.ThemedIcon({name: 'dialog-information'}),
-                iconName: 'dialog-information',
-                policy: new NotificationGenericPolicy(),
-            });
-
-            this.pm.patch(() => {
-                Main.messageTray.add(this.notificationSource!);
-
-                // Destroy the notification source when the extension is disabled:
-                return () => this.notificationSource?.destroy(NotificationDestroyedReason.SOURCE_CLOSED);
-            });
-
-            // Reset the notification source if it's destroyed
-            this.notificationSource.connect('destroy', _source => this.notificationSource = undefined);
-        }
-
-        return this.notificationSource ?? null;
     }
 }
 
