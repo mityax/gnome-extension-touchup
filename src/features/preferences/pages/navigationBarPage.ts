@@ -1,7 +1,12 @@
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
 import {settings} from "$src/settings";
-import {buildPreferencesGroup, buildSwitchRow, buildToggleButtonRow} from "$src/features/preferences/uiUtils";
+import {
+    buildComboRow,
+    buildPreferencesGroup,
+    buildSwitchRow,
+    buildToggleButtonRow
+} from "$src/features/preferences/uiUtils";
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
 import {SettingsType} from "$src/features/preferences/backend";
@@ -43,10 +48,10 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                     setting: settings.navigationBar.mode,
                 }),
                 buildSwitchRow({
-                    title: "Always Show",
-                    subtitle: "Enable to show the navigation bar regardless of whether Gnome's touch mode is enabled " +
+                    title: "Ignore Touch Mode",
+                    subtitle: "Enable the navigation bar regardless of whether Gnome's touch mode is enabled " +
                         "or supported on this device",
-                    setting: settings.navigationBar.alwaysVisible,
+                    setting: settings.navigationBar.ignoreTouchMode,
                 }),
                 this.buildMonitorRow({
                     title: "Monitor",
@@ -73,10 +78,31 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                         "the navigation bar is shown on top of overlapping windows and adjusts its color dynamically.",
                     setting: settings.navigationBar.gesturesReserveSpace,
                 }),
-                buildSwitchRow({
+                buildComboRow({
                     title: "Invisible Mode",
-                    subtitle: "Enable to make the navigation bar invisible while retaining its functionality",
+                    subtitle: "Make the navigation bar invisible while retaining its functionality",
+                    items: [
+                        { label: 'Never', value: 'never' },
+                        { label: 'When not in touch mode', value: 'when-not-in-touch-mode' },
+                        { label: 'Always', value: 'always' }
+                    ],
                     setting: settings.navigationBar.gesturesInvisibleMode,
+                    onCreated: row => {
+                        let suffix = Gtk.Image.new_from_icon_name('dialog-warning-symbolic');
+                        suffix.tooltipText = 'You likely want to enable "Ignore Touch Mode" (above) to make this work as intended.';
+                        row.add_suffix(suffix);
+
+                        const update = () => {
+                            suffix.visible = (
+                                settings.navigationBar.gesturesInvisibleMode.get() === 'when-not-in-touch-mode' &&
+                                !settings.navigationBar.ignoreTouchMode.get()
+                            );
+                        };
+
+                        settings.navigationBar.ignoreTouchMode.connect(() => update());
+                        settings.navigationBar.gesturesInvisibleMode.connect(() => update());
+                        update();
+                    },
                 })
             ],
             // Only show this group when mode is set to "gestures":

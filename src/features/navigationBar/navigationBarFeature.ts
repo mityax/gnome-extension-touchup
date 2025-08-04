@@ -29,19 +29,17 @@ export class NavigationBarFeature extends ExtensionFeature {
         super(pm);
 
         // Connect to touch mode changes:
-        this.pm.connectTo(TouchUpExtension.instance!.getFeature(TouchModeService)!.onChanged, 'changed', () => {
-            this._updateVisibility().then(() => {});
-        });
+        this.pm.connectTo(TouchUpExtension.instance!.getFeature(TouchModeService)!.onChanged, 'changed', () =>
+            this._updateVisibility());
 
         // Connect to monitor changes:
-        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () => {
-            this._updateVisibility().then(() => {});
-        });
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', () =>
+            this._updateVisibility());
 
         // Connect to settings:
         this.pm.connectTo(settings.navigationBar.mode, 'changed', (mode) =>
             this.setMode(mode));
-        this.pm.connectTo(settings.navigationBar.alwaysVisible, 'changed', () =>
+        this.pm.connectTo(settings.navigationBar.ignoreTouchMode, 'changed', () =>
             this._updateVisibility());
         this.pm.connectTo(settings.navigationBar.monitor, 'changed', () =>
             this._updateVisibility());
@@ -56,11 +54,8 @@ export class NavigationBarFeature extends ExtensionFeature {
                 this._currentNavBar.setReserveSpace(value);
             }
         });
-        this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', (value) => {
-            if (this._mode === 'gestures') {
-                (this._currentNavBar as GestureNavigationBar).setInvisibleMode(value);
-            }
-        });
+        this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', () =>
+            this._updateVisibility());
 
         // Remove the OSK bottom drag action from the shell:
         this._removeOskActionPatch = this.pm.patch(() => {
@@ -98,7 +93,7 @@ export class NavigationBarFeature extends ExtensionFeature {
             case 'gestures':
                 this._currentNavBar = new GestureNavigationBar({
                     reserveSpace: settings.navigationBar.gesturesReserveSpace.get(),
-                    invisibleMode: settings.navigationBar.gesturesInvisibleMode.get(),
+                    invisibleMode: this._invisibleMode,
                 });
                 break;
             case 'buttons':
@@ -160,6 +155,8 @@ export class NavigationBarFeature extends ExtensionFeature {
             // Remove all global style classes:
             this._removeGlobalStyleClasses();
         }
+
+        this._updateInvisibleMode();
     }
 
     /**
@@ -170,7 +167,7 @@ export class NavigationBarFeature extends ExtensionFeature {
      */
     private async _getNavigationBarTargetMonitor() {
         const touchMode = TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive;
-        const alwaysVisible = settings.navigationBar.alwaysVisible.get();
+        const alwaysVisible = settings.navigationBar.ignoreTouchMode.get();
         const selectedMonitor = settings.navigationBar.monitor.get();
 
         if (!alwaysVisible && !touchMode) return null;
@@ -186,7 +183,7 @@ export class NavigationBarFeature extends ExtensionFeature {
         } else {
             monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector);
         }
- 
+
         return monitorIndex === -1 ? null : monitorIndex;
     }
 
@@ -197,10 +194,7 @@ export class NavigationBarFeature extends ExtensionFeature {
      * below it.
      */
     private _updateGlobalStyleClasses() {
-        const isInInvisibleMode = (
-            settings.navigationBar.mode.get() === 'gestures' &&
-            settings.navigationBar.gesturesInvisibleMode.get()
-        );
+        const isInInvisibleMode = (settings.navigationBar.mode.get() === 'gestures' && this._invisibleMode);
 
         const styleClasses: Record<string, boolean> = {
             'touchup-navbar--visible': this._currentNavBar.isVisible && !isInInvisibleMode,
@@ -258,6 +252,19 @@ export class NavigationBarFeature extends ExtensionFeature {
                 originalMonitor = undefined;
             }
         });
+    }
+
+    private get _invisibleMode() {
+        const touchMode = TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive;
+        const setting = settings.navigationBar.gesturesInvisibleMode.get();
+
+        return setting === 'always' || (setting === 'when-not-in-touch-mode' && !touchMode);
+    }
+
+    private _updateInvisibleMode() {
+        if (this._mode === 'gestures') {
+            (this._currentNavBar as GestureNavigationBar).setInvisibleMode(this._invisibleMode);
+        }
     }
 
     destroy() {

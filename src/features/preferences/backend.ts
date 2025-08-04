@@ -37,9 +37,15 @@ export abstract class Setting<T> {
         gioSettings!.bind(this.key, instance as GObject.Object, property, flags);
     }
 
-    connect(signal: 'changed' | string, handler: (newValue: T) => any): number {
-        assert(signal === 'changed', "The only supported signal for now is `changed`");
-        return gioSettings!.connect(`${signal}::${this.key}`, () => handler(this.get()));
+    connect(handler: (newValue: T) => any): number
+    connect(signal: 'changed' | string, handler: (newValue: T) => any): number
+    connect(signal: 'changed' | string | ((newValue: T) => any), handler?: (newValue: T) => any): number {
+        assert(!handler || signal === 'changed', "The only supported signal for now is `changed`");
+        if (!handler) {
+            handler = signal as any;
+            signal = 'changed';
+        }
+        return gioSettings!.connect(`${signal}::${this.key}`, () => handler!(this.get()));
     }
 
     disconnect(signalId: number) {
@@ -135,7 +141,7 @@ export class StringListSetting<T extends string> extends Setting<T[]>{
  * This does not perform any kind of validation; we rely on typescript in this codebase and trust other
  * parties editing the setting to ensure that the data is valid.
  */
-export class JSONSetting<T extends JSONValue> extends Setting<T> {
+export class JSONSetting<T> extends Setting<T> {
     get(): T {
         return JSON.parse(gioSettings!.get_string(this.key)) as T;
     }

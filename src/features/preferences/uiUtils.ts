@@ -107,9 +107,11 @@ export function buildComboRow<T>(props: {
         ? props.initialValue
         : props.setting.get()
 
-    const onChanged = (v: T) => {
-        if ('onChanged' in props) props.onChanged(v);
-        if ('setting' in props) props.setting.set(v);
+    const onChanged = () => {
+        const newValue = props.items[row.selected].value;
+
+        if ('onChanged' in props) props.onChanged(newValue);
+        if ('setting' in props) props.setting.set(newValue);
     }
 
     row.set_selected(props.items.findIndex(i => i.value === initialValue));

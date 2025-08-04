@@ -22,7 +22,7 @@ export const settings = {
          * If true, the navigation bar will be shown even if the Shell is not in touch mode. If false, the
          * navigation bar will be shown only in touch mode.
          */
-        alwaysVisible: new BoolSetting('navigation-bar-always-visible', false),
+        ignoreTouchMode: new BoolSetting('navigation-bar-ignore-touch-mode', false),
 
         /**
          * When set, and the chosen monitor is connected, the navigation bar is shown on that monitor instead
@@ -51,7 +51,7 @@ export const settings = {
         /**
          * Whether to hide to navigation bar gesture hint entirely.
          */
-        gesturesInvisibleMode: new BoolSetting('navigation-bar-invisible-mode', false),
+        gesturesInvisibleMode: new EnumSetting<'never' | 'when-not-in-touch-mode' | 'always'>('navigation-bar-gestures-invisible-mode', 'never'),
 
         /**
          * Which buttons to show on the left side of the button navigation bar
