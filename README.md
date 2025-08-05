@@ -54,6 +54,7 @@ very frequently – you can help speed up progress by [donating](#support).
    - [x] Hold and move to drag and drop windows
    - [x] Single-finger swipe up/down to open/close overview/app list
    - [ ] Move windows to another screen via dragging to the corner
+ - [ ] Gesture-driven top menu pull down animations
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
  - [ ] Option to display individual windows instead of workspaces when navigating

@@ -32,6 +32,9 @@ export function showFeatureInitializationFailedNotification(featureName: string,
     // Prepare details for error report:
     const systemInfo = `${GLib.get_os_info('NAME')}, version: ${GLib.get_os_info('VERSION')}`;
     const shellInfo = `${Config.PACKAGE_NAME} ${Config.PACKAGE_VERSION}`
+    let extensionInfo = `TouchUp v. ${TouchUpExtension.instance!.metadata["version-name"]} (${TouchUpExtension.instance!.metadata.version})`;
+    DEBUG: extensionInfo += ' [debug build]';
+    PROD: extensionInfo += ' [release build]';
     let errorInfo = `${error.constructor.name}${error.message ? ': ' + error.message : ' (no error message)'}`;
     if (error.stack) {
         errorInfo += "\n\n" + error.stack
@@ -43,6 +46,7 @@ export function showFeatureInitializationFailedNotification(featureName: string,
     // Show a modal dialog with the error information:
     function showDetails() {
         let details = `${errorInfo}\n\n---\n` +
+            `Extension: ${extensionInfo}\n` +
             `Shell: ${shellInfo.replaceAll('gnome-shell', 'Gnome Shell')}\n` +
             `Operating System: ${systemInfo}\n`;
 
@@ -92,6 +96,7 @@ export function showFeatureInitializationFailedNotification(featureName: string,
     function reportIssue() {
         let body = `An error occurred during initializing the \"${featureName}\" feature:\n\n` +
             `\`\`\`\n${errorInfo}\n\`\`\`\n\n` +
+            `**Extension:** ${extensionInfo}\n` +
             `**Shell:** ${shellInfo.replaceAll('gnome-shell', 'Gnome Shell')}\n` +
             `**Operating System:** ${systemInfo}\n`;
 
