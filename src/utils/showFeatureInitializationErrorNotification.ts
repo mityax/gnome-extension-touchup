@@ -30,11 +30,10 @@ export function showFeatureInitializationFailedNotification(featureName: string,
     notificationService.show(notification);
 
     // Prepare details for error report:
+    const metadata = TouchUpExtension.instance!.metadata as Record<string, any>;
     const systemInfo = `${GLib.get_os_info('NAME')}, version: ${GLib.get_os_info('VERSION')}`;
     const shellInfo = `${Config.PACKAGE_NAME} ${Config.PACKAGE_VERSION}`
-    let extensionInfo = `TouchUp v. ${TouchUpExtension.instance!.metadata["version-name"]} (${TouchUpExtension.instance!.metadata.version})`;
-    DEBUG: extensionInfo += ' [debug build]';
-    PROD: extensionInfo += ' [release build]';
+    const extensionInfo = `TouchUp v. ${metadata["version-name"]} (#${metadata.version}, commit-sha: ${metadata['commit-sha'] ?? 'unknown'})`;
     let errorInfo = `${error.constructor.name}${error.message ? ': ' + error.message : ' (no error message)'}`;
     if (error.stack) {
         errorInfo += "\n\n" + error.stack

@@ -3,7 +3,6 @@ import {fileURLToPath} from 'url';
 import * as fs from "fs";
 import typescript from '@rollup/plugin-typescript';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
-import copy from 'rollup-plugin-copy';
 import strip from "@rollup/plugin-strip";
 
 import sassWriter from "./build_plugins/rollup_plugin_sass_writer.js";
@@ -14,6 +13,8 @@ import disallowImportsPlugin from "./build_plugins/rollup_plugin_disallow_import
 import createZip from "./build_plugins/rollup_plugin_create_zip.js";
 import reloadSSENotifier from "./build_plugins/rollup_plugin_reload_sse_notifier.js";
 import * as dotenv from "dotenv";
+import writeJsonPlugin from "./build_plugins/rollup_plugin_write_json.js";
+import {execSync} from "child_process";
 
 dotenv.config();
 
@@ -42,11 +43,22 @@ const IS_WATCH_MODE = !!process.env.ROLLUP_WATCH || process.argv.includes('-w') 
  */
 const PRESERVE_MODULES = !IS_WATCH_MODE && process.env.BUNDLE_JS !== 'true';
 
+
 /**
  * The extension metadata
  */
-const metadataFile = path.join(rootDir, 'src', IS_DEBUG_MODE ? 'metadata-debug.json' : 'metadata.json');
-const metadata = JSON.parse(fs.readFileSync(metadataFile).toString());
+const metadataRelease = JSON.parse(fs.readFileSync(path.join(rootDir, 'src', 'metadata.json')).toString());
+const metadataDebug = JSON.parse(fs.readFileSync(path.join(rootDir, 'src', 'metadata-debug.json')).toString());
+const metadata = IS_DEBUG_MODE ? metadataDebug : metadataRelease;
+
+
+// Update metadata with build details:
+metadataDebug['version-name'] ??= `${metadataRelease['version-name']}.debug`;
+try {
+    metadataDebug['commit-sha'] = metadataRelease['commit-sha'] = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (err) {
+    console.warn(`WARNING: Unable to retrieve Git commit SHA: ${err.message}`);
+}
 
 
 // Clear up/remove previous build:
@@ -75,6 +87,8 @@ export default {
         typescript({
             tsconfig: './tsconfig.json',
         }),
+
+        // Strip out debug-only/release-only code depending on build mode:
         strip({
             labels: [
                 IS_DEBUG_MODE ? null   : 'DEBUG',
@@ -90,6 +104,7 @@ export default {
             ],
         }),
 
+        // Compile stylesheets:
         sassWriter({
             input: 'src/sass/stylesheet-dark.sass',
             output: `${outDir}/stylesheet-dark.css`,
@@ -124,6 +139,7 @@ export default {
             blacklist: ['gi://Gdk', 'gi://Gtk', 'gi://Adw'],
         }),
 
+        // Compile preferences stylesheets:
         sassWriter({
             input: 'src/sass/prefs-dark.sass',
             output: `${outDir}/prefs-dark.css`,
@@ -140,18 +156,14 @@ export default {
             blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
         }),
 
-        copy({
-            targets: [
-                {
-                    src: metadataFile,
-                    dest: outDir,
-                    rename: 'metadata.json'
-                },
-            ],
+        // Add metadata.json:
+        writeJsonPlugin({
+            fileName: 'metadata.json',
+            content: metadata
         }),
 
         createZip({
-            zipFilename: `../${metadata.uuid}.zip`,  // relative to `outDir`
+            zipFilename: `../${metadata.uuid.replaceAll(/\W/g, '')}.v${metadata['version-name']}.shell-extension.zip`,  // relative to `outDir`
         }),
 
         IS_WATCH_MODE

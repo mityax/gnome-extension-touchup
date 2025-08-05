@@ -16,8 +16,8 @@ fi
 
 
 projectDir="$(dirname "$(readlink -f "$0")")"
-zipFile="$(ls "$projectDir"/dist/*.zip)"
-extensionId="$(basename "$zipFile" .zip)"
+zipFile="$(ls -t "$projectDir"/dist/*.zip 2>/dev/null | head -n 1)"  # select the newest .zip file in the build dir
+extensionId="touchup@mityax"
 
 
 if [[ -z "$zipFile" ]]; then
