@@ -33,20 +33,14 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                 if (state.hasMovement) {
                     const d = state.totalMotionDelta;
                     this.overviewAndWorkspaceController.gestureUpdate({
-                        overviewProgress: state.firstMotionDirection?.axis === 'vertical'
-                            ? -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.25)
-                            : undefined,
-                        workspaceProgress: state.firstMotionDirection?.axis === 'horizontal'
-                            ? -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62)
-                            : undefined,
+                        overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.25),
+                        workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
                     });
                 }
             },
             onGestureCompleted: state => {
                 this.overviewAndWorkspaceController.gestureEnd({
-                    direction: state.firstMotionDirection?.axis === 'horizontal'
-                        ? _oneOf(state.finalMotionDirection?.direction, ['left', 'right']) ?? null
-                        : _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
+                    direction: state.firstMotionDirection?.direction ?? null,
                 });
             }
         });
@@ -185,24 +179,17 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
                 if (state.hasMovement) {
-                    if (state.firstMotionDirection?.axis === 'vertical') {
-                        this.overviewAndWorkspaceController.gestureUpdate({
-                            overviewProgress: -state.totalMotionDelta.y / (
-                                this.overviewAndWorkspaceController.baseDistY * 0.25)
-                        });
-                    } else if (state.firstMotionDirection?.axis === 'horizontal') {
-                        this.overviewAndWorkspaceController.gestureUpdate({
-                            workspaceProgress: -state.totalMotionDelta.x / (
-                                this.overviewAndWorkspaceController.baseDistX * 0.62)
-                        });
-                    }
+                    this.overviewAndWorkspaceController.gestureUpdate({
+                        overviewProgress: -state.totalMotionDelta.y / (
+                            this.overviewAndWorkspaceController.baseDistY * 0.25),
+                        workspaceProgress: -state.totalMotionDelta.x / (
+                            this.overviewAndWorkspaceController.baseDistX * 0.62),
+                    });
                 }
             },
             onGestureCompleted: state => {
                 this.overviewAndWorkspaceController.gestureEnd({
-                    direction: state.firstMotionDirection?.axis === 'horizontal'
-                        ? _oneOf(state.finalMotionDirection?.direction, ['left', 'right']) ?? null
-                        : _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
+                    direction: state.finalMotionDirection?.direction ?? null,
                 });
             }
         });
