@@ -126,6 +126,8 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                     horizontalMoveActor = notificationGroup.expanded || isTray ? message : notificationGroup;
                     if (message.canClose()) {
                         horizontalMoveActor.translationX = x;
+                        const actorWidth = horizontalMoveActor.get_transformed_size()[0];
+                        horizontalMoveActor.opacity = 255 - 255 * Math.min(1, Math.abs(x) / actorWidth * 1.3);
                     } else {
                         horizontalMoveActor.translationX = Math.sign(x) * Math.log(Math.abs(x)) ** 3;
                     }
@@ -138,6 +140,11 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 onScrollScrollView: (deltaY) => this.scrollNotificationList(deltaY),
                 onEaseBackPosition: () => {
                     gestureHelper.easeBackPositionOf(horizontalMoveActor!);
+                    // @ts-ignore
+                    horizontalMoveActor!.ease({
+                        opacity: 255,
+                        duration: 200,
+                    })
                 },
                 onActivate: () =>
                     // @ts-ignore
