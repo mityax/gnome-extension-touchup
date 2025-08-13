@@ -100,6 +100,10 @@ export class Ref<T extends Clutter.Actor> {
 }
 
 type UiProps<T extends St.Widget> = {
+    /**
+     * Assign a `Ref` to this widget to access widgets inside a nested tree from outside it and/or create a
+     * reference to a widget that automatically is set to `null` when the widget is destroyed.
+     */
     ref?: Ref<T>,
     /**
      * The [onCreated] callback is called immediately and synchronously when the widget instance has been created –
@@ -111,14 +115,23 @@ type UiProps<T extends St.Widget> = {
      * within the [onCreated] callback.
      */
     onCreated?: (widget: T) => ((() => void) | void),
+    /**
+     * Set multiple constraints on the widget.
+     */
     constraints?: Clutter.Constraint[],
+    /**
+     * Set widget style class(es). This can be done as usual, by supplying a string of space-separated style
+     * classes, or by supplying an array of style classes, or by supplying an object which contains style
+     * classes as keys and booleans, that indicate whether to set a style class or not, as values.
+     */
+    styleClass?: string | string[] | Record<string, boolean>,
 } & Partial<SignalPropsForWidget<T>>;
 
 type ConstructorPropsFor<W extends St.Widget, ConstructorProps> = Override<Partial<ConstructorProps>, UiProps<W>>;
 
 function filterConfig<T extends St.Widget>(config: UiProps<T>, filterOut?: (string | RegExp)[]): any {
     filterOut ??= [
-        'ref', 'children', 'child', 'onCreated', 'constraints', /^(on|notify)[A-Z]/,
+        'ref', 'children', 'child', 'onCreated', 'constraints', /^(on|notify)[A-Z]/, 'styleClass'
     ];
     return filterObject(
         config,
@@ -131,22 +144,36 @@ function filterConfig<T extends St.Widget>(config: UiProps<T>, filterOut?: (stri
     )
 }
 
-function initWidget<T extends St.Widget>(w: T, props: UiProps<T>) {
-    if (props.ref) props.ref.set(w);
+function initWidget<T extends St.Widget>(widget: T, props: UiProps<T>) {
+    // Setup ref, if given:
+    if (props.ref) props.ref.set(widget);
 
-    props.constraints?.forEach(c => w.add_constraint(c));
+    // Add constraints, if given:
+    props.constraints?.forEach(c => widget.add_constraint(c));
 
     // Automatically connect signals from the constructor (e.g. `onClicked` or `notifySize`):
     for (const [key, value] of Object.entries(props)) {
         if (/^(on|notify)[A-Z]/.test(key) && typeof value === "function" && key !== "onCreated") {
             const signalName = key.replace(/^on/, "").replace(/^notify/, 'notify::')
                 .replace(/(\w)([A-Z])/g, "$1-$2").toLowerCase();
-            w.connect(signalName, value as any);
+            widget.connect(signalName, value as any);
         }
     }
 
-    const onCreatedRes = props.onCreated?.(w);
-    if (onCreatedRes) w.connect('destroy', onCreatedRes);
+    // Transform the given style class (which might be an array or object of classes):
+    if (props.styleClass) {
+        widget.styleClass = Array.isArray(props.styleClass)
+            ? props.styleClass.join(' ')
+            : typeof props.styleClass === 'object'
+            ? Object.keys(props).filter(k => (props.styleClass as Record<string, boolean>)[k]).join(' ')
+            : props.styleClass
+    }
+
+    // Call the special `onCreated` callback, if given:
+    const onCreatedRes = props.onCreated?.(widget);
+
+    // Optionally, `onCreated` may return a function to be called when the widget is destroyed:
+    if (onCreatedRes) widget.connect('destroy', onCreatedRes);
 }
 
 export class Button extends St.Button {
