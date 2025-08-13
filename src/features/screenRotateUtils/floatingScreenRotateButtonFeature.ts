@@ -38,18 +38,22 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
                 '/net/hadess/SensorProxy',
                 null,
                 Gio.DBusSignalFlags.NONE,
-                (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
-                    // FIXME: Apparently, this signal subscription no longer works after turning Gnome Shell's
-                    //  auto-rotate quicksetting on and off again.
-                    debugLog("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
-                    const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
-                        ?.at(1)
-                        ?.AccelerometerOrientation
-                        ?.deepUnpack();
-                    if (orientation) {
-                        this.onAccelerometerOrientationChanged(orientation).then();
+                async (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
+                    try {
+                        debugLog("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
+                        const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
+                            ?.at(1)
+                            ?.AccelerometerOrientation
+                            ?.deepUnpack();
+                        if (orientation) {
+                            await this.onAccelerometerOrientationChanged(orientation);
+                        }
+                    } catch (e) {
+                        debugLog("Error during handling SensorProxy's PropertiesChanged signal: ", e);
+                        debugLog("The parameters were: ", parameters.deepUnpack());
                     }
                 });
+            debugLog("Subscribed to /net/hadess/SensorProxy:PropertiesChanged");
             return () => Gio.DBus.system.signal_unsubscribe(handlerId);
         });
     }

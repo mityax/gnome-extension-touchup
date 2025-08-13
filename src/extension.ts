@@ -111,6 +111,15 @@ export default class TouchUpExtension extends Extension {
       },
     );
 
+    BETA: await this.defineFeature(
+        'panel-menus-swipe-to-open',
+        async pm => {
+          const m = (await import('$src/features/panel/panelMenusSwipeToOpen'));
+          return new m.PanelMenusSwipeToOpenFeature(pm);
+        },
+        // TODO: add setting
+    );
+
     await this.defineFeature(
       'floating-screen-rotate-button',
       async pm => {
