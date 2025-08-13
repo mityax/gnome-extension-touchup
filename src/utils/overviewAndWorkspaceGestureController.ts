@@ -1,7 +1,7 @@
 import {clamp, UnknownClass} from "./utils";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {debugLog} from "$src/utils/logging";
+import {logger} from "$src/utils/logging";
 
 
 export default class OverviewAndWorkspaceGestureController {
@@ -91,7 +91,7 @@ export default class OverviewAndWorkspaceGestureController {
         } catch (e: any) {
             DEBUG: {
                 if (!e.toString().includes('Invalid overview shown transition from HIDDEN to HIDING')) {
-                    debugLog("Error during overview gesture termination: ", e);
+                    logger.error("Error during overview gesture termination: ", e);
                     throw e;
                 }
             }

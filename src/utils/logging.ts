@@ -3,56 +3,113 @@ import Gio from "gi://Gio";
 import {logFile} from "$src/config";
 
 
-/**
- * Log the given arguments to the console and the logfile (if given), together with a timestamp.
- *
- * Note: This function is **not** optimized for speed (!)
- */
-export function log(...text: any[]): string {
-    if (text.length < 1) return '';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogCallback = (msg: LogCallbackArguments) => void;
+export type LogCallbackArguments = {
+    level: LogLevel,
+    tag: string,
+    formattedMessage: string,
+    rawArguments: any[],
+};
 
-    console.log("[touchup] ", ...text.map(item => {
-        if (item && item instanceof Error) {
-            console.error(item, item.message || '', "\n", item.stack)
+/**
+ * The several log methods of this class log text to the console and, if given, to the global
+ * logfile for this extension.
+ *
+ * Note: The logging methods are **not** optimized for speed (!)
+ */
+export class Logger {
+    static instance = new Logger('touchup');
+
+    private constructor(private tag: string) {}
+
+    /**
+     * Log a debug-level message.
+     *
+     * This is a no-op in release builds.
+     */
+    debug(...text: any) {
+        DEBUG: this._log('debug', this._formatTag(), ...text);
+    }
+
+    /**
+     * Perform an info-level log.
+     */
+    info(...text: any) {
+        this._log('info', this._formatTag(), ...text);
+    }
+
+    /**
+     * Log a warning message.
+     */
+    warn(...text: any) {
+        this._log('warn', this._formatTag(), 'WARNING:', ...text);
+    }
+
+    /**
+     * Log an error. The stacktrace is printed if the error instance is given as the last argument, e.g.:
+     *
+     * ```ts
+     * try {
+     *     foo()
+     * } catch (e) {
+     *     logger.error('An error occurred while doing foo:', error);
+     * }
+     * ```
+     */
+    error(...text: any) {
+        this._log('error', this._formatTag(), 'ERROR:', ...text);
+    }
+
+    private _log(level: LogLevel, tag: string, ...text: any[]): string {
+        if (text.length < 1) return '';
+
+        const consoleLogFn= {
+            debug: console.debug,
+            info: console.log,
+            warn: console.warn,
+            error: console.error,
+        }[level];
+
+        let msg = text.map(item => {
+            return item && item instanceof Error
+                ? `${item.name}: ${(item.message || '')}`
+                : repr(item);
+        }).join(" ");
+
+        // If the last item is an error, we append its stack trace to the log message:
+        if (text.at(-1) instanceof Error && text.at(-1).stack) {
+            msg += '\n' + text.at(-1).stack.trim();
         }
 
-        return repr(item);
-    }));
+        consoleLogFn(tag, msg);
 
-    let msg = text.map(item => {
-        return item && item instanceof Error
-            ? `Error (${item}): ` + (item.message || '')
-            : repr(item);
-    }).join(" ");
+        if (logFile) {
+            const stream = Gio.File.new_for_path(logFile).append_to(Gio.FileCreateFlags.NONE, null);
 
-    // If the last item is an error, we append its stack trace to the log message:
-    if (text.at(-1) instanceof Error && text.at(-1).stack) {
-        msg += '\n' + text.at(-1).stack.trim();
+            // @ts-ignore
+            stream.write_bytes(new GLib.Bytes(`${new Date().toISOString()}: ${msg}\n`), null);
+        }
+
+        for(let cb of logCallbacks.values()) {
+            cb({
+                level: level,
+                tag: tag,
+                formattedMessage: msg,
+                rawArguments: text,
+            });
+        }
+
+        return msg;
     }
 
-    if (logFile) {
-        const stream = Gio.File.new_for_path(logFile).append_to(Gio.FileCreateFlags.NONE, null);
-
-        // @ts-ignore
-        stream.write_bytes(new GLib.Bytes(`${new Date().toISOString()}: ${msg}\n`), null);
+    private _formatTag(subtag?: string) {
+        return `[${this.tag}${subtag ? `:${subtag}` : ''}]`;
     }
-
-    for(let cb of logCallbacks.values()) {
-        cb(msg);
-    }
-
-    return msg;
 }
 
 
-/**
- * Log the given arguments, together with a timestamp, to the logfile (if given), and (if in debug mode) also to the console.
- *
- * Note: This function is **not** optimized for speed (!)
- */
-export function debugLog(...text: any[]): string | null {
-    DEBUG: return log(...text);
-}
+export const logger = Logger.instance;
 
 
 /**
@@ -87,13 +144,12 @@ export function repr(item: any): string {
     return json || `${item}`;
 }
 
-
-const logCallbacks = new Map<number, (msg: string) => void>();
+const logCallbacks = new Map<number, LogCallback>();
 
 /**
  * Add a log callback
  */
-export function addLogCallback(callback: (msg: string) => void) {
+export function addLogCallback(callback: LogCallback) {
     const key = Date.now() + Math.random();
     logCallbacks.set(key, callback);
     return key;
@@ -114,7 +170,7 @@ export function assert(condition: boolean, message?: string | {isWarning: boolea
             throw new Error(message ?? "Assertion error");
         } else if (typeof message === 'object') {
             if (message.isWarning) {
-                debugLog("WARNING:", message.message);
+                logger.warn("WARNING:", message.message);
             } else {
                 throw new Error(message.message);
             }

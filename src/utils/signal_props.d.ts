@@ -29,8 +29,8 @@
  *
  * // Usage example:
  * const widgetProps: SomeWidgetSignalProps = {
- *     onClicked: (source) => { console.log('Widget clicked!', source); },
- *     onHovered: (source, event) => { console.log('Widget hovered!', event); return true; },
+ *     onClicked: (source) => { logger.debug('Widget clicked!', source); },
+ *     onHovered: (source, event) => { logger.debug('Widget hovered!', event); return true; },
  * };
  * ```
  */

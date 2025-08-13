@@ -1,7 +1,7 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Soup from "gi://Soup";
-import {debugLog} from "./logging";
+import {logger} from "$src/utils/logging";
 
 type EventCallback = (data: string, event: string, id: string | null) => void;
 
@@ -116,9 +116,9 @@ export default class EventSource {
                     buffer += decodedLine + '\n';
                 }
             } catch (error) {
-                debugLog('Error reading SSE stream:', error);
+                logger.debug('Error reading SSE stream:', error);
                 if (error instanceof Gio.IOErrorEnum) {
-                    debugLog(Gio.IOErrorEnum);
+                    logger.debug(Gio.IOErrorEnum);
                 }
                 this.close();
                 break;

@@ -70,14 +70,14 @@ There are some utilities that I encourage you to use where applicable.
 Here, I can only provide brief information, but there is more extensive
 documentation in the source code for each utility.
 
- - **Logging** – use `log("Hello")` or `debugLog("Hello!")` to print any 
-    messages. These functions accept multiple arguments and try to best
-    serialize complex types for readability.
+ - **Logging** – use `logger.info("Hello")` or `logger.debug("Hello!")` to 
+    print any messages. These functions accept multiple arguments and try to
+    best serialize complex types for readability.
  - **Delay** – schedule simple one-off callbacks after a delay. Callbacks
     can be cancelled and will be automatically cancelled at extension 
     disabling. Example:
     ```js
-    await Delay.ms(500).then(() => debugLog("Delay is over!"));
+    await Delay.ms(500).then(() => logger.debug("Delay is over!"));
     ```
  - **Intervals** – the `IntervalRunner` class provides a very friendly
     and easy interface to have functions ran repeatedly, at a dynamic
@@ -116,7 +116,7 @@ documentation in the source code for each utility.
             color: 'red',
             borderRadius: '10px',
           }),
-          onClick: () => debugLog("I've been clicked!")
+          onClick: () => logger.debug("I've been clicked!")
         }),
         new Widgets.Icon({
           iconName: 'emblem-ok-symbolic',
@@ -135,11 +135,11 @@ documentation in the source code for each utility.
    prefix it with the `DEBUG` label, like this:
    ```js
    // This is included in release builds:
-   log("Hello World!");
+   logger.info("I always run!");
    
    // And this is stripped out of releases:
    DEBUG: for (let i=0; i<10; i++) {
-     someDebugOnlyAction(i);
+     logger.info("I only run in debug builds :/");
    }
    ```
  - **Beta-only code** – there's also a `BETA` label, which works similarly 

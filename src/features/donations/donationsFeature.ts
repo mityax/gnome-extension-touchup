@@ -2,7 +2,6 @@ import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
 import Gio from "gi://Gio";
 import {Delay} from "$src/utils/delay";
-import {debugLog} from "$src/utils/logging";
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import {randomChoice} from "$src/utils/utils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
@@ -12,6 +11,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
 import {NotificationService} from "$src/services/notificationService";
+import {logger} from "$src/utils/logging";
 
 
 type InstallationData = {
@@ -41,12 +41,12 @@ export class DonationsFeature extends ExtensionFeature {
     private async _initializeInstallationData(): Promise<InstallationData> {
         try {
             const data = await this._readInstallationData();
-            debugLog("Installation data: ", data);
+            logger.debug("Installation data: ", data);
             this._validateInstallationData(data);
             return data;
         } catch (e) {
             DEBUG: if (!(e instanceof Gio.IOErrorEnum && e.code == Gio.IOErrorEnum.NOT_FOUND)) {
-                debugLog("Error while trying to read installations data: ", e);
+                logger.error("Error while trying to read installations data: ", e);
             }
             const data = {
                 installedAt: Date.now(),
@@ -62,7 +62,7 @@ export class DonationsFeature extends ExtensionFeature {
 
         const dt = data.promptedForDonationAt ?? data.installedAt;
         if (dt && Date.now() - dt > DonationsFeature.NOTIFICATION_INTERVAL) {
-            debugLog(`Scheduling notification in ${DonationsFeature.NOTIFICATION_DELAY} minutes`);
+            logger.debug(`Scheduling notification in ${DonationsFeature.NOTIFICATION_DELAY} minutes`);
             Delay.min(DonationsFeature.NOTIFICATION_DELAY).then(() => this.showDonationNotification(data));
         }
     }
@@ -121,7 +121,7 @@ export class DonationsFeature extends ExtensionFeature {
         try {
             settings.donations.installationData.set(JSON.stringify(data));
         } catch (e) {
-            debugLog("Error while trying to write installation data: ", e instanceof Gio.IOErrorEnum ? [e.code, e.message] : e);
+            logger.error("Error while trying to write installation data: ", e instanceof Gio.IOErrorEnum ? [e.code, e.message] : e);
         }
     }
 

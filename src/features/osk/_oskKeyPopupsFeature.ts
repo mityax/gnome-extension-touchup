@@ -5,7 +5,7 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import Clutter from "gi://Clutter";
 import St from "gi://St";
 
-import {log} from "$src/utils/logging";
+import {logger} from "$src/utils/logging";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {settings} from "$src/settings";
 import {Delay} from "$src/utils/delay";
@@ -108,7 +108,7 @@ export default class OSKKeyPopupFeature extends ExtensionFeature {
                 this._patchKeyMethods(proto);
                 this._hasPatchedKeyProto = true;
             } else {
-                log("Could not extract Key prototype, thus not patching OSK key popups.");
+                logger.error("Could not extract Key prototype, thus not patching OSK key popups.");
             }
         }
     }

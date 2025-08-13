@@ -7,11 +7,11 @@ import {clamp} from "$src/utils/utils";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import Graphene from "gi://Graphene";
-import {debugLog} from "$src/utils/logging";
 import Mtk from "gi://Mtk";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import {logger} from "$src/utils/logging";
 import Ref = Widgets.Ref;
 
 type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
@@ -40,7 +40,7 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
                 Gio.DBusSignalFlags.NONE,
                 async (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
                     try {
-                        debugLog("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
+                        logger.debug("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
                         const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
                             ?.at(1)
                             ?.AccelerometerOrientation
@@ -49,11 +49,11 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
                             await this.onAccelerometerOrientationChanged(orientation);
                         }
                     } catch (e) {
-                        debugLog("Error during handling SensorProxy's PropertiesChanged signal: ", e);
-                        debugLog("The parameters were: ", parameters.deepUnpack());
+                        logger.debug("Error during handling SensorProxy's PropertiesChanged signal: ", e);
+                        logger.debug("The parameters were: ", parameters.deepUnpack());
                     }
                 });
-            debugLog("Subscribed to /net/hadess/SensorProxy:PropertiesChanged");
+            logger.debug("Subscribed to /net/hadess/SensorProxy:PropertiesChanged");
             return () => Gio.DBus.system.signal_unsubscribe(handlerId);
         });
     }

@@ -8,7 +8,7 @@ import GLib from "gi://GLib";
  * @example
  * // Create a new IntervalRunner that executes a callback every 1000 milliseconds
  * const runner = new IntervalRunner(1000, (stop) => {
- *     console.log("Callback executed");
+ *     logger.debug("Callback executed");
  *     // Call stop() to stop the interval if needed
  * });
  *

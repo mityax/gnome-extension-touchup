@@ -7,9 +7,9 @@ import {EdgeDragAction} from 'resource:///org/gnome/shell/ui/edgeDragAction.js';
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
-import {debugLog} from "$src/utils/logging";
 import St from "gi://St";
 import Shell from "gi://Shell";
+import {logger} from "$src/utils/logging";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
@@ -46,14 +46,14 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             const action = new EdgeDragAction(St.Side.TOP, Shell.ActionMode.ALL);
 
             action.connect('progress', (_: any, progress: number) => {
-                debugLog("Gesture progress: ", progress);
+                logger.debug("Gesture progress: ", progress);
                 const actor = Main.panel.statusArea.quickSettings.menu.actor;
                 actor.show()
-                debugLog("actor: ", actor, actor.get_transformed_size()[1]);
+                logger.debug("actor: ", actor, actor.get_transformed_size()[1]);
                 actor.translationY = -actor.get_transformed_size()[1] + progress;
             });
             action.connect('activated', () => {
-                debugLog("Gesture activated");
+                logger.debug("Gesture activated");
 
             })
 
@@ -63,7 +63,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
 
         this.pm.connectTo(Main.panel, 'captured-event', (_: any, evt: Clutter.Event) => {
             if (GestureRecognizerEvent.isTouch(evt)) {
-                debugLog("Captured event: ", GestureRecognizerEvent.fromClutterEvent(evt), evt.get_related());
+                logger.debug("Captured event: ", GestureRecognizerEvent.fromClutterEvent(evt), evt.get_related());
             }
             return Clutter.EVENT_PROPAGATE;
         });

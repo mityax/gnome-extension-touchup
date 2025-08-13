@@ -4,7 +4,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
 import {settings} from "$src/settings";
-import {log} from "$src/utils/logging";
+import {logger} from "$src/utils/logging";
 import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {SettingsType} from "$src/features/preferences/backend";
@@ -140,7 +140,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
             case "spacer":
                 return new Widgets.Bin({ width: 20 });
             default:
-                log(`Unknown button for ButtonNavigationBar: ${buttonType}`);
+                logger.warn(`Unknown button for ButtonNavigationBar: ${buttonType}`);
 
                 // If typescript complains here, that means a button is missing above:
                 assertExhaustive(buttonType);

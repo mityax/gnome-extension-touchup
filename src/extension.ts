@@ -2,7 +2,6 @@ import Gio from "gi://Gio";
 
 import {PatchManager} from "$src/utils/patchManager";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
-import {debugLog} from "$src/utils/logging";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {Delay} from "$src/utils/delay";
@@ -12,6 +11,7 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
+import {logger} from "$src/utils/logging";
 
 
 export default class TouchUpExtension extends Extension {
@@ -21,10 +21,10 @@ export default class TouchUpExtension extends Extension {
   features: ExtensionFeature[] = [];
 
   async enable() {
-    debugLog("*************************************************")
-    debugLog(`          Starting TouchUp v. ${this.metadata.version}          `)
-    debugLog("*************************************************")
-    debugLog()
+    logger.debug("*************************************************")
+    logger.debug(`          Starting TouchUp v. ${this.metadata.version}          `)
+    logger.debug("*************************************************")
+    logger.debug()
 
     TouchUpExtension.instance = this;
 
@@ -171,7 +171,7 @@ export default class TouchUpExtension extends Extension {
           this.features.push(f);
         })
         .catch(e => {
-          log(`Error while activating feature "${featureName}":`, e);
+          logger.error(`Error while activating feature "${featureName}":`, e);
           PROD: setting?.set(false);  // Disable the feature for future launches
           import('$src/utils/showFeatureInitializationErrorNotification')
             .then(m => m.showFeatureInitializationFailedNotification(featureName, e));
@@ -211,7 +211,7 @@ export default class TouchUpExtension extends Extension {
 
   disable() {
     // Cancel any pending delays:
-    debugLog(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
+    logger.debug(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);
     Delay.getAllPendingDelays().forEach(d => d.cancel());
 
     // Destroy the root PatchManager and with that all its descendents:
@@ -225,7 +225,7 @@ export default class TouchUpExtension extends Extension {
 
     TouchUpExtension.instance = undefined;
 
-    debugLog("TouchUp extension successfully unloaded.");
+    logger.debug("TouchUp extension successfully unloaded.");
   }
 
   getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {

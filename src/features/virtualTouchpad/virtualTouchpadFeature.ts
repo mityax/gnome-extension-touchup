@@ -90,7 +90,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
     private async updateMonitor() {
         //const devices = Clutter.get_default_backend().get_default_seat().list_devices();
         //const device = devices.find(d => d.deviceType == Clutter.InputDeviceType.TOUCHSCREEN_DEVICE);
-        //debugLog("Touch device dimensions:", device?.get_dimensions());
+        //logger.debug("Touch device dimensions:", device?.get_dimensions());
 
         // FIXME: Find a way to get the touch-enabled monitor instead of builtin monitor
 

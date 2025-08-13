@@ -1,4 +1,5 @@
 import Cogl from "gi://Cogl";
+import {logger} from "$src/utils/logging";
 
 
 export function css(v: any): string | undefined {
@@ -21,7 +22,7 @@ export function css(v: any): string | undefined {
             }
         }
     } else {
-        log(`Warning: cannot convert \`${typeof v}\` to CSS: `, v);
+        logger.warn(`Cannot convert \`${typeof v}\` to CSS: `, v);
         res = v.toString();
     }
 

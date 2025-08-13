@@ -12,8 +12,8 @@ import {
     BUILD_OUTPUT_DIR,
     PROJECT_DIR
 } from "$src/features/developmentTools/developmentReloadUtils";
-import {debugLog} from "$src/utils/logging";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
+import {logger} from "$src/utils/logging";
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
@@ -58,7 +58,7 @@ export class HotReloadButton extends DevToolButton {
                 });
             }
         } catch (e) {
-            debugLog("Error during hot reloading or building: ", e);
+            logger.error("Error during hot reloading or building: ", e);
             console.error(e);
         }
     }

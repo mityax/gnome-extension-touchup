@@ -4,7 +4,7 @@ import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings";
 import Clutter from "gi://Clutter";
-import {log} from "$src/utils/logging";
+import {logger} from "$src/utils/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {Patch, PatchManager} from "$src/utils/patchManager";
 import TouchUpExtension from "$src/extension";
@@ -100,7 +100,7 @@ export class NavigationBarFeature extends ExtensionFeature {
                 this._currentNavBar = new ButtonsNavigationBar();
                 break;
             default:
-                log(`Warning: NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
+                logger.warn(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
                 await this.setMode('gestures');
                 return;
         }

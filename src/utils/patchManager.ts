@@ -2,7 +2,7 @@ import GObject from "gi://GObject";
 //@ts-ignore
 import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
-import {assert, debugLog, repr} from "$src/utils/logging";
+import {assert, logger, repr} from "$src/utils/logging";
 import {Ref} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {Setting} from "$src/features/preferences/backend";
@@ -245,7 +245,7 @@ export class PatchManager {
     destroy() {
         if (this._isDestroyed) return;
 
-        debugLog(`Destroying PatchManager ${this.debugName ?? ''}`.trim());
+        logger.debug(`Destroying PatchManager ${this.debugName ?? ''}`.trim());
 
         // Remove this PM from its parent:
         if (this._parent?._children.includes(this)) {
@@ -288,7 +288,7 @@ export class PatchManager {
         });
         if (this._isDestroyed) return;
 
-        debugLog(`Disabling PatchManager ${this.debugName ?? ''}`.trim());
+        logger.debug(`Disabling PatchManager ${this.debugName ?? ''}`.trim());
 
         this._children.toReversed().forEach(c => c.disable());
         this._patches.toReversed().forEach(p => p.disable());
@@ -304,7 +304,7 @@ export class PatchManager {
     enable() {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been destroyed, cannot enable again.`);
 
-        debugLog(`Enabling PatchManager ${this.debugName ?? ''}`.trim());
+        logger.debug(`Enabling PatchManager ${this.debugName ?? ''}`.trim());
 
         this._patches.forEach(p => p.enable());
         this._children.forEach(c => c.enable());
@@ -368,14 +368,14 @@ export class Patch {
 
     disable(force: boolean = false) {
         if (!force && !this.isEnabled) return;
-        debugLog(` - Disabling patch ${this.debugName}`);
+        logger.debug(` - Disabling patch ${this.debugName}`);
         this._disableCallback?.call(this);
         this._isEnabled = false;
     }
 
     enable(force: boolean = false) {
         if (!force && this.isEnabled) return;
-        debugLog(` - Enabling patch ${this.debugName}`);
+        logger.debug(` - Enabling patch ${this.debugName}`);
         this._disableCallback = this._enableCallback();
         this._isEnabled = true;
     }

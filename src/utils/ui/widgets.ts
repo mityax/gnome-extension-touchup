@@ -17,7 +17,7 @@
  *       }),
  *
  *       // All widget events are translated to callback properties automatically:
- *       onClick: () => debugLog("I've been clicked!")
+ *       onClick: () => logger.debug("I've been clicked!")
  *     }),
  *     new Widgets.Icon({
  *       iconName: 'emblem-ok-symbolic',

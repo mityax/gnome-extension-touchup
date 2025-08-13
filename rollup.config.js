@@ -96,7 +96,7 @@ export default {
                 IS_DEBUG_MODE ? 'PROD' : null,
             ].filter(e => !!e),
             functions: [
-                IS_DEBUG_MODE ? null : 'debugLog',
+                IS_DEBUG_MODE ? null : 'logger.debug',
             ].filter(e => !!e),
             include: [
                 '**/*.js',

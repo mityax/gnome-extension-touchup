@@ -18,13 +18,13 @@ import GLib from "gi://GLib";
  * ### Usage
  * ```typescript
  * const promise = Delay.ms(1000, 'resolve').then(result => {
- *     console.log(result ? 'Delay ended!' : 'Cancelling delay!');
+ *     logger.debug(result ? 'Delay ended!' : 'Cancelling delay!');
  * });
  *
  * // Optionally cancel the delay:
  * let wasCancelled = promise.cancel(); // Cancels the promise
  *
- * console.log(wasCanceled ? "Delay has been canceled successfully!" : "Too late, delay was already over!");
+ * logger.debug(wasCanceled ? "Delay has been canceled successfully!" : "Too late, delay was already over!");
  * ```
  */
 export class Delay {

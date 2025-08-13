@@ -4,7 +4,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {clamp, findActorBy} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
-import {addLogCallback, removeLogCallback} from "$src/utils/logging";
+import {addLogCallback, LogCallback, LogCallbackArguments, removeLogCallback} from "$src/utils/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import {Delay} from "$src/utils/delay";
@@ -24,7 +24,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     }
 
     private logDisplays: St.Widget[] = [];
-    private readonly logAddedCallbacks: ((text: string) => void)[] = [];
+    private readonly logAddedCallbacks: LogCallback[] = [];
     private readonly logCallbackId: number;
 
     constructor(props?: {initialValue?: boolean, onPressed?: (value: boolean) => void}) {
@@ -83,14 +83,14 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             hscrollbarPolicy: PolicyType.AUTOMATIC,
             vscrollbarPolicy: PolicyType.AUTOMATIC,
             style: css({
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'rgba(0,0,0,0.7)',
                 color: 'white',
                 padding: '15px',
                 borderRadius: '10px',
             }),
         });
 
-        const callback = (t: string) => {
+        const callback: LogCallback = (msg) => {
             // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
             const a = display.get_vadjustment();
             if (a.value < a.upper - display.contentBox.get_height() - 25 * scaleFactor) {
@@ -106,11 +106,11 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
 
             if (col.current?.get_last_child() != null) {
                 const text = findActorBy(col.current.get_last_child()!,
-                    e => (e as St.Widget).styleClass === 'log-item-text') as Widgets.Label;
+                    e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
                 const counter = findActorBy(col.current.get_last_child()!,
-                    e => (e as St.Widget).styleClass === 'log-item-duplicates-counter') as Widgets.Label;
+                    e => (e as St.Widget).styleClass === 'log-item__duplicates-counter') as Widgets.Label;
 
-                if (text.text === t) {
+                if (text.text === msg.formattedMessage) {
                     counter.text = `${Number.parseInt(counter.text) + 1}`;
                     counter.visible = true;
 
@@ -119,7 +119,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
             }
 
             // Add the log message:
-            col.current?.add_child(this._buildNewLogMessage(t));
+            col.current?.add_child(this._buildNewLogMessage(msg));
         };
 
         this.logAddedCallbacks.push(callback);
@@ -133,22 +133,34 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         return display;
     }
 
-    private _buildNewLogMessage(t: string) {
+    private _buildNewLogMessage(msg: LogCallbackArguments) {
         return new Widgets.Row({
             xAlign: ActorAlign.FILL,
             style: css({
-                backgroundColor: "rgba(255,255,255,0.2)",
+                backgroundColor: {
+                    'debug': "rgba(255,255,255,0.2)",
+                    'info': "rgba(180,255,255,0.2)",
+                    'warn': "rgba(255,255,180,0.2)",
+                    'error': "rgba(255,180,180,0.2)",
+                }[msg.level],
                 borderRadius: "7px",
                 padding: "7px",
                 marginTop: "7px",
                 fontFamily: "monospace",
                 fontSize: '9pt',
+                color: {
+                    'debug': 'white',
+                    'info': 'aqua',
+                    'warn': 'orange',
+                    'error': 'salmon',
+                }[msg.level]
             }),
+            styleClass: ['log-item', `log-item--${msg.level}`],
             children: [
                 new Widgets.Label({
                     xExpand: true,
-                    text: t,
-                    styleClass: 'log-item-text',
+                    text: msg.formattedMessage,
+                    styleClass: 'log-item__text',
                     onCreated: (l) => {
                         l.clutterText.lineWrap = true;
                         l.clutterText.lineWrapMode = Pango.WrapMode.WORD_CHAR;
@@ -160,7 +172,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 }),
                 new Widgets.Label({
                     text: '1',
-                    styleClass: 'log-item-duplicates-counter',
+                    styleClass: 'log-item__duplicates-counter',
                     visible: false,
                     xAlign: Clutter.ActorAlign.END,
                     yAlign: Clutter.ActorAlign.START,

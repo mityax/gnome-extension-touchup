@@ -5,7 +5,6 @@ import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
-import {debugLog, log} from "$src/utils/logging";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
@@ -15,6 +14,7 @@ import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
 import Mtk from "gi://Mtk";
+import {logger} from "$src/utils/logging";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -177,18 +177,18 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             //         //const buf = new Uint8Array(size);
             //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
             //
-            //         debugLog("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+            //         logger.debug("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
             //     } else {
-            //         debugLog("Subtex is null");
+            //         logger.debug("Subtex is null");
             //     }
             // } catch (e) {
-            //     debugLog("Error in updatePillBrightness: ", e);
+            //     logger.debug("Error in updatePillBrightness: ", e);
             // }
 
             // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
             // const ctx = Clutter.get_default_backend().get_cogl_context();
             // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-            // debugLog("subtex: ", subtex);
+            // logger.debug("subtex: ", subtex);
             // if (subtex) {
             //     /*(global.stage as Clutter.Stage).paint_to_buffer(
             //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
@@ -231,7 +231,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
             return luminance > 0.5 ? 'dark' : 'light';
         } catch (e) {
-            log("Exception during `findBestPillBrightness` (falling back to 'dark' brightness): ", e);
+            logger.error("Exception during `findBestPillBrightness` (falling back to 'dark' brightness): ", e);
             return 'dark';
         }
     }
@@ -378,7 +378,7 @@ class NavigationBarGestureManager {
         if (state.isTap) {
             this._controller.gestureEnd({ direction: null });
 
-            debugLog("Emitting virtual tap");
+            logger.debug("Emitting virtual tap");
 
             this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
                 state.pressCoordinates.x, state.pressCoordinates.y);

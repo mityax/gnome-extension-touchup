@@ -2,7 +2,6 @@ import {RestartButton} from "$src/features/developmentTools/restartButton";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay";
 import * as Widgets from "$src/utils/ui/widgets";
-import {debugLog} from "$src/utils/logging";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
@@ -18,6 +17,7 @@ import {debounce} from "$src/utils/debounce";
 import Cogl from "gi://Cogl";
 import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
 import {TouchModeService} from "$src/services/touchModeService";
+import {logger} from "$src/utils/logging";
 
 
 type _PersistedState = {
@@ -116,11 +116,11 @@ export class DevelopmentTools extends ExtensionFeature {
                     //   {"added":[],"removed":[],"updated":["src/extension.ts"]}
                     // We're lazy here and just check whether '.js"' or '.ts"' is present in that string:
                     stylesheetsOnly: !/\.[jt]s"/.test(data),
-                }).catch((e) => void debugLog("Error during auto-hot-reloading extension: ", e));
+                }).catch((e) => void logger.error("Error during auto-hot-reloading extension: ", e));
             }, 500));
             source.start()
-                .then(_ => debugLog(`[Live-reload] Connected to ${watchEventUrl}`))
-                .catch((e) => debugLog(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e));
+                .then(_ => logger.debug(`[Live-reload] Connected to ${watchEventUrl}`))
+                .catch((e) => logger.error(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e));
 
             return () => source.close();
         });

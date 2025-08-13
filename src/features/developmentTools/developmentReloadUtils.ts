@@ -1,6 +1,6 @@
 import Meta from "gi://Meta";
 import Gio from "gi://Gio";
-import {assert, debugLog} from "$src/utils/logging";
+import {assert, logger} from "$src/utils/logging";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
 import {MessageDialogContent} from "resource:///org/gnome/shell/ui/dialog.js";
 import St from "gi://St";
@@ -45,7 +45,7 @@ export async function _hotReloadExtension(extensionUuid: string, config?: { base
 
     const reloadId = `hr${Date.now().toString()}`;
 
-    debugLog(config?.stylesheetsOnly
+    logger.debug(config?.stylesheetsOnly
         ? `Hot-Reloading extension stylesheets (reload id: ${reloadId})…`
         : `Hot-restarting extension (reload id: ${reloadId})…`);
 
@@ -73,8 +73,7 @@ export async function _hotReloadExtension(extensionUuid: string, config?: { base
     // Patch extension error logger function to print errors occurring during reloading the extension:
     const origLogExtError = Main.extensionManager.logExtensionError;
     Main.extensionManager.logExtensionError = (u, e) => {
-        debugLog(`Extension error during hot reload (${u}): ${e}`);
-        console.error(e);
+        logger.error(`Extension error during hot reload (${u}):`, e);
         origLogExtError.call(Main.extensionManager, u, e);
     }
 
@@ -125,16 +124,16 @@ export async function _rebuildExtension(opts: {showDialogOnError: boolean, build
             launcher.setenv('BUNDLE_JS', 'true', true);
         }
 
-        debugLog("Rebuilding extension, cwd: ", PROJECT_DIR);
+        logger.debug("Rebuilding extension, cwd: ", PROJECT_DIR);
 
         const proc = launcher.spawnv(['npm', 'run', opts.buildForHotReload ? 'build' : 'enable']);
         // @ts-ignore
         const [stdout, stderr] = await proc.communicate_utf8_async(null, null);
 
-        debugLog(`Exit code (${proc.get_successful() ? 'successful' : 'unsuccessful'}): `, proc.get_exit_status());
+        logger.debug(`Exit code (${proc.get_successful() ? 'successful' : 'unsuccessful'}): `, proc.get_exit_status());
 
         if (!proc.get_successful()) {
-            debugLog(`Build failed.\n\nstdout:\n${stdout}"\n\nstderr:\n${stderr}`)
+            logger.debug(`Build failed.\n\nstdout:\n${stdout}"\n\nstderr:\n${stderr}`)
 
             if (opts.showDialogOnError) {
                 _showBuildFailedDialog(proc.get_exit_status(), stdout, stderr);
@@ -143,7 +142,7 @@ export async function _rebuildExtension(opts: {showDialogOnError: boolean, build
             return false;
         }
     } catch (e) {
-        debugLog(e);
+        logger.debug(e);
         return false;
     }
 
