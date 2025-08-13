@@ -100,7 +100,7 @@ export class NavigationBarFeature extends ExtensionFeature {
                 this._currentNavBar = new ButtonsNavigationBar();
                 break;
             default:
-                log(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
+                log(`Warning: NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
                 await this.setMode('gestures');
                 return;
         }

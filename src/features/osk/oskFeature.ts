@@ -8,7 +8,6 @@ import {settings} from "$src/settings";
 
 import OSKKeyPopupFeature from "./_oskKeyPopupsFeature";
 import OSKGesturesFeature from "./_oskGesturesFeature";
-import {debugLog} from "$src/utils/logging";
 
 
 export class OskFeature extends ExtensionFeature {
@@ -29,7 +28,6 @@ export class OskFeature extends ExtensionFeature {
         // When the keyboard is replaced/a new keyboard is created, notify all sub-features:
         const self = this;
         this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_init', function(this: Keyboard.Keyboard) {
-            debugLog("new keyboard!!!");
             self.getSubFeature(OSKKeyPopupFeature)?.onNewKeyboard(this);
             self.getSubFeature(OSKGesturesFeature)?.onNewKeyboard(this);
         });

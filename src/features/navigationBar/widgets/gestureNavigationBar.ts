@@ -34,7 +34,11 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         this.setInvisibleMode(props.invisibleMode);
 
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
-        this.gestureManager = new NavigationBarGestureManager(this.actor);
+        this.gestureManager = new NavigationBarGestureManager({
+            edgeThreshold: this.computeHeight(),
+        });
+
+        this.actor.connect('notify::mapped', () => this.gestureManager.setEnabled(this.actor.mapped));
 
         this.connect('notify::visible', _ => this._updateStyleClassIntervalActivity());
         this.connect('notify::reserve-space', _ => {
@@ -75,13 +79,27 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         }
     }
 
-    protected onBeforeReallocate() {
+    protected computeHeight() {
         const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
-        const height = 22 * sf;
-        this.actor.set_height(height);
 
-        this.pill.set_width(clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf));
-        this.pill.set_height(Math.floor(Math.min(height * 0.8, 6 * sf, height - 2)));
+        return 22 * sf;
+    }
+
+    protected computePillSize() {
+        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+
+        return {
+            width: clamp(this.monitor.width * 0.25, 70 * sf, 330 * sf),
+            height: Math.floor(Math.min(this.computeHeight() * 0.8, 6 * sf, this.computeHeight() - 2)),
+        };
+    }
+
+    protected onBeforeReallocate() {
+        this.actor.set_height(this.computeHeight());
+        this.pill.set_width(this.computePillSize().width);
+        this.pill.set_height(this.computePillSize().height);
+
+        this.gestureManager.setEdgeThreshold(this.computeHeight());
     }
 
     setMonitor(monitorIndex: number) {
@@ -224,12 +242,13 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
     setInvisibleMode(invisible: boolean) {
         // We use opacity here instead of the actors `visible` property since [LayoutManager.addTopChrome] uses the
-        // visibility property itself and interferes with this.
+        // `visible` property itself which would interfere with this.
         this.actor.opacity = invisible ? 0 : 255;
     }
 
     destroy() {
         this.styleClassUpdateInterval.stop();
+        this.gestureManager.destroy();
         super.destroy();
     }
 }
@@ -239,6 +258,7 @@ class NavigationBarGestureManager {
     private static readonly _overviewMaxSpeed = 0.005;
     private static readonly _workspaceMaxSpeed = 0.0016;
 
+    private readonly action: GestureNavigationBarAction;
     private _controller: OverviewAndWorkspaceGestureController;
     private _recognizer: GestureRecognizer;
     private _idleRunner: IdleRunner;
@@ -255,48 +275,55 @@ class NavigationBarGestureManager {
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
 
-    constructor(private actor: _EventPassthroughActor, private monitor?: Monitor) {
+    constructor(props: {monitor?: Monitor, edgeThreshold: number}) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
         // The controller used to actually perform the navigation gestures:
         this._controller = new OverviewAndWorkspaceGestureController({
-            monitorIndex: monitor?.index ?? Main.layoutManager.primaryIndex,
+            monitorIndex: props.monitor?.index ?? Main.layoutManager.primaryIndex,
         });
 
         // Use an [IdleRunner] to make the gestures asynchronously follow the users' finger:
         this._idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
 
-        // Our [GestureRecognizer] to interprete the gestures:
+        // Our [GestureRecognizer] to interpret the gestures:
         this._recognizer = new GestureRecognizer({
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),
         });
 
         // Action that listens to appropriate events on the stage:
-        const action = new GestureNavigationBarAction({
-            edgeThreshold: actor.get_transformed_size()[1]
+        this.action = new GestureNavigationBarAction({
+            edgeThreshold: props.edgeThreshold,
         });
-        action.connect('progress', (_, evt: Clutter.Event) => {
+        this.action.connect('progress', (_, evt: Clutter.Event) => {
             this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
         });
-        action.connect('end', (_, evt: Clutter.Event) => {
+        this.action.connect('end', (_, evt: Clutter.Event) => {
             this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
         });
-        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, action);
-
-        // Bind the actors allocation to the actions edgeThreshold:
-        this.actor.connect('notify::allocation', () => action.setEdgeThreshold(actor.get_transformed_size()[1]));
-
-        this.actor.connect('notify::mapped', () => action.enabled = actor.mapped)
-        this.actor.connect('destroy', () => {
-            global.stage.remove_action(action);
-            this._idleRunner.stop();
-        });
+        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.action);
 
         // To emit virtual events:
         this._virtualTouchscreenDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
             Clutter.InputDeviceType.TOUCHSCREEN_DEVICE
         );
+    }
+
+    setMonitor(monitorIndex: number) {
+        this._controller.monitorIndex = monitorIndex;
+    }
+
+    setEdgeThreshold(edgeThreshold: number) {
+        this.action.setEdgeThreshold(edgeThreshold);
+    }
+
+    setEnabled(enabled: boolean) {
+        this.action.enabled = enabled;
+    }
+
+    destroy() {
+        global.stage.remove_action(this.action);
     }
 
     private _onGestureProgress(state: GestureState) {
@@ -392,10 +419,6 @@ class NavigationBarGestureManager {
             overviewProgress: overviewProg - this._controller.initialOverviewProgress,
             workspaceProgress: workspaceProg - this._controller.initialWorkspaceProgress,
         });
-    }
-
-    setMonitor(monitorIndex: number) {
-        this._controller.monitorIndex = monitorIndex;
     }
 }
 
