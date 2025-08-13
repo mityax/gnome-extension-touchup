@@ -72,7 +72,7 @@ discuss it!
 ## A Note on Compatibility
 
 TouchUp is developed for and actively tested on upstream Gnome Shell. It is not
-tested on derivations thereof, such as Ubuntu, and I don't have capacity to 
+tested on derivations thereof, such as in Ubuntu, and I don't have capacity to 
 include those at the moment (should you be willing to contribute as a long-term 
 beta tester, and to investigate issues on a specific shell derivation yourself, 
 please
