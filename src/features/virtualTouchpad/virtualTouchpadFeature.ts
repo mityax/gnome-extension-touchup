@@ -29,17 +29,6 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             onClose: () => this.close(),
         });
 
-        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed',
-            () => this.updateMonitor());
-        void this.updateMonitor();
-
-        this.pm.connectTo(TouchUpExtension.instance!.getFeature(TouchModeService)!.onChanged, 'changed',
-            touchMode => {
-                // TODO: depend on monitor number
-                this.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
-            })
-        this.setCanOpen(TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive);
-
         this.pm.patch(() => {
             Main.layoutManager.addTopChrome(this.actor, {
                 affectsStruts: false,
@@ -58,6 +47,17 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             );
             return () => this.openButton?.destroy();
         });
+
+        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed',
+            () => this.updateMonitor());
+        void this.updateMonitor();
+
+        this.pm.connectTo(TouchUpExtension.instance!.getFeature(TouchModeService)!.onChanged, 'changed',
+            touchMode => {
+                // TODO: depend on monitor number
+                this.setCanOpen(touchMode /*&&  global.display.get_n_monitors() > 1*/);
+            })
+        this.setCanOpen(TouchUpExtension.instance!.getFeature(TouchModeService)!.isTouchModeActive);
     }
 
     open() {
@@ -195,6 +195,8 @@ class _TouchPadActor extends Widgets.Column {
      * is hidden or destroyed.
      */
     private _addEventFilter() {
+        if (this._eventFilterId !== null) return;
+
         this._eventFilterId = Clutter.event_add_filter(global.stage, (event, event_actor) => {
             if (event_actor === this && GestureRecognizerEvent.isTouch(event)) {
                 this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(event));
