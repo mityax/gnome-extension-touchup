@@ -31,6 +31,11 @@ the first TTY (the one where your IDE is) and the second – whenever you
 make changes in your IDE, just save them, switch back to the second TTY, 
 and hit the restart button.
 
+**Note:** Though running natively yields the overall best experience, there
+is at the moment no way to see uncaught exceptions. Should you entertain 
+suspicion that an error might occurr in a certain scenario, try running
+a nested shell – uncaught errors are then logged to its stdout.
+
 ### Running in a nested shell
 You can also run the extension in a nested instance of Gnome Shell. While
 this might cause issues in specific cases, it can be sufficient when working
