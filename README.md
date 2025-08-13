@@ -69,7 +69,26 @@ don't hesitate
 to [create an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so we can
 discuss it!
 
-## Why an extension?
+## A Note on Compatibility
+
+TouchUp is developed for and actively tested on upstream Gnome Shell. It is not
+tested on derivations thereof, such as Ubuntu, and I don't have capacity to 
+include those at the moment (should you be willing to contribute as a long-term 
+beta tester, and to investigate issues on a specific shell derivation yourself, 
+please
+[open an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) 
+to get in touch).
+
+However, TouchUp will automatically disable features that fail to initialize,
+and show a notification for these. Other features _might_ work on your shell
+derivation. Consider logging out and back in when a feature failed to 
+initialize – this way you ensure the failed feature leaves no traces in your 
+session.
+
+By the way: TouchUp does not even load the code for disabled features into
+memory – thus you only 'pay' for features you actually enable.
+
+## Why an Extension?
 
 Developing this functionality in the form of a Gnome extension allows a seamless
 interplay between a touch-centered usage and one based on keyboard and mouse. It
