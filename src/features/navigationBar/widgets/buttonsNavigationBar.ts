@@ -73,7 +73,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         });
     }
 
-    protected onIsWindowNearChanged(isWindowNear: boolean): void {
+    protected onUpdateToSurrounding(isWindowNear: boolean): void {
         if (isWindowNear && !Main.overview.visible) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('touchup-navbar--transparent');

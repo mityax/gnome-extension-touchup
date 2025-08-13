@@ -65,14 +65,12 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         });
     }
 
-    protected onIsWindowNearChanged(isWindowNear: boolean): void {
-        this._isWindowNear = isWindowNear;
+    protected onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean}): void {
+        this._isWindowNear = surrounding.isWindowNear;
         if (!this.reserveSpace) {
-            let newInterval = Main.overview.visible || !isWindowNear ? 3000 : 500;
-            if (newInterval != this.styleClassUpdateInterval.interval) {
-                // if a window is moved onto/away from the navigation bar or overview is toggled, schedule update soonish:
-                this.styleClassUpdateInterval.scheduleOnce(250);
-            }
+            let newInterval = surrounding.isInOverview || !surrounding.isWindowNear ? 3000 : 500;
+            // if a window is moved onto/away from the navigation bar or overview is toggled, schedule update soonish:
+            this.styleClassUpdateInterval.scheduleOnce(250);
             this.styleClassUpdateInterval.setInterval(newInterval);
         } else {
             void this.updateStyleClasses();

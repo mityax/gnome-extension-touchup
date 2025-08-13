@@ -104,12 +104,15 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
         Main.layoutManager.removeChrome(this.actor);
     }
 
-    protected abstract onIsWindowNearChanged(isWindowNear: boolean): void;
+    /**
+     * This callback is invoked when the context in which the navigation bar appears on screen is changed, e.g. when
+     * the overview is toggled or a window is moved close to the navigation bar or away from it.
+     */
+    protected abstract onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean }): void;
 
     protected onBeforeReallocate(): void {}
 
     private _createWindowPositionTracker() {
-        let lastIsWindowNear = false;
         this.windowPositionTracker = new WindowPositionTracker(windows => {
             if (this.actor.realized) {
                 // Check if at least one window is near enough to the navigation bar:
@@ -118,10 +121,10 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
                     const windowBottom = metaWindow.get_frame_rect().y + metaWindow.get_frame_rect().height;
                     return windowBottom >= top;
                 });
-                if (isWindowNear !== lastIsWindowNear) {
-                    this.onIsWindowNearChanged(isWindowNear);
-                }
-                lastIsWindowNear = isWindowNear;
+                this.onUpdateToSurrounding({
+                    isWindowNear,
+                    isInOverview: Main.overview.visible,
+                });
             }
         });
     }
