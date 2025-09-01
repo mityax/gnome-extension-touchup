@@ -1,5 +1,7 @@
 import {MonitorConstraint} from "resource:///org/gnome/shell/ui/layout.js";
-import {PatchManager} from "$src/utils/patchManager";
+//@ts-ignore
+import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
+import {Patch, PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
 import * as Widgets from "$src/utils/ui/widgets";
@@ -21,6 +23,8 @@ import {TouchModeService} from "$src/services/touchModeService";
 export class VirtualTouchpadFeature extends ExtensionFeature {
     private readonly actor: _TouchPadActor;
     private readonly openButton: VirtualTouchpadQuickSettingsItem;
+    private _forceEnableKeyboardPatch?: Patch;
+    private _ensureKeyboardMonitorPatch?: Patch;
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -30,7 +34,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         });
 
         this.pm.patch(() => {
-            Main.layoutManager.addTopChrome(this.actor, {
+            Main.layoutManager.addChrome(this.actor, {
                 affectsStruts: false,
                 trackFullscreen: false,
                 affectsInputRegion: true,
@@ -62,10 +66,32 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
 
     open() {
         this.actor.show();
+
+        // This patch ensures that the OSK is opened properly when e.g. focusing an input widget using the
+        // virtual touchpad:
+        this._forceEnableKeyboardPatch ??= this.pm.patchMethod(
+            Keyboard.KeyboardManager.prototype,
+            '_lastDeviceIsTouchscreen',
+            () => true,
+        );
+        this._forceEnableKeyboardPatch.enable();
+
+        // Ensure that the keyboard opens on the correct monitor:
+        const self = this;
+        this._ensureKeyboardMonitorPatch ??= this.pm.patchMethod(
+            Keyboard.KeyboardManager.prototype,
+            'open',
+            function (this: Keyboard.KeyboardManager, originalMethod, _monitor: number) {
+                originalMethod(self.actor.monitor);  // Call `KeyboardManager.open()` with the correct monitor as argument
+            }
+        );
+        this._ensureKeyboardMonitorPatch.enable();
     }
 
     close() {
         this.actor.hide();
+        this._forceEnableKeyboardPatch?.disable();
+        this._ensureKeyboardMonitorPatch?.disable();
     }
 
     toggle() {
@@ -95,9 +121,9 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         // FIXME: Find a way to get the touch-enabled monitor instead of builtin monitor
 
         const state = await DisplayConfigState.getCurrent();
-        const idx = global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector) ?? global.display.get_primary_monitor();
-
-        this.actor.setMonitor(idx);
+        this.actor.monitor =
+            global.backend.get_monitor_manager().get_monitor_for_connector(state.builtinMonitor.connector)
+            ?? global.display.get_primary_monitor();
     }
 
     destroy() {
@@ -112,7 +138,6 @@ class _TouchPadActor extends Widgets.Column {
     }
 
     private readonly _onClose: () => void;
-
     private readonly _virtualInputDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
         Clutter.InputDeviceType.TOUCHPAD_DEVICE
     );
@@ -274,7 +299,7 @@ class _TouchPadActor extends Widgets.Column {
         super.hide();
     }
 
-    setMonitor(index: number) {
+    set monitor(index: number) {
         this._monitorIndex = index;
 
         this.remove_constraint_by_name('monitor');
@@ -298,6 +323,10 @@ class _TouchPadActor extends Widgets.Column {
                 );
             }
         }
+    }
+
+    get monitor() {
+        return this._monitorIndex;
     }
 
     /**
