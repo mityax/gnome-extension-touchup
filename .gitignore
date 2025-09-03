@@ -1,3 +1,5 @@
 /.lib/
 .vagrant
 /dist/
+/_gnome-shell/
+tools/.gnome-shell

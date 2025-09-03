@@ -11,15 +11,31 @@ help you out, should it be needed.
 
 ## Development Workflow
 
+### Running on the host vs. in a container
+Running the extension can be done using the host system's gnome-shell 
+installation or inside a toolbox/podman container – more details are
+available [here](https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/docs/building-and-running.md).
+TouchUp contains some developer tools to make this trivial; in the following
+those are introduced. By default, the shell is run inside a container – 
+commands ending with ":host" are the run-on-host counterpart.
+
+The major difference between host and container (apart from isolation) is that
+inside the container, the latest upstream shell code is pulled and compiled 
+whereas the host (most likely) runs an older/stable version of the shell.
+Therefore, please test bigger developments using the container to ensure they 
+are compatible with the current upstream shell. For smaller fixes or debugging 
+however, running on the host might be enough for you – then, there's no need
+to wait for the container being set up, which can take quite some time.
+
 ### Running natively (recommended)
 
-The extension can best be [run natively](https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/docs/building-and-running.md#native) as
-there are some difficulties with touch events in nested shells. To make
+The extension can best be [run natively](https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/docs/building-and-running.md#native) 
+as there are some difficulties with touch events in nested shells. To make
 this smooth, open a TTY (using `Ctrl + Alt + F3` for example) and run
 this command:
 
 ```bash
-npm run dev-tty
+npm run dev  # or `npm run dev:host`
 ```
 
 - To **rebuild and restart**, just click the reload icon in the top bar
@@ -39,10 +55,18 @@ a nested shell – uncaught errors are then logged to its stdout.
 ### Running in a nested shell
 You can also run the extension in a nested instance of Gnome Shell. While
 this might cause issues in specific cases, it can be sufficient when working
-on unaffected features. To do so, just run
+on unaffected features. To do so, just run the same command from within a 
+normal terminal instead of a TTY:
 
 ```bash
-npm run dev
+npm run dev  # - or: npm run dev:host
+```
+
+**Tip:** To see more logs in case anything unexpected happens, run the 
+command like this:
+
+```bash
+npm run dev -- --verbose  # - or: npm run dev:host -- --verbose
 ```
 
 ### Live-Reloading
@@ -55,7 +79,7 @@ rebuilt and reloaded in the running gnome shell instance.
 To use live-relaoding, do:
 
 ```bash
-npm run watch  # - or in a tty: `npm run watch-tty`
+npm run watch  # - or: `npm run watch:host`
 ```
 
 **Note:** While live-reloading can significantly improve the development

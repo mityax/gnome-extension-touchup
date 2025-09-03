@@ -27,6 +27,7 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
             clients = [];
             server = null;
             serverStarted = false;
+            process.exit(0);
         }
     }
 

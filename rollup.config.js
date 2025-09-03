@@ -4,17 +4,17 @@ import * as fs from "fs";
 import typescript from '@rollup/plugin-typescript';
 import {nodeResolve} from '@rollup/plugin-node-resolve';
 import strip from "@rollup/plugin-strip";
-
-import sassWriter from "./build_plugins/rollup_plugin_sass_writer.js";
-import gsettingsSchemaPlugin from "./build_plugins/rollup_plugin_generate_settings_schema.js";
-import compileGSchemas from "./build_plugins/rollup_plugin_compile_gschemas.js";
-import compileGResources from "./build_plugins/rollup_plugin_compile_gresources.js";
-import disallowImportsPlugin from "./build_plugins/rollup_plugin_disallow_imports.js";
-import createZip from "./build_plugins/rollup_plugin_create_zip.js";
-import reloadSSENotifier from "./build_plugins/rollup_plugin_reload_sse_notifier.js";
 import * as dotenv from "dotenv";
-import writeJsonPlugin from "./build_plugins/rollup_plugin_write_json.js";
 import {execSync} from "child_process";
+
+import sassWriter from "./tools/rollup_plugins/rollup_plugin_sass_writer.js";
+import gsettingsSchemaPlugin from "./tools/rollup_plugins/rollup_plugin_generate_settings_schema.js";
+import compileGSchemas from "./tools/rollup_plugins/rollup_plugin_compile_gschemas.js";
+import compileGResources from "./tools/rollup_plugins/rollup_plugin_compile_gresources.js";
+import disallowImportsPlugin from "./tools/rollup_plugins/rollup_plugin_disallow_imports.js";
+import createZip from "./tools/rollup_plugins/rollup_plugin_create_zip.js";
+import reloadSSENotifier from "./tools/rollup_plugins/rollup_plugin_reload_sse_notifier.js";
+import writeJsonPlugin from "./tools/rollup_plugins/rollup_plugin_write_json.js";
 
 dotenv.config();
 
