@@ -58,10 +58,12 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         global.window_group.set_child_above_sibling(display, Main.layoutManager._backgroundGroup);
 
         const updatePos = () => {
-            const monitor = Main.layoutManager.primaryMonitor!;
             const margin = 15 * St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+            const monitor = Main.layoutManager.primaryMonitor! ?? Main.layoutManager.monitors[0];
 
-            display.set_position(monitor.x + margin, monitor.y + Main.panel.height + margin);
+            if (monitor !== undefined) {
+                display.set_position(monitor.x + margin, monitor.y + Main.panel.height + margin);
+            }
         }
 
         updatePos();
