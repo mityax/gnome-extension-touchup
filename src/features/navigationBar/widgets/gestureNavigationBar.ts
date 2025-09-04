@@ -256,7 +256,7 @@ class NavigationBarGestureManager {
     private static readonly _overviewMaxSpeed = 0.005;
     private static readonly _workspaceMaxSpeed = 0.0016;
 
-    private readonly action: GestureNavigationBarAction;
+    private readonly gesture: Clutter.PanGesture;
     private _controller: OverviewAndWorkspaceGestureController;
     private _recognizer: GestureRecognizer;
     private _idleRunner: IdleRunner;
@@ -272,9 +272,12 @@ class NavigationBarGestureManager {
 
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
+    private _edgeThreshold: number;
+    private _enabled: boolean = true;
 
     constructor(props: {monitor?: Monitor, edgeThreshold: number}) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+        this._edgeThreshold = props.edgeThreshold;
 
         // The controller used to actually perform the navigation gestures:
         this._controller = new OverviewAndWorkspaceGestureController({
@@ -291,21 +294,26 @@ class NavigationBarGestureManager {
         });
 
         // Action that listens to appropriate events on the stage:
-        this.action = new GestureNavigationBarAction({
-            edgeThreshold: props.edgeThreshold,
+        this.gesture = new Clutter.PanGesture({
+            max_n_points: 1,
         });
-        this.action.connect('progress', (_, evt: Clutter.Event) => {
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
-        });
-        this.action.connect('end', (_, evt: Clutter.Event) => {
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
-        });
-        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.action);
+
+        this.gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
+            this._shouldHandleSequence(e));
+        this.gesture.connect('pan-update', () =>
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event())));
+        this.gesture.connect('end', () =>
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event())));
+        this.gesture.connect('cancel', () =>
+            this._onGestureCancel())
+
+        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.gesture);
 
         // To emit virtual events:
-        this._virtualTouchscreenDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
-            Clutter.InputDeviceType.TOUCHSCREEN_DEVICE
-        );
+        this._virtualTouchscreenDevice = Clutter
+            .get_default_backend()
+            .get_default_seat()
+            .create_virtual_device(Clutter.InputDeviceType.TOUCHSCREEN_DEVICE);
     }
 
     setMonitor(monitorIndex: number) {
@@ -313,15 +321,29 @@ class NavigationBarGestureManager {
     }
 
     setEdgeThreshold(edgeThreshold: number) {
-        this.action.setEdgeThreshold(edgeThreshold);
+        this._edgeThreshold = edgeThreshold;
     }
 
     setEnabled(enabled: boolean) {
-        this.action.enabled = enabled;
+        this._enabled = enabled;
     }
 
     destroy() {
-        global.stage.remove_action(this.action);
+        global.stage.remove_action(this.gesture);
+    }
+
+    private _getMonitorRect(x: number, y: number): Mtk.Rectangle {
+        const rect = new Mtk.Rectangle({ x: x - 1, y: y - 1, width: 1, height: 1 });
+        const monitorIndex = global.display.get_monitor_index_for_rect(rect);
+
+        return global.display.get_monitor_geometry(monitorIndex);
+    }
+
+    private _shouldHandleSequence(event: Clutter.Event): boolean {
+        const [x, y] = event.get_coords();
+        const monitorRect = this._getMonitorRect(x, y);
+
+        return y > monitorRect.y + monitorRect.height - this._edgeThreshold;
     }
 
     private _onGestureProgress(state: GestureState) {
@@ -397,6 +419,11 @@ class NavigationBarGestureManager {
         this._targetWorkspaceProgress = null;
     }
 
+    private _onGestureCancel() {
+        Main.keyboard._keyboard?.gestureCancel();
+        this._controller.gestureCancel();
+    }
+
     private _onIdleRun(dt: number = 0) {
         let overviewProg = this._controller.currentOverviewProgress;
         let workspaceProg = this._controller.currentWorkspaceProgress;
@@ -436,86 +463,6 @@ class _EventPassthroughActor extends Widgets.Bin {
         return;
     }
 }
-
-
-/**
- * To handle navigation bar events, we register a [GestureNavigationBarAction] on the stage. This class
- * emit gesture progress and end events when events occur in the lower edge of the screen, i.e. in the
- * lowest area the height of which is defined by [edgeThreshold]. The signals emitted just propagate the
- * raw [Clutter.Event] instances to their listeners, such that they can then analyze them using a
- * [GestureRecognizer] which contains all the logic we need to interprete gestures.
- *
- * Therefore, the task of this class is not recognizing any gestures but instead merely filtering out
- * the events that we want to act on and integrate as an outermost layer with the shell.
- */
-class GestureNavigationBarAction extends Clutter.GestureAction {
-    static {
-        GObject.registerClass({
-            Signals: {
-                'end': {param_types: [Clutter.Event.$gtype]},
-                'progress': {param_types: [Clutter.Event.$gtype]},
-                'begin': {param_types: [Clutter.Event.$gtype]}
-            },
-        }, this);
-    }
-
-    declare private _edgeThreshold: number;
-    declare private _allowedModes: Shell.ActionMode;
-
-    constructor(props: { edgeThreshold: number, allowedModes?: Shell.ActionMode }) {
-        // Note: This constructor is only to make typescript happy. DON'T put any logic in here – use `_init` below.
-
-        // @ts-ignore
-        super(props);
-    }
-
-    // @ts-ignore
-    _init(props: { edgeThreshold: number, allowedModes?: Shell.ActionMode }) {
-        super._init();
-        this._allowedModes = props.allowedModes ?? Shell.ActionMode.ALL;
-        this._edgeThreshold = props.edgeThreshold;
-        this.set_n_touch_points(1);
-        this.set_threshold_trigger_edge(Clutter.GestureTriggerEdge.AFTER);
-    }
-
-    setEdgeThreshold(edgeThreshold: number) {
-        this._edgeThreshold = edgeThreshold;
-    }
-
-    _getMonitorRect(x: number, y: number) {
-        const rect = new Mtk.Rectangle({x: x - 1, y: y - 1, width: 1, height: 1});
-        let monitorIndex = global.display.get_monitor_index_for_rect(rect);
-
-        return global.display.get_monitor_geometry(monitorIndex);
-    }
-
-    vfunc_gesture_prepare(actor: Clutter.Actor) {
-        if (this.get_n_current_points() === 0)
-            return false;
-
-        if (!(this._allowedModes & Main.actionMode))
-            return false;
-
-        let [x, y] = this.get_press_coords(0);
-        let monitorRect = this._getMonitorRect(x, y);
-
-        const res = y > monitorRect.y + monitorRect.height - this._edgeThreshold;
-        if (res) {
-            this.emit('begin', this.get_last_event(0));
-        }
-        return res;
-    }
-
-    vfunc_gesture_progress(actor: Clutter.Actor) {
-        this.emit('progress', this.get_last_event(0));
-        return true;
-    }
-
-    vfunc_gesture_end(actor: Clutter.Actor) {
-        this.emit('end', this.get_last_event(0));
-    }
-}
-
 
 
 // Note: these are potentially needed for some of the approaches in `updatePillBrightness`, should
