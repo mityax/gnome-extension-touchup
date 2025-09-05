@@ -16,9 +16,10 @@ import Ref = Widgets.Ref;
 import ActorAlign = Clutter.ActorAlign;
 
 
-export class DevelopmentLogDisplayButton extends DevToolToggleButton {
-    static readonly MAX_LENGTH = 500;
+const MAX_LOG_HISTORY = 500;
 
+
+export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     static {
         GObject.registerClass(this);
     }
@@ -196,7 +197,7 @@ class LogDisplay extends Widgets.Column {
         }
 
         // Remove first log message if there are too many:
-        if ((this.logMsgContainer.current?.get_n_children() ?? 0) > DevelopmentLogDisplayButton.MAX_LENGTH) {
+        if ((this.logMsgContainer.current?.get_n_children() ?? 0) > MAX_LOG_HISTORY) {
             this.logMsgContainer.current!.remove_child(this.logMsgContainer.current!.get_child_at_index(0)!);
         }
 
@@ -208,7 +209,7 @@ class LogDisplay extends Widgets.Column {
 
             if (text.text === msg.formattedMessage) {
                 counter.text = `${Number.parseInt(counter.text) + 1}`;
-                counter.visible = true;
+                counter.show();
 
                 return;
             }
@@ -216,7 +217,7 @@ class LogDisplay extends Widgets.Column {
 
         // Add the log message:
         this.logMsgContainer.current?.add_child(this._buildNewLogMessage(msg));
-        this._applySearch(this.searchEntry.current!.text);
+        this._applySearch(this.searchEntry.current!.text, {from: (this.logMsgContainer.current?.get_n_children() ?? 1) - 1});
     }
 
     private _buildNewLogMessage(msg: LogCallbackArguments) {
@@ -285,22 +286,26 @@ class LogDisplay extends Widgets.Column {
         return St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
     }
 
-    private _applySearch(query: string) {
+    private _applySearch(query: string, opts?: {from?: number, to?: number}) {
         query = query.trim().toLowerCase();
 
+        const children = this.logMsgContainer.current!
+            .get_children()
+            .slice(opts?.from, opts?.to);
+
         if (query.length === 0) {
-            this.logMsgContainer.current!.get_children().forEach(child => child.show());
-        }
+            children.forEach(child => child.show());
+        } else {
+            for (const child of children) {
+                const label = findActorBy(child,
+                    e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
+                const text = label.text;
 
-        for (const child of this.logMsgContainer.current!.get_children()) {
-            const label = findActorBy(child,
-                e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
-            const text = label.text;
-
-            if (!text.toLowerCase().includes(query)) {
-                child.hide();
-            } else {
-                child.show();
+                if (!text.toLowerCase().includes(query)) {
+                    child.hide();
+                } else {
+                    child.show();
+                }
             }
         }
     }
