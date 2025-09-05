@@ -73,66 +73,150 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     }
 
     private _createLogDisplay(): St.Widget {
-        const scaleFactor = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+        const display = new LogDisplay();
+        const cb = (msg: LogCallbackArguments) => display.addLogMessage(msg);
 
-        const col = new Ref<Widgets.Column>();
-        const display = new Widgets.ScrollView({
-            child: new Widgets.Column({
-                ref: col,
-            }),
-            width: clamp(global.screenWidth * 0.5, 250 * scaleFactor, 900 * scaleFactor),
-            height: clamp(global.screenHeight * 0.5, 250 * scaleFactor, 900 * scaleFactor),
-            hscrollbarPolicy: PolicyType.AUTOMATIC,
-            vscrollbarPolicy: PolicyType.AUTOMATIC,
-            style: css({
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                color: 'white',
-                padding: '15px',
-                borderRadius: '10px',
-            }),
-        });
+        this.logAddedCallbacks.push(cb);
 
-        const callback: LogCallback = (msg) => {
-            // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
-            const a = display.get_vadjustment();
-            if (a.value < a.upper - display.contentBox.get_height() - 25 * scaleFactor) {
-                Delay.ms(100).then(() => {
-                    if (this.logDisplays.includes(display)) a.set_value(a.upper);
-                });
-            }
-
-            // Remove first log message if there are too many:
-            if ((col.current?.get_n_children() ?? 0) > DevelopmentLogDisplayButton.MAX_LENGTH) {
-                col.current!.remove_child(col.current!.get_child_at_index(0)!);
-            }
-
-            if (col.current?.get_last_child() != null) {
-                const text = findActorBy(col.current.get_last_child()!,
-                    e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
-                const counter = findActorBy(col.current.get_last_child()!,
-                    e => (e as St.Widget).styleClass === 'log-item__duplicates-counter') as Widgets.Label;
-
-                if (text.text === msg.formattedMessage) {
-                    counter.text = `${Number.parseInt(counter.text) + 1}`;
-                    counter.visible = true;
-
-                    return;
-                }
-            }
-
-            // Add the log message:
-            col.current?.add_child(this._buildNewLogMessage(msg));
-        };
-
-        this.logAddedCallbacks.push(callback);
         display.connect('destroy', () => {
-            this.logAddedCallbacks.splice(this.logAddedCallbacks.findIndex(c => c === callback), 1);
+            this.logAddedCallbacks.splice(this.logAddedCallbacks.findIndex(c => c === cb), 1);
             this.logDisplays.splice(this.logDisplays.findIndex(d => d === display), 1);
         });
 
         this.logDisplays.push(display);
 
         return display;
+    }
+
+    private _onPressed(value: boolean) {
+        for (let d of this.logDisplays) {
+            d.visible = value;
+        }
+    }
+
+    vfunc_destroy() {
+        removeLogCallback(this.logCallbackId);
+        this.logDisplays.forEach((d) => d.destroy());
+        this.logDisplays = [];
+        super.destroy();
+    }
+}
+
+
+class LogDisplay extends Widgets.Column {
+    static {
+        GObject.registerClass(this);
+    }
+
+    private logMsgContainer: Ref<Widgets.Column>;
+    private scrollView: Ref<Widgets.ScrollView>;
+    private searchEntry: Ref<Widgets.Entry>;
+
+    constructor() {
+        const logMsgColumn = new Ref<Widgets.Column>();
+        const scrollView = new Ref<Widgets.ScrollView>();
+        const searchEntry = new Ref<Widgets.Entry>();
+
+        super({
+            style: css({
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '15px',
+                borderRadius: '10px',
+            }),
+            children: [
+                new Widgets.Row({
+                    style: css({ paddingBottom: '5px' }),
+                    children: [
+                        new Widgets.Entry({
+                            ref: searchEntry,
+                            notifyText: entry => this._applySearch(entry.text),
+                            width: 350,
+                            hintText: "Search…",
+                            primaryIcon: new Widgets.Icon({
+                                iconName: 'folder-saved-search-symbolic',
+                                iconSize: 16,
+                            }),
+                            secondaryIcon: new Widgets.Button({
+                                child: new Widgets.Icon({
+                                    iconName: 'edit-clear-symbolic',
+                                    iconSize: 16,
+                                }),
+                                onClicked: () => this.searchEntry.current!.text = "",
+                            }),
+                        }),
+                        new Widgets.Bin({
+                            xExpand: true,
+                        }),
+                        new Widgets.Button({
+                            child: new Widgets.Icon({
+                                iconName: 'folder-download-symbolic',
+                                iconSize: 16,
+                            }),
+                            style: css({ padding: '5px' }),
+                            onClicked: () => scrollView.apply((sv) => {
+                                sv.vadjustment.set_value(sv.vadjustment.upper);
+                            }),
+                        }),
+                        new Widgets.Button({
+                            child: new Widgets.Icon({
+                                iconName: 'user-trash-symbolic',
+                                iconSize: 16,
+                            }),
+                            style: css({ padding: '5px' }),
+                            onClicked: () => this.logMsgContainer.current?.destroy_all_children(),
+                        }),
+                    ],
+                }),
+                new Widgets.ScrollView({
+                    ref: scrollView,
+                    child: new Widgets.Column({
+                        ref: logMsgColumn,
+                    }),
+                    width: clamp(global.screenWidth * 0.5, 500, 1800),
+                    height: clamp(global.screenHeight * 0.5, 500, 1800),
+                    hscrollbarPolicy: PolicyType.AUTOMATIC,
+                    vscrollbarPolicy: PolicyType.AUTOMATIC,
+                })
+            ],
+        });
+
+        this.logMsgContainer = logMsgColumn;
+        this.scrollView = scrollView;
+        this.searchEntry = searchEntry;
+    }
+
+    addLogMessage(msg: LogCallbackArguments) {
+        // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
+        const a = this.scrollView.current?.get_vadjustment();
+        if (a && a.value < a.upper - this.scrollView.current!.contentBox.get_height() - 25 * this._scaleFactor) {
+            Delay.ms(100).then(() => {
+                if (this.scrollView.current) a.set_value(a.upper);
+            });
+        }
+
+        // Remove first log message if there are too many:
+        if ((this.logMsgContainer.current?.get_n_children() ?? 0) > DevelopmentLogDisplayButton.MAX_LENGTH) {
+            this.logMsgContainer.current!.remove_child(this.logMsgContainer.current!.get_child_at_index(0)!);
+        }
+
+        if (this.logMsgContainer.current?.get_last_child() != null) {
+            const text = findActorBy(this.logMsgContainer.current.get_last_child()!,
+                e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
+            const counter = findActorBy(this.logMsgContainer.current.get_last_child()!,
+                e => (e as St.Widget).styleClass === 'log-item__duplicates-counter') as Widgets.Label;
+
+            if (text.text === msg.formattedMessage) {
+                counter.text = `${Number.parseInt(counter.text) + 1}`;
+                counter.visible = true;
+
+                return;
+            }
+        }
+
+        // Add the log message:
+        this.logMsgContainer.current?.add_child(this._buildNewLogMessage(msg));
+        this._applySearch(this.searchEntry.current!.text);
     }
 
     private _buildNewLogMessage(msg: LogCallbackArguments) {
@@ -197,16 +281,28 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         });
     }
 
-    private _onPressed(value: boolean) {
-        for (let d of this.logDisplays) {
-            d.visible = value;
-        }
+    private get _scaleFactor() {
+        return St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
     }
 
-    vfunc_destroy() {
-        removeLogCallback(this.logCallbackId);
-        this.logDisplays.forEach((d) => d.destroy());
-        this.logDisplays = [];
-        super.destroy();
+    private _applySearch(query: string) {
+        query = query.trim().toLowerCase();
+
+        if (query.length === 0) {
+            this.logMsgContainer.current!.get_children().forEach(child => child.show());
+        }
+
+        for (const child of this.logMsgContainer.current!.get_children()) {
+            const label = findActorBy(child,
+                e => (e as St.Widget).styleClass === 'log-item__text') as Widgets.Label;
+            const text = label.text;
+
+            if (!text.toLowerCase().includes(query)) {
+                child.hide();
+            } else {
+                child.show();
+            }
+        }
     }
 }
+
