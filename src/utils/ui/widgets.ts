@@ -334,6 +334,17 @@ export class ScrollView extends St.ScrollView {
     }
 }
 
+export class Entry extends St.Entry {
+    static {
+        GObject.registerClass(this);
+    }
+
+    constructor(config: ConstructorPropsFor<Entry, St.Entry.ConstructorProps>) {
+        super(filterConfig(config));
+        initWidget(this, config);
+    }
+}
+
 
 // Defines signal properties for a widget, incorporating common widget classes and notify signals.
 type SignalPropsForWidget<T> = SignalPropsFromClasses<
