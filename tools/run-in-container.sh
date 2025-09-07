@@ -105,6 +105,6 @@ if (( VERBOSE )); then
   ./_patched-run-gnome-shell.sh --toolbox "$TOOLBOX_NAME" "${forward_args[@]}" <<<"$heredoc_content"
 else
   ./_patched-run-gnome-shell.sh --toolbox "$TOOLBOX_NAME" "${forward_args[@]}" \
-    2> >(grep -i -P --color 'touchup|Gjs-CRITICAL|Gjs-WARNING|Shell-CRITICAL|JS ERROR' >&2) <<<"$heredoc_content"
+    2> >(grep -i -P --color 'touchup|-CRITICAL|-WARNING|JS ERROR' >&2) <<<"$heredoc_content"
 fi
 
