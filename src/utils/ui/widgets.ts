@@ -39,7 +39,6 @@ import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
 import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
-import {Delay} from "$src/utils/delay";
 
 
 /**
@@ -182,50 +181,17 @@ export class Button extends St.Button {
     }
 
     constructor(config: ConstructorPropsFor<Button, St.Button.ConstructorProps> & {onLongPress?: (source: Button) => void}) {
-        super(filterConfig(config));
-        initWidget(this, filterConfig(config, config.onLongPress ? ['onLongPress', 'onClicked'] : []))
-        if (config.onLongPress) {
-            this._setupLongPress(config.onLongPress, config.onClicked as any);
-        }
+        const filteredConfig = filterConfig(config, config.onLongPress ? ['onLongPress'] : []);
+        super(filterConfig(filteredConfig));
+        initWidget(this, filteredConfig)
+        if (config.onLongPress) this._setupLongPress(config.onLongPress);
         if (config.child) this.child = config.child;
     }
 
-    // A simple long press implementation, that is triggered after holding the button for 500ms
-    // and cancelled when moving up earlier or when moving the finger too much.
-    private _setupLongPress(onLongPress: (source: Button) => void, onClicked?: (source: Button) => void) {
-        const pressEvents = [Clutter.EventType.TOUCH_BEGIN, Clutter.EventType.BUTTON_PRESS, Clutter.EventType.PAD_BUTTON_PRESS];
-        const releaseEvents = [Clutter.EventType.TOUCH_END, Clutter.EventType.BUTTON_RELEASE, Clutter.EventType.PAD_BUTTON_RELEASE];
-        const cancelEvents = [Clutter.EventType.TOUCH_CANCEL, Clutter.EventType.LEAVE];
-
-        let downAt: {t: number, x: number, y: number} | undefined;
-
-        const handleEvent = (_: any, evt: Clutter.Event) => {
-            if (pressEvents.includes(evt.type())) {
-                let thisDownAt = downAt = {t: evt.get_time(), x: evt.get_coords()[0], y: evt.get_coords()[1]};
-                Delay.ms(500).then(() => {
-                    if (this.pressed && downAt?.t === thisDownAt.t && downAt?.x === thisDownAt.x && downAt?.y === thisDownAt.y) {
-                        // Long press detected!
-                        onLongPress(this);
-                        downAt = undefined;
-                    }
-                })
-            } else if (releaseEvents.includes(evt.type()) && downAt) {
-                if (evt.get_time() - downAt.t < 500) onClicked?.(this);  // Normal click detected!
-                downAt = undefined;
-            } else if (cancelEvents.includes(evt.type())) {
-                downAt = undefined;  // Click/long press cancelled
-            } else if (evt.type() == Clutter.EventType.TOUCH_UPDATE && downAt) {
-                let dist = Math.sqrt((evt.get_coords()[0] - downAt.x)**2 + (evt.get_coords()[1] - downAt.y)**2)
-                if (dist > 15 * St.ThemeContext.get_for_stage(global.stage as any).scaleFactor) {
-                    downAt = undefined;  // Long press cancelled, finger moved too much
-                }
-            }
-        };
-
-        this.connect('touch-event', handleEvent);
-        this.connect('button-press-event', handleEvent);
-        this.connect('button-release-event', handleEvent);
-        this.connect('leave-event', handleEvent);
+    private _setupLongPress(onLongPress: (source: Button) => void) {
+        const gesture = new Clutter.LongPressGesture();
+        gesture.connect("recognize", () => onLongPress(this));
+        this.add_action(gesture);
     }
 }
 
