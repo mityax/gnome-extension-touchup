@@ -84,7 +84,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
 
     reallocate() {
         // FIXME: find touch-enabled monitor, keyword: ClutterInputDevice
-        this._monitor ??= Main.layoutManager.primaryMonitor!;
+        this._monitor ??= Main.layoutManager.primaryMonitor ?? Main.layoutManager.monitors[0];
 
         this.onBeforeReallocate();
 

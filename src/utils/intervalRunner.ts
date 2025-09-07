@@ -75,7 +75,7 @@ export class IntervalRunner {
      * Calling this with `active=true` while the timeout is running or with `active=false`
      * while it is not running is a no-op.
      */
-    setActive(active: boolean) {
+    setEnabled(active: boolean) {
         if (!active && this._timeoutId !== null) {
             this.stop();
         } else if (active && this._timeoutId === null) {

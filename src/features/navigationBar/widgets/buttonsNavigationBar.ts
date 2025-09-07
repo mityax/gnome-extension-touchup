@@ -8,6 +8,7 @@ import {logger} from "$src/utils/logging";
 import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {SettingsType} from "$src/features/preferences/backend";
+import GLib from "gi://GLib";
 import ActorAlign = Clutter.ActorAlign;
 
 
@@ -24,7 +25,13 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
     protected _buildActor(): St.BoxLayout {
         return new Widgets.Row({
             name: 'touchup-navbar',
-            styleClass: 'touchup-navbar bottom-panel',
+            styleClass: 'touchup-navbar',
+            onRealize: () => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                // Since the navigation bar's button sizes are not yet available before/at realization (at least
+                // in Gnome >= 49), we schedule reallocation here once:
+                this.reallocate();
+                return GLib.SOURCE_REMOVE;
+            }),
             children: [
                 // Left side:
                 new Widgets.Row({

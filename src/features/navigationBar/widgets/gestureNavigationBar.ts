@@ -9,7 +9,7 @@ import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
 import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
-import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureState} from "$src/utils/ui/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
@@ -40,9 +40,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
         this.actor.connect('notify::mapped', () => this.gestureManager.setEnabled(this.actor.mapped));
 
-        this.connect('notify::visible', _ => this._updateStyleClassIntervalActivity());
+        this.connect('notify::visible', _ => this._updateStyleClassIntervalEnabled());
         this.connect('notify::reserve-space', _ => {
-            this._updateStyleClassIntervalActivity();
+            this._updateStyleClassIntervalEnabled();
             void this.updateStyleClasses();
         });
     }
@@ -234,8 +234,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         }
     }
 
-    private _updateStyleClassIntervalActivity() {
-        this.styleClassUpdateInterval.setActive(this.isVisible && !this.reserveSpace);
+    private _updateStyleClassIntervalEnabled() {
+        this.styleClassUpdateInterval.setEnabled(this.isVisible && !this.reserveSpace);
     }
 
     setInvisibleMode(invisible: boolean) {
@@ -301,16 +301,9 @@ class NavigationBarGestureManager {
 
         this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
             this._shouldHandleSequence(e));
-        this._gesture.connect('pan-update', () =>
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event())));
-        this._gesture.connect('end', () => {
-            logger.debug("Gesture end!");
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event()));
-        });
-        this._gesture.connect('cancel', () => {
-            logger.debug("Gesture cancelled!")
-            this._onGestureCancel();
-        })
+        this._gesture.connect('pan-update', () => this._recognizer.push(Clutter.get_current_event()));
+        this._gesture.connect('end', () => this._recognizer.push(Clutter.get_current_event()));
+        this._gesture.connect('cancel', () => this._onGestureCancel())
 
         global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
 
