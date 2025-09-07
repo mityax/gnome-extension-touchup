@@ -54,6 +54,12 @@ export const settings = {
         gesturesInvisibleMode: new EnumSetting<'never' | 'when-not-in-touch-mode' | 'always'>('navigation-bar-gestures-invisible-mode', 'never'),
 
         /**
+         * Factor by which the overview gesture base distance is scaled (i.e. the bigger this factor, the
+         * longer the required swipe distance for opening overview/app grid).
+         */
+        gesturesBaseDistFactor: new IntSetting('navigation-bar-gestures-base-dist-factor', 2, 1, 10),
+
+        /**
          * Which buttons to show on the left side of the button navigation bar
          *
          * Available choices are:

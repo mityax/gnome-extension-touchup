@@ -15,6 +15,7 @@ import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
 import Mtk from "gi://Mtk";
 import {logger} from "$src/utils/logging";
+import {settings} from "$src/settings";
 
 
 // Area reserved on the left side of the navbar in which a swipe up opens the OSK
@@ -349,8 +350,9 @@ class NavigationBarGestureManager {
             if (this._isKeyboardGesture) {
                 Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
             } else {
+                const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
                 this._targetOverviewProgress = this._overviewController.initialProgress
-                    + (-state.totalMotionDelta.y / (this._overviewController.baseDist * 0.2));
+                    + (-state.totalMotionDelta.y / (this._overviewController.baseDist * baseDistFactor));
                 this._targetWorkspaceProgress = this._wsController.initialProgress
                     - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
             }

@@ -9,14 +9,13 @@
     "target": "ES2022",
     "paths" : {
       "$src/*": ["./src/*"],
-      "gi://*": ["@girs/*"],
+      "gi://*": ["@girs/*"]
     },
     "lib": [
       "ES2023"
     ],
     "jsx": "preserve",
-    "sourceMap": false,
-    "outDir": "./dist/output"
+    "sourceMap": false
   },
   "include": [
     "src/ambient.d.ts",

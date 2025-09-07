@@ -4,6 +4,7 @@ import {settings} from "$src/settings";
 import {
     buildComboRow,
     buildPreferencesGroup,
+    buildSpinRow,
     buildSwitchRow,
     buildToggleButtonRow
 } from "$src/features/preferences/uiUtils";
@@ -29,6 +30,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             icon_name: "computer-apple-ipad-symbolic",
         });
 
+        // General settings:
         this.add(buildPreferencesGroup({
             title: "Navigation Bar",
             description: "Configure the behavior and appearance of the navigation bar",
@@ -69,6 +71,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             ]
         }));
 
+        // Gestures-mode specific settings:
         this.add(buildPreferencesGroup({
             title: "Gestures Navigation Bar",
             children: [
@@ -103,7 +106,18 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                         settings.navigationBar.gesturesInvisibleMode.connect(() => update());
                         update();
                     },
-                })
+                }),
+                buildSpinRow({
+                    title: 'Swipe Distance Threshold',
+                    subtitle: 'Adjust how far you need to swipe to open the overview or app grid',
+                    setting: settings.navigationBar.gesturesBaseDistFactor,
+                    adjustment: new Gtk.Adjustment({
+                        lower: settings.navigationBar.gesturesBaseDistFactor.min,
+                        upper: settings.navigationBar.gesturesBaseDistFactor.max,
+                        step_increment: 1,
+                        page_increment: 1,
+                    }),
+                }),
             ],
             // Only show this group when mode is set to "gestures":
             onCreated: (group) => {
@@ -113,6 +127,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
             },
         }));
 
+        // Buttons-mode specific settings:
         this.add(buildPreferencesGroup({
             title: 'Buttons Navigation Bar',
             children: [

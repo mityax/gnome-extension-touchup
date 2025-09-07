@@ -95,6 +95,31 @@ export class IntSetting extends Setting<number> {
     }
 }
 
+
+export class DoubleSetting extends Setting<number> {
+    readonly min: number;
+    readonly max: number;
+
+    constructor(key: string, defaultValue: number, min: number, max: number) {
+        assert(min <= max);
+        super(key, defaultValue);
+        this.min = min;
+        this.max = max;
+    }
+
+    get() {
+        return gioSettings!.get_double(this.key)!;
+    }
+
+    set(value: number) {
+        assert(value % 1 == 0);
+        assert(value >= this.min);
+        assert(value <= this.max);
+        gioSettings!.set_int(this.key, clamp(value, this.min, this.max));
+    }
+}
+
+
 export class StringSetting extends Setting<string> {
     get(): string {
         return gioSettings!.get_string(this.key);

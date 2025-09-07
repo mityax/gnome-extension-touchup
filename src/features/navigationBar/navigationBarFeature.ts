@@ -79,39 +79,43 @@ export class NavigationBarFeature extends ExtensionFeature {
             }, 120);
 
         // Build the appropriate navigation bar:
-        this.setMode(settings.navigationBar.mode.get()).then(() => {});
+        void this.setMode(settings.navigationBar.mode.get());
     }
 
     async setMode(mode: NavbarMode) {
-        if (mode === this._mode) {
-            return;
-        }
-
-        this._currentNavBar?.destroy();
-
-        switch (mode) {
-            case 'gestures':
-                this._currentNavBar = new GestureNavigationBar({
-                    reserveSpace: settings.navigationBar.gesturesReserveSpace.get(),
-                    invisibleMode: this._invisibleMode,
-                });
-                break;
-            case 'buttons':
-                this._currentNavBar = new ButtonsNavigationBar();
-                break;
-            default:
-                logger.warn(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
-                await this.setMode('gestures');
+        try {
+            if (mode === this._mode) {
                 return;
+            }
+
+            this._currentNavBar?.destroy();
+
+            switch (mode) {
+                case 'gestures':
+                    this._currentNavBar = new GestureNavigationBar({
+                        reserveSpace: settings.navigationBar.gesturesReserveSpace.get(),
+                        invisibleMode: this._invisibleMode,
+                    });
+                    break;
+                case 'buttons':
+                    this._currentNavBar = new ButtonsNavigationBar();
+                    break;
+                default:
+                    logger.warn(`NavigationBarFeature.setMode() called with an unknown mode: ${mode}`);
+                    await this.setMode('gestures');
+                    return;
+            }
+
+            this._mode = mode;
+
+            await this._updateVisibility();
+
+            this._mode == 'gestures'
+                ? this._removeOskActionPatch.enable()
+                : this._removeOskActionPatch.disable();
+        } catch (e) {
+            logger.error("Error in NavigationBarFeature.setMode: ", e);
         }
-
-        this._mode = mode;
-
-        await this._updateVisibility();
-
-        this._mode == 'gestures'
-            ? this._removeOskActionPatch.enable()
-            : this._removeOskActionPatch.disable();
     }
 
     get mode(): NavbarMode {
@@ -125,7 +129,7 @@ export class NavigationBarFeature extends ExtensionFeature {
     private async _updateVisibility() {
         let monitorIndex = await this._getNavigationBarTargetMonitor();
 
-        if (monitorIndex != null) {
+        if (monitorIndex !== null) {
             // Update the navbar monitor:
             this._currentNavBar.setMonitor(monitorIndex);
 
