@@ -10,12 +10,12 @@ import {VirtualTouchpadQuickSettingsItem} from "$src/features/virtualTouchpad/vi
 import {css} from "$src/utils/ui/css";
 import {DisplayConfigState} from "$src/utils/monitorDBusUtils";
 import Mtk from "gi://Mtk";
-import {clamp} from "$src/utils/utils";
+import {clamp, oneOf} from "$src/utils/utils";
 import {Delay} from "$src/utils/delay";
 import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
 import GLib from "gi://GLib";
 import GObject from "gi://GObject";
-import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
 import TouchUpExtension from "$src/extension";
 import {TouchModeService} from "$src/services/touchModeService";
 
@@ -141,7 +141,10 @@ class _TouchPadActor extends Widgets.Column {
     private readonly _virtualInputDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
         Clutter.InputDeviceType.TOUCHPAD_DEVICE
     );
-    private readonly overviewAndWorkspaceController = new OverviewAndWorkspaceGestureController();
+    private readonly _overviewController = new OverviewGestureController();
+    private readonly _wsController = new WorkspaceGestureController({
+        monitorIndex: Main.layoutManager.primaryIndex ?? 0,
+    });
     private _monitorIndex: number = 0;
     private readonly _recognizer: GestureRecognizer;
     private _eventFilterId: number | null = null;
@@ -261,19 +264,16 @@ class _TouchPadActor extends Widgets.Column {
                 );
             } else if (state.totalFingerCount === 3) {
                 const d = state.totalMotionDelta;
-                this.overviewAndWorkspaceController.gestureUpdate({
-                    overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.35),
-                    workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
-                });
+                this._overviewController.gestureProgress(-d.y / (this._overviewController.baseDist * 0.35))
+                this._wsController.gestureProgress(-d.x / (this._wsController.baseDist * 0.62))
             }
         }
     }
 
     private async _onGestureCompleted(state: GestureState) {
         if (state.totalFingerCount === 3) {
-            this.overviewAndWorkspaceController.gestureEnd({
-                direction: state.lastMotionDirection?.direction ?? null,
-            });
+            this._overviewController.gestureEnd(oneOf(state.lastMotionDirection?.direction, ['up', 'down']));
+            this._wsController.gestureEnd(oneOf(state.lastMotionDirection?.direction, ['left', 'right']));
         } else if (state.isTap) {
             this._virtualInputDevice.notify_absolute_motion(state.events.at(-1)!.timeUS, this._lastPos![0], this._lastPos![1]);
 
@@ -307,6 +307,8 @@ class _TouchPadActor extends Widgets.Column {
             workArea: true,
             index: this._monitorIndex,
         }));
+
+        this._wsController.monitorIndex = Main.layoutManager.monitors.find(m => m.index !== index)?.index ?? 0;
 
         DEBUG: {
             // In debug mode, make the touchpad only occupy half the screen if there is no second monitor
@@ -368,6 +370,12 @@ class _TouchPadActor extends Widgets.Column {
             geometry.x + geometry.width / 2,
             geometry.y + geometry.height / 2,
         );
+    }
+
+    vfunc_destroy() {
+        this._overviewController.destroy();
+        this._wsController.destroy();
+        super.vfunc_destroy();
     }
 }
 

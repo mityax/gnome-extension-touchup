@@ -124,18 +124,18 @@ export type MotionDirection = {
 
 
 export class GestureRecognizer extends EventEmitter<{
-    'gesture-started': [GestureState],
-    'gesture-progress': [GestureState],
-    'gesture-completed': [GestureState],
+    'gesture-started': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
+    'gesture-progress': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
+    'gesture-completed': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
 }> {
     private _state: GestureState;
     private readonly _scaleFactor: number;
 
     constructor(props?: {
         scaleFactor?: number,
-        onGestureStarted?: (state: GestureState) => void,
-        onGestureProgress?: (state: GestureState) => void,
-        onGestureCompleted?: (state: GestureState) => void,
+        onGestureStarted?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
+        onGestureProgress?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
+        onGestureCompleted?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
     }) {
         super();
 
@@ -149,19 +149,25 @@ export class GestureRecognizer extends EventEmitter<{
         if (props?.onGestureCompleted) this.connect('gesture-completed', props.onGestureCompleted);
     }
 
-    push(event: GestureRecognizerEvent): GestureState {
+    push(event: GestureRecognizerEvent | Clutter.Event): GestureState {
+        let rawEvent: Clutter.Event | null = null;
+        if (event instanceof Clutter.Event) {
+            rawEvent = event;
+            event = GestureRecognizerEvent.fromClutterEvent(event);
+        }
+
         if (this._state.hasGestureJustEnded) {
             this._state = GestureState.initial({
                 firstEvent: event,
                 scaleFactor: this._scaleFactor
             });
-            this.emit('gesture-started', this._state);
+            this.emit('gesture-started', this._state, event, rawEvent);
         } else {
             this._state = this._state.copyWith(event);
             if (this._state.isDuringGesture) {
-                this.emit('gesture-progress', this._state);
+                this.emit('gesture-progress', this._state, event, rawEvent);
             } else {
-                this.emit('gesture-completed', this._state);
+                this.emit('gesture-completed', this._state, event, rawEvent);
             }
         }
 
@@ -265,7 +271,7 @@ export class GestureState {
                     minTimeUS: 0,
                 });
 
-                if (!hold) return false;
+                if (!hold) return true;
 
                 return hold.lastIncludedEventIdx + 1 < this._events.length;
             }

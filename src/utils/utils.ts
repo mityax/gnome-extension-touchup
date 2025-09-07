@@ -80,3 +80,15 @@ export function filterObject<T extends object>(
 }
 
 
+/**
+ * Returns `v` if it exists in `filter`, otherwise returns `orElse` (if provided) or
+ * `undefined` otherwise.
+ */
+export function oneOf<T, E>(v: any, filter: T[]): undefined
+export function oneOf<T, E>(v: any, filter: T[], orElse: E): E
+export function oneOf<T, E>(v: any, filter: T[], orElse?: E): E | undefined {
+    if (filter.includes(v)) {
+        return v;
+    }
+    return orElse;
+}

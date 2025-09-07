@@ -9,18 +9,23 @@ import {LayoutManager} from "resource:///org/gnome/shell/ui/layout.js";
 
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
-import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import {GestureRecognizer} from "$src/utils/ui/gestureRecognizer";
+import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
 import {Delay} from "$src/utils/delay";
+import {oneOf} from "$src/utils/utils";
 
 
 export class OverviewGesturesFeature extends ExtensionFeature {
-    private overviewAndWorkspaceController: OverviewAndWorkspaceGestureController;
+    private _overviewController: OverviewGestureController;
+    private _wsController: WorkspaceGestureController;
 
     constructor(pm: PatchManager) {
         super(pm);
 
-        this.overviewAndWorkspaceController = new OverviewAndWorkspaceGestureController();
+        this._overviewController = new OverviewGestureController();
+        this._wsController = new WorkspaceGestureController({
+            monitorIndex: Main.layoutManager.primaryIndex
+        });
 
         this._setupOverviewBackgroundGestures();
         this._setupDesktopBackgroundGestures();
@@ -32,25 +37,27 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             onGestureProgress: state => {
                 if (state.hasMovement) {
                     const d = state.totalMotionDelta;
-                    this.overviewAndWorkspaceController.gestureUpdate({
-                        overviewProgress: -d.y / (this.overviewAndWorkspaceController.baseDistY * 0.25),
-                        workspaceProgress: -d.x / (this.overviewAndWorkspaceController.baseDistX * 0.62),
-                    });
+                    this._overviewController.gestureProgress(-d.y / (this._overviewController.baseDist * 0.25));
+                    this._wsController.gestureProgress(-d.x / (this._wsController.baseDist * 0.62));
+                } else {
                 }
             },
             onGestureCompleted: state => {
-                this.overviewAndWorkspaceController.gestureEnd({
-                    direction: state.firstMotionDirection?.direction ?? null,
-                });
+                this._overviewController.gestureEnd(oneOf(state.firstMotionDirection?.direction, ['up', 'down']));
+                this._wsController.gestureEnd(oneOf(state.firstMotionDirection?.direction, ['left', 'right']));
             }
         });
 
+        this.pm.setProperty(Main.overview._overview._controls, 'reactive', true);
+
+        const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+        gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()))
+
         this.pm.patch(() => {
-            Main.overview._overview._controls.reactive = true;
-            return () => Main.overview._overview._controls.reactive = false;
-        })
-        this.pm.connectTo(Main.overview._overview._controls, 'touch-event', (_, e) => {
-            recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
+            Main.overview._overview._controls.add_action(gesture);
+            return () => Main.overview._overview._controls.remove_action(gesture);
         });
     }
 
@@ -60,14 +67,45 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         });
 
         const patchWindowPreview = (windowPreview: WindowPreview)=>  {
-            let decidedOnGesture: 'drag' | 'swipe-up' | 'swipe-down' | 'swipe-horizontally' | null = null;
+            // Set a 'timeout_threshold' (the time the user needs to hold still before dragging is
+            // initiated) on the windowPreview's DndStartGesture, to allow our own gesture to run:
+            // @ts-ignore
+            this.pm.setProperty(windowPreview._draggable._dndGesture, 'timeout_threshold', 500);
 
+            // Construct our PanGesture:
+            const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+            gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
+            gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
+            gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()));
+
+            this.pm.patch(() => {
+                windowPreview.add_action_full('pan', Clutter.EventPhase.CAPTURE, gesture);
+                return () => windowPreview.remove_action(gesture);
+            });
+
+            let decidedOnGesture: 'swipe-up' | 'swipe-down' | 'swipe-horizontally' | null = null;
             const recognizer = new GestureRecognizer({
+                onGestureProgress: (state) => {
+                    if (state.hasMovement) {
+                        if (decidedOnGesture === 'swipe-up'
+                            || state.firstMotionDirection?.direction === 'up') {
+                            windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
+                            decidedOnGesture = 'swipe-up';
+                        } else if (decidedOnGesture === 'swipe-down'
+                            || state.firstMotionDirection?.direction === 'down') {
+                            this._overviewController.gestureProgress(
+                                -state.totalMotionDelta.y / (this._overviewController.baseDist * 0.35));
+                            decidedOnGesture = 'swipe-down';
+                        } else if (decidedOnGesture === 'swipe-horizontally'
+                            || state.firstMotionDirection?.axis === 'horizontal') {
+                            this._wsController.gestureProgress(
+                                -state.totalMotionDelta.x / (this._wsController.baseDist * 0.62));
+                            decidedOnGesture = 'swipe-horizontally';
+                        }
+                    }
+                },
                 onGestureCompleted: state => {
-                    if (decidedOnGesture === 'drag') {
-                        // @ts-ignore
-                        windowPreview._onDragEnd();
-                    } else if (decidedOnGesture === 'swipe-up') {
+                    if (decidedOnGesture === 'swipe-up') {
                         if (state.finalMotionDirection?.direction === 'up') {
                             windowPreview.pivotPoint = new Graphene.Point({x: 0.5, y: 0});
                             // @ts-ignore
@@ -109,13 +147,13 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                             });
                         }
                     } else if (decidedOnGesture === 'swipe-horizontally') {
-                        this.overviewAndWorkspaceController.gestureEnd({
-                            direction: _oneOf(state.finalMotionDirection?.direction, ['left', 'right']) ?? null,
-                        });
+                        this._wsController.gestureEnd(
+                            oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
+                        this._overviewController.gestureCancel();
                     } else if (decidedOnGesture === 'swipe-down') {
-                        this.overviewAndWorkspaceController.gestureEnd({
-                            direction: _oneOf(state.finalMotionDirection?.direction, ['up', 'down']) ?? null,
-                        });
+                        this._overviewController.gestureEnd(
+                            oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
+                        this._wsController.gestureCancel();
                     } else if (state.isTap) {
                         // @ts-ignore
                         windowPreview._activate();
@@ -124,54 +162,6 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                     decidedOnGesture = null;
                 }
             });
-
-            this.pm.connectTo(windowPreview, 'captured-event', (_, raw_event: Clutter.Event) => {
-                if (!GestureRecognizerEvent.isTouch(raw_event)) {
-                    return Clutter.EVENT_PROPAGATE;
-                }
-
-                const state = recognizer.push(GestureRecognizerEvent.fromClutterEvent(raw_event));
-
-                if (state.isDuringGesture) {
-                    if (decidedOnGesture === 'drag' || state.startsWithHold) {
-                        if (decidedOnGesture !== 'drag') {
-                            // @ts-ignore
-                            windowPreview._draggable.startDrag(
-                                ...raw_event.get_coords(),
-                                raw_event.get_time_us(),
-                                raw_event.get_event_sequence(),
-                                raw_event.get_device(),
-                            );
-                            decidedOnGesture = 'drag';
-                        } else {
-                            // @ts-ignore
-                            windowPreview._draggable._updateDragPosition.call(windowPreview._draggable, raw_event);
-                        }
-                    } else if (state.hasMovement) {
-                        if (decidedOnGesture === 'swipe-up'
-                            || state.firstMotionDirection?.direction === 'up') {
-                            windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
-                            decidedOnGesture = 'swipe-up';
-                        } else if (decidedOnGesture === 'swipe-down'
-                            || state.firstMotionDirection?.direction === 'down') {
-                            this.overviewAndWorkspaceController.gestureUpdate({
-                                overviewProgress: -state.totalMotionDelta.y / (
-                                    this.overviewAndWorkspaceController.baseDistY * 0.35)
-                            });
-                            decidedOnGesture = 'swipe-down';
-                        } else if (decidedOnGesture === 'swipe-horizontally'
-                            || state.firstMotionDirection?.axis === 'horizontal') {
-                            this.overviewAndWorkspaceController.gestureUpdate({
-                                workspaceProgress: -state.totalMotionDelta.x / (
-                                    this.overviewAndWorkspaceController.baseDistX * 0.62)
-                            });
-                            decidedOnGesture = 'swipe-horizontally';
-                        }
-                    }
-                }
-
-                return Clutter.EVENT_STOP;
-            });
         }
     }
 
@@ -179,26 +169,38 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
                 if (state.hasMovement) {
-                    this.overviewAndWorkspaceController.gestureUpdate({
-                        overviewProgress: -state.totalMotionDelta.y / (
-                            this.overviewAndWorkspaceController.baseDistY * 0.25),
-                        workspaceProgress: -state.totalMotionDelta.x / (
-                            this.overviewAndWorkspaceController.baseDistX * 0.62),
-                    });
+                    this._overviewController.gestureProgress(
+                        -state.totalMotionDelta.y / (this._overviewController.baseDist * 0.25));
+                    this._wsController.gestureProgress(
+                        -state.totalMotionDelta.x / (this._wsController.baseDist * 0.62));
                 }
             },
             onGestureCompleted: state => {
-                this.overviewAndWorkspaceController.gestureEnd({
-                    direction: state.finalMotionDirection?.direction ?? null,
-                });
+                this._overviewController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
+                this._wsController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
             }
         });
 
         const patchBgManager = (bgManager: BackgroundManager) => {
+            if (bgManager.backgroundActor?.get_action('touchup-background-swipe-gestures')) {
+                return;
+            }
+
             this.pm.setProperty(bgManager.backgroundActor, 'reactive', true);
-            this.pm.connectTo(bgManager.backgroundActor, 'touch-event', (_, evt) => {
-                recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
-            });
+
+            const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+            gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
+            gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
+            gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()))
+
+            this.pm.patch(() => {
+                bgManager.backgroundActor?.add_action_full(
+                    'touchup-background-swipe-gestures',
+                    Clutter.EventPhase.BUBBLE,
+                    gesture,
+                );
+                return () => bgManager.backgroundActor?.remove_action(gesture);
+            })
         }
 
         // @ts-ignore
@@ -241,14 +243,11 @@ export class OverviewGesturesFeature extends ExtensionFeature {
     get _scaleFactor(): number {
         return St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
     }
-}
 
-
-
-function _oneOf<T>(v: T, allowed: T[]): T | undefined
-function _oneOf<T>(v: T, allowed: T[], orElse: T): T
-function _oneOf<T>(v: T, allowed: T[], orElse?: T): T | undefined {
-    if (allowed.includes(v)) return v;
-    return orElse;
+    destroy() {
+        this._overviewController.destroy();
+        this._wsController.destroy();
+        super.destroy();
+    }
 }
 

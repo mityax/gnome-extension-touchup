@@ -1,91 +1,143 @@
 import {clamp, UnknownClass} from "./utils";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {IdleRunner} from "$src/utils/idleRunner";
 import {logger} from "$src/utils/logging";
 
 
-export default class OverviewAndWorkspaceGestureController {
-    private _monitorIndex?: number;
+class ControllerCoordinator<T extends GestureController<any>> {
+    private _focusLock: T | null = null;
+    private readonly _allControllers: Set<T> = new Set();
 
-    private _baseDistX = 900;
-    private _baseDistY: number = global.screenHeight;
-
-    private _initialWorkspaceProgress = 0;
-    private _initialOverviewProgress = 0;
-
-    private _currentOverviewProgress = 0;
-    private _currentWorkspaceProgress = 0;
-
-    private _isOverviewGestureRunning = false;
-    private _isWorkspaceGestureRunning = false;
-
-    //@ts-ignore
-    private _wsController: UnknownClass = Main.wm._workspaceAnimation;
-    private _idleRunner?: IdleRunner;
-
-    constructor(props?: {monitorIndex?: number}) {
-        this._monitorIndex = props?.monitorIndex;
+    add(controller: T): void {
+        this._allControllers.add(controller);
     }
 
-    /**
-     * This function is optional; if it has not been called before `gestureUpdate` the gesture
-     * will begin automatically.
-     */
+    remove(controller: T): void {
+        this._allControllers.delete(controller);
+    }
+
+    acquireFocus(controller: T) {
+        this._focusLock = controller;
+    }
+
+    maybeAcquireFocus(controller: T) {
+        if (this._focusLock === controller) {
+            return true;
+        }
+
+        if (!this._focusLock || !this._focusLock.isGestureRunning) {
+            this.acquireFocus(controller);
+            return true;
+        }
+    }
+
+    isTheOnlyRunningGesture(controller: T): boolean {
+        for (const c of this._allControllers) {
+            if (c.isGestureRunning && c !== controller) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+
+abstract class GestureController<D extends ('left' | 'right' | 'up' | 'down')[]> {
+    private _isGestureRunning = false;
+    private _coordinator: ControllerCoordinator<any>;
+
+    protected abstract _doBegin(): void;
+    protected abstract _doProgress(progress: number): void;
+    protected abstract _doEnd(direction: D[0] | null): void;
+    protected abstract _doCancel(): void;
+
+    protected constructor(coordinator: ControllerCoordinator<any>) {
+        this._coordinator = coordinator;
+        this._coordinator.add(this);
+    }
+
     gestureBegin() {
-        this.gestureUpdate({overviewProgress: 0, workspaceProgress: 0});
+        this.gestureProgress(0);
     }
 
-    gestureUpdate(props: {overviewProgress?: number, workspaceProgress?: number}) {
-        if (props.overviewProgress) {
-            if (!this._isOverviewGestureRunning) {
-                Main.overview._gestureBegin({
-                    confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
-                        this._baseDistY = baseDistance;
-
-                        // The following tenary expression is needed to fix a bug (presumably in Gnome Shell's
-                        // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
-                        // gesture begin, even though the overview is not visible:
-                        this._initialOverviewProgress = Main.overview._visible ? progress : 0;
-                        this._currentOverviewProgress = this._initialOverviewProgress;
-                    }
-                });
-
-                this._isOverviewGestureRunning = true;
+    gestureProgress(progress: number) {
+        if (this._coordinator.maybeAcquireFocus(this)) {
+            if (!this._isGestureRunning) {
+                this._doBegin();
             } else {
-                this._currentOverviewProgress = this._initialOverviewProgress + props.overviewProgress;
-                Main.overview._gestureUpdate({}, this._currentOverviewProgress);
+                this._doProgress(progress);
             }
         }
 
-        if (props.workspaceProgress) {
-            if (!this._isWorkspaceGestureRunning) {
-                this._wsController._switchWorkspaceBegin({
-                    confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
-                        this._baseDistX = baseDistance;
-
-                        this._initialWorkspaceProgress = progress;
-                        this._currentWorkspaceProgress = this._initialWorkspaceProgress;
-                    }
-                }, this._monitorIndex ?? Main.layoutManager.primaryIndex);
-
-                this._isWorkspaceGestureRunning = true;
-            } else {
-                this._currentWorkspaceProgress = this._initialWorkspaceProgress + props.workspaceProgress;
-                this._wsController._switchWorkspaceUpdate({}, this._currentWorkspaceProgress);
-            }
-        }
+        this._isGestureRunning = true;
     }
 
-    gestureEnd(props: {direction: 'left' | 'right' | 'up' | 'down' | null}) {
-        // Overview toggling:
+    gestureEnd(direction?: D[0] | null) {
+        if (this._coordinator.isTheOnlyRunningGesture(this) && this._isGestureRunning) {
+            this._doEnd(direction ?? null);
+        }
+        this._isGestureRunning = false;
+    }
+
+    gestureCancel() {
+        if (this._coordinator.isTheOnlyRunningGesture(this) && this._isGestureRunning) {
+            this._doCancel();
+        }
+        this._isGestureRunning = false;
+    }
+
+    get isGestureRunning() {
+        return this._isGestureRunning;
+    }
+
+    destroy() {
+        this._coordinator.remove(this);
+    }
+}
+
+
+export class OverviewGestureController extends GestureController<['up' | 'down']> {
+    private static readonly _coordinator = new ControllerCoordinator<OverviewGestureController>();
+
+    private _baseDist: number = global.screenHeight;
+    private _initialProgress = 0;
+    private _currentProgress = 0;
+    private _cancelProgress = 0;
+
+    constructor() {
+        super(OverviewGestureController._coordinator);
+    }
+
+    protected _doBegin() {
+        const overviewVisible = Main.overview._visible;
+        Main.overview._gestureBegin({
+            confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
+                this._baseDist = baseDistance;
+
+                // TODO: check if this is still the case:
+                // The following tenary expression is needed to fix a bug (presumably in Gnome Shell's
+                // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
+                // gesture begin, even though the overview is not visible:
+                this._initialProgress = progress; // overviewVisible ? Math.max(1, progress) : 0;
+                this._currentProgress = this._initialProgress;
+                this._cancelProgress = cancelProgress;
+            }
+        });
+    }
+
+    protected _doProgress(progress: number) {
+        this._currentProgress = this._initialProgress + progress;
+        Main.overview._gestureUpdate({}, this._currentProgress);
+    }
+
+    protected _doEnd(direction: 'up' | 'down' | null) {
         try {
-            if (this._isOverviewGestureRunning) {
-                if (props.direction === 'up') {
-                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress + 0.5), 1, 2));
-                } else if (props.direction === 'down') {
-                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress - 0.5), 0, 1));
+            if (this.isGestureRunning) {
+                if (direction === 'up') {
+                    Main.overview._gestureEnd(null, 300, clamp(Math.round(this._currentProgress + 0.5), 1, 2));
+                } else if (direction === 'down') {
+                    Main.overview._gestureEnd(null, 300, clamp(Math.round(this._currentProgress - 0.5), 0, 1));
                 } else {
-                    Main.overview._gestureEnd({}, 300, clamp(Math.round(this._currentOverviewProgress), 0, 2));
+                    Main.overview._gestureEnd(null, 300, clamp(Math.round(this._currentProgress), 0, 2));
                 }
             }
         } catch (e: any) {
@@ -93,63 +145,98 @@ export default class OverviewAndWorkspaceGestureController {
                 if (!e.toString().includes('Invalid overview shown transition from HIDDEN to HIDING')) {
                     logger.error("Error during overview gesture termination: ", e);
                     throw e;
+                } else {
+                    logger.debug("(Expected) error during terminating overview gesture: ", e);
                 }
             }
         }
-
-        // Workspace switching:
-        if (this._isWorkspaceGestureRunning) {
-            // TODO: debug occasional cases of non-ending gesture
-
-            if (props.direction === 'left' || props.direction === 'right') {
-                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress + (props.direction == 'left' ? 0.5 : -0.5)));
-            } else {
-                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentWorkspaceProgress));
-            }
-        }
-
-        this._isOverviewGestureRunning = false;
-        this._isWorkspaceGestureRunning = false;
     }
 
-    gestureCancel() {
-        this._wsController._switchWorkspaceEnd({}, 500, this._initialWorkspaceProgress);
-        Main.overview._gestureEnd({}, 300, 0);
-
-        this._isOverviewGestureRunning = false;
-        this._isWorkspaceGestureRunning = false;
+    protected _doCancel() {
+        Main.overview._gestureEnd({}, 300, this._cancelProgress);
     }
 
-    get monitorIndex(): number | null {
-        return this._monitorIndex ?? null;
+    get baseDist() {
+        return this._baseDist;
     }
 
-    set monitorIndex(value: number | null) {
-        this._monitorIndex = value ?? undefined;
+    get initialProgress() {
+        return this._initialProgress;
     }
 
-    get baseDistY(): number {
-        return this._baseDistY;
-    }
-
-    get baseDistX(): number {
-        return this._baseDistX;
-    }
-
-    get currentWorkspaceProgress(): number {
-        return this._currentWorkspaceProgress;
-    }
-
-    get currentOverviewProgress(): number {
-        return this._currentOverviewProgress;
-    }
-
-    get initialWorkspaceProgress(): number {
-        return this._initialWorkspaceProgress;
-    }
-
-    get initialOverviewProgress(): number {
-        return this._initialOverviewProgress;
+    get currentProgress() {
+        return this._currentProgress;
     }
 }
 
+
+
+export class WorkspaceGestureController extends GestureController<['left' | 'right']> {
+    //@ts-ignore
+    private _wsController: UnknownClass = Main.wm._workspaceAnimation;
+    private static readonly _coordinator = new ControllerCoordinator<WorkspaceGestureController>();
+
+    private _monitorIndex: number;
+    private _baseDist: number = 900;
+    private _initialProgress = 0;
+    private _currentProgress = 0;
+    private _cancelProgress = 0;
+
+    constructor(props: {monitorIndex: number}) {
+        super(WorkspaceGestureController._coordinator);
+        this._monitorIndex = props.monitorIndex;
+    }
+
+    protected _doBegin() {
+        this._wsController._switchWorkspaceBegin({
+            confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
+                this._baseDist = baseDistance;
+
+                this._initialProgress = progress;
+                this._currentProgress = this._initialProgress;
+                this._cancelProgress = cancelProgress;
+            }
+        }, this._monitorIndex ?? Main.layoutManager.primaryIndex);
+    }
+
+    protected _doProgress(progress: number) {
+        this._currentProgress = this._initialProgress + progress;
+        this._wsController._switchWorkspaceUpdate({}, this._currentProgress);
+    }
+
+    protected _doEnd(direction: 'left' | 'right' | null) {
+        if (this.isGestureRunning) {
+            // TODO: debug occasional cases of non-ending gesture
+
+            if (direction === 'left' || direction === 'right') {
+                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentProgress + (direction == 'left' ? 0.5 : -0.5)));
+            } else {
+                this._wsController._switchWorkspaceEnd({}, 500, Math.round(this._currentProgress));
+            }
+        }
+    }
+
+    protected _doCancel() {
+        this._wsController._switchWorkspaceEnd({}, 500, this._cancelProgress);
+    }
+
+    get baseDist() {
+        return this._baseDist;
+    }
+
+    get initialProgress() {
+        return this._initialProgress;
+    }
+
+    get currentProgress() {
+        return this._currentProgress;
+    }
+
+    get monitorIndex(): number {
+        return this._monitorIndex;
+    }
+
+    set monitorIndex(value: number) {
+        this._monitorIndex = value;
+    }
+}

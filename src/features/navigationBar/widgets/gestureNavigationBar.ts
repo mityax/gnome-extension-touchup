@@ -1,14 +1,14 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import {IntervalRunner} from "$src/utils/intervalRunner";
-import {clamp} from "$src/utils/utils";
+import {clamp, oneOf} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {IdleRunner} from "$src/utils/idleRunner";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
-import OverviewAndWorkspaceGestureController from "$src/utils/overviewAndWorkspaceGestureController";
+import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
 import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
@@ -256,8 +256,9 @@ class NavigationBarGestureManager {
     private static readonly _overviewMaxSpeed = 0.005;
     private static readonly _workspaceMaxSpeed = 0.0016;
 
-    private readonly gesture: Clutter.PanGesture;
-    private _controller: OverviewAndWorkspaceGestureController;
+    private readonly _gesture: Clutter.PanGesture;
+    private _overviewController: OverviewGestureController;
+    private _wsController: WorkspaceGestureController;
     private _recognizer: GestureRecognizer;
     private _idleRunner: IdleRunner;
 
@@ -273,14 +274,14 @@ class NavigationBarGestureManager {
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
     private _edgeThreshold: number;
-    private _enabled: boolean = true;
 
     constructor(props: {monitor?: Monitor, edgeThreshold: number}) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         this._edgeThreshold = props.edgeThreshold;
 
         // The controller used to actually perform the navigation gestures:
-        this._controller = new OverviewAndWorkspaceGestureController({
+        this._overviewController = new OverviewGestureController();
+        this._wsController = new WorkspaceGestureController({
             monitorIndex: props.monitor?.index ?? Main.layoutManager.primaryIndex,
         });
 
@@ -294,20 +295,24 @@ class NavigationBarGestureManager {
         });
 
         // Action that listens to appropriate events on the stage:
-        this.gesture = new Clutter.PanGesture({
+        this._gesture = new Clutter.PanGesture({
             max_n_points: 1,
         });
 
-        this.gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
+        this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
             this._shouldHandleSequence(e));
-        this.gesture.connect('pan-update', () =>
+        this._gesture.connect('pan-update', () =>
             this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event())));
-        this.gesture.connect('end', () =>
-            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event())));
-        this.gesture.connect('cancel', () =>
-            this._onGestureCancel())
+        this._gesture.connect('end', () => {
+            logger.debug("Gesture end!");
+            this._recognizer.push(GestureRecognizerEvent.fromClutterEvent(Clutter.get_current_event()));
+        });
+        this._gesture.connect('cancel', () => {
+            logger.debug("Gesture cancelled!")
+            this._onGestureCancel();
+        })
 
-        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.gesture);
+        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
 
         // To emit virtual events:
         this._virtualTouchscreenDevice = Clutter
@@ -317,7 +322,7 @@ class NavigationBarGestureManager {
     }
 
     setMonitor(monitorIndex: number) {
-        this._controller.monitorIndex = monitorIndex;
+        this._wsController.monitorIndex = monitorIndex;
     }
 
     setEdgeThreshold(edgeThreshold: number) {
@@ -325,11 +330,7 @@ class NavigationBarGestureManager {
     }
 
     setEnabled(enabled: boolean) {
-        this._enabled = enabled;
-    }
-
-    destroy() {
-        global.stage.remove_action(this.gesture);
+        this._gesture.enabled = enabled;
     }
 
     private _getMonitorRect(x: number, y: number): Mtk.Rectangle {
@@ -355,10 +356,10 @@ class NavigationBarGestureManager {
             if (this._isKeyboardGesture) {
                 Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
             } else {
-                this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress
-                    - (state.totalMotionDelta.x / this._controller.baseDistX) * 1.6;
-                this._targetOverviewProgress = this._controller.initialOverviewProgress
-                    + (-state.totalMotionDelta.y / (this._controller.baseDistY * 0.2));
+                this._targetOverviewProgress = this._overviewController.initialProgress
+                    + (-state.totalMotionDelta.y / (this._overviewController.baseDist * 0.2));
+                this._targetWorkspaceProgress = this._wsController.initialProgress
+                    - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
             }
         }
     }
@@ -382,9 +383,12 @@ class NavigationBarGestureManager {
 
         if (!this._isKeyboardGesture) {
             // Start navigation gestures:
-            this._controller.gestureBegin();
-            this._targetOverviewProgress = this._controller.initialOverviewProgress;
-            this._targetWorkspaceProgress = this._controller.initialWorkspaceProgress;
+            this._overviewController.gestureBegin();
+            this._wsController.gestureBegin();
+
+            this._targetOverviewProgress = this._overviewController.initialProgress;
+            this._targetWorkspaceProgress = this._wsController.initialProgress;
+
             this._idleRunner.start();
         }
     }
@@ -396,7 +400,8 @@ class NavigationBarGestureManager {
         const direction = state.lastMotionDirection?.direction ?? null;
 
         if (state.isTap) {
-            this._controller.gestureEnd({ direction: null });
+            this._overviewController.gestureCancel();
+            this._wsController.gestureCancel();
 
             logger.debug("Emitting virtual tap");
 
@@ -412,7 +417,8 @@ class NavigationBarGestureManager {
                 Main.keyboard._keyboard?.gestureCancel();
             }
         } else {
-            this._controller.gestureEnd({ direction });
+            this._overviewController.gestureEnd(oneOf(direction, ['up', 'down']));
+            this._wsController.gestureEnd(oneOf(direction, ['left', 'right']));
         }
 
         this._targetOverviewProgress = null;
@@ -421,12 +427,13 @@ class NavigationBarGestureManager {
 
     private _onGestureCancel() {
         Main.keyboard._keyboard?.gestureCancel();
-        this._controller.gestureCancel();
+        this._overviewController.gestureCancel();
+        this._wsController.gestureCancel();
     }
 
     private _onIdleRun(dt: number = 0) {
-        let overviewProg = this._controller.currentOverviewProgress;
-        let workspaceProg = this._controller.currentWorkspaceProgress;
+        let overviewProg = this._overviewController.currentProgress;
+        let workspaceProg = this._wsController.currentProgress;
 
         if (this._targetOverviewProgress !== null
             && Math.abs(this._targetOverviewProgress - overviewProg) > 5 * NavigationBarGestureManager._overviewMaxSpeed) {
@@ -440,10 +447,14 @@ class NavigationBarGestureManager {
             workspaceProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * NavigationBarGestureManager._workspaceMaxSpeed);
         }
 
-        this._controller.gestureUpdate({
-            overviewProgress: overviewProg - this._controller.initialOverviewProgress,
-            workspaceProgress: workspaceProg - this._controller.initialWorkspaceProgress,
-        });
+        this._overviewController.gestureProgress(overviewProg - this._overviewController.initialProgress);
+        this._wsController.gestureProgress(workspaceProg - this._wsController.initialProgress);
+    }
+
+    destroy() {
+        this._overviewController.destroy();
+        this._wsController.destroy();
+        global.stage.remove_action(this._gesture);
     }
 }
 
