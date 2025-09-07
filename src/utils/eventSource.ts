@@ -116,12 +116,14 @@ export default class EventSource {
                     buffer += decodedLine + '\n';
                 }
             } catch (error) {
-                logger.debug('Error reading SSE stream:', error);
-                if (error instanceof Gio.IOErrorEnum) {
-                    logger.debug(Gio.IOErrorEnum);
+                if (error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.TIMED_OUT)) {
+                    // On a timeout error, we just let the loop continue with the next iteration (i.e. try
+                    // to read another line).
+                } else {
+                    logger.error('[Live-reload] Error reading SSE stream:', error);
+                    this.close();
+                    break;
                 }
-                this.close();
-                break;
             }
         }
     }
