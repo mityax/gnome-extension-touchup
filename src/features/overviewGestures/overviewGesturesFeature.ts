@@ -4,7 +4,6 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {Workspace} from "resource:///org/gnome/shell/ui/workspace.js";
 import {WindowPreview} from "resource:///org/gnome/shell/ui/windowPreview.js";
 import Graphene from "gi://Graphene";
-import {BackgroundManager} from "resource:///org/gnome/shell/ui/background.js";
 import {LayoutManager} from "resource:///org/gnome/shell/ui/layout.js";
 
 import ExtensionFeature from "$src/utils/extensionFeature";
@@ -181,35 +180,23 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             }
         });
 
-        const patchBgManager = (bgManager: BackgroundManager) => {
-            if (bgManager.backgroundActor?.get_action('touchup-background-swipe-gestures')) {
-                return;
-            }
-
-            this.pm.setProperty(bgManager.backgroundActor, 'reactive', true);
-
-            const gesture = new Clutter.PanGesture({ max_n_points: 1 });
-            gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
-            gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
-            gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()))
-
-            this.pm.patch(() => {
-                bgManager.backgroundActor?.add_action_full(
-                    'touchup-background-swipe-gestures',
-                    Clutter.EventPhase.BUBBLE,
-                    gesture,
-                );
-                return () => bgManager.backgroundActor?.remove_action(gesture);
-            })
-        }
+        const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+        gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()))
 
         // @ts-ignore
-        Main.layoutManager._bgManagers.forEach((m: BackgroundManager) => patchBgManager(m));
-
-        this.pm.appendToMethod(LayoutManager.prototype, '_updateBackgrounds', function (this: LayoutManager) {
+        this.pm.setProperty(Main.layoutManager._backgroundGroup, 'reactive', true);
+        this.pm.patch(() => {
             // @ts-ignore
-            this._bgManagers.forEach((m: BackgroundManager) => patchBgManager(m));
-        });
+            Main.layoutManager._backgroundGroup.add_action_full(
+                'touchup-background-swipe-gestures',
+                Clutter.EventPhase.BUBBLE,
+                gesture,
+            );
+            // @ts-ignore
+            return () => Main.layoutManager._backgroundGroup.remove_action(gesture);
+        })
 
         // We have to overwrite the function responsible for updating the visibility of the several actors
         // managed by the Shell's [LayoutManager] during the overview-opening transition.
