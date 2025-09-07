@@ -19,16 +19,16 @@ import {logger} from "$src/utils/logging";
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 
 
-export class HotReloadButton extends DevToolButton {
-    private readonly extensionUuid: string;
-
+export class HotRestartButton extends DevToolButton {
     static {
         GObject.registerClass(this);
     }
 
+    private readonly extensionUuid: string;
+
     constructor(extensionUuid: string) {
         super({
-            label: 'Rebuild and hot-reload',
+            label: 'Rebuild and hot-restart',
             icon: new St.Icon({
                 gicon: new AssetIcon('camera-flash-symbolic'),
                 iconSize: 16,

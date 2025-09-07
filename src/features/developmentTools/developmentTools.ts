@@ -7,7 +7,7 @@ import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import TouchUpExtension from "$src/extension";
-import {HotReloadButton} from "$src/features/developmentTools/hotReloadButton";
+import {HotRestartButton} from "$src/features/developmentTools/hotRestartButton";
 import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource";
 import {_hotReloadExtension, BUILD_OUTPUT_DIR} from "$src/features/developmentTools/developmentReloadUtils";
@@ -71,7 +71,7 @@ export class DevelopmentTools extends ExtensionFeature {
             new Widgets.Bin({width: 15}),
             new RestartButton(),
             new Widgets.Bin({width: 10}),
-            new HotReloadButton(TouchUpExtension.instance!.metadata.uuid),
+            new HotRestartButton(TouchUpExtension.instance!.metadata.uuid),
             new Widgets.Bin({width: 10}),
             new Widgets.Bin({width: 1, backgroundColor: Cogl.Color.from_string('grey')[1]}),
             new Widgets.Bin({width: 10}),
