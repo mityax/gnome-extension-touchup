@@ -11,7 +11,7 @@ import ExtensionFeature from "$src/utils/extensionFeature";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
-import {logger} from "$src/utils/logging";
+import {initLogger, logger, uninitLogger} from "$src/utils/logging";
 
 
 export default class TouchUpExtension extends Extension {
@@ -21,6 +21,8 @@ export default class TouchUpExtension extends Extension {
   features: ExtensionFeature[] = [];
 
   async enable() {
+    initLogger();
+
     logger.debug("*************************************************")
     logger.debug(`          Starting TouchUp v. ${this.metadata.version}          `)
     logger.debug("*************************************************")
@@ -226,6 +228,8 @@ export default class TouchUpExtension extends Extension {
     TouchUpExtension.instance = undefined;
 
     logger.debug("TouchUp extension successfully unloaded.");
+
+    uninitLogger();
   }
 
   getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {

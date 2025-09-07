@@ -12,6 +12,25 @@ export type LogCallbackArguments = {
     rawArguments: any[],
 };
 
+
+/**
+ * The main logger instance.
+ */
+export let logger: Logger;
+
+
+export function initLogger() {
+    DEBUG: assert(!logger);
+    logger = new Logger('touchup');
+}
+
+export function uninitLogger() {
+    // @ts-ignore
+    logger = undefined;
+}
+
+
+
 /**
  * The several log methods of this class log text to the console and, if given, to the global
  * logfile for this extension.
@@ -19,9 +38,7 @@ export type LogCallbackArguments = {
  * Note: The logging methods are **not** optimized for speed (!)
  */
 export class Logger {
-    static instance = new Logger('touchup');
-
-    private constructor(private tag: string) {}
+    constructor(private tag: string) {}
 
     /**
      * Log a debug-level message.
@@ -107,9 +124,6 @@ export class Logger {
         return `[${this.tag}${subtag ? `:${subtag}` : ''}]`;
     }
 }
-
-
-export const logger = Logger.instance;
 
 
 /**

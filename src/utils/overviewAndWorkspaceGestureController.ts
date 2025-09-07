@@ -38,20 +38,31 @@ class ControllerCoordinator<T extends GestureController<any>> {
         }
         return true;
     }
+
+    get hasControllers(): boolean {
+        return this._allControllers.size > 0;
+    }
 }
 
 
 abstract class GestureController<D extends ('left' | 'right' | 'up' | 'down')[]> {
+    private static readonly _coordinators = new Map<typeof GestureController, ControllerCoordinator<any>>();
+    private readonly _klass: typeof GestureController;
+
     private _isGestureRunning = false;
-    private _coordinator: ControllerCoordinator<any>;
 
     protected abstract _doBegin(): void;
     protected abstract _doProgress(progress: number): void;
     protected abstract _doEnd(direction: D[0] | null): void;
     protected abstract _doCancel(): void;
 
-    protected constructor(coordinator: ControllerCoordinator<any>) {
-        this._coordinator = coordinator;
+    protected constructor(klass: typeof GestureController) {
+        this._klass = klass;
+
+        if (!GestureController._coordinators.has(klass)) {
+            GestureController._coordinators.set(klass, new ControllerCoordinator());
+        }
+
         this._coordinator.add(this);
     }
 
@@ -89,26 +100,31 @@ abstract class GestureController<D extends ('left' | 'right' | 'up' | 'down')[]>
         return this._isGestureRunning;
     }
 
+    get _coordinator() {
+        return GestureController._coordinators.get(this._klass)!;
+    }
+
     destroy() {
         this._coordinator.remove(this);
+
+        if (!this._coordinator.hasControllers) {
+            GestureController._coordinators.delete(this._klass)
+        }
     }
 }
 
 
 export class OverviewGestureController extends GestureController<['up' | 'down']> {
-    private static readonly _coordinator = new ControllerCoordinator<OverviewGestureController>();
-
     private _baseDist: number = global.screenHeight;
     private _initialProgress = 0;
     private _currentProgress = 0;
     private _cancelProgress = 0;
 
     constructor() {
-        super(OverviewGestureController._coordinator);
+        super(OverviewGestureController);
     }
 
     protected _doBegin() {
-        const overviewVisible = Main.overview._visible;
         Main.overview._gestureBegin({
             confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
                 this._baseDist = baseDistance;
@@ -174,7 +190,6 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
 export class WorkspaceGestureController extends GestureController<['left' | 'right']> {
     //@ts-ignore
     private _wsController: UnknownClass = Main.wm._workspaceAnimation;
-    private static readonly _coordinator = new ControllerCoordinator<WorkspaceGestureController>();
 
     private _monitorIndex: number;
     private _baseDist: number = 900;
@@ -183,7 +198,8 @@ export class WorkspaceGestureController extends GestureController<['left' | 'rig
     private _cancelProgress = 0;
 
     constructor(props: {monitorIndex: number}) {
-        super(WorkspaceGestureController._coordinator);
+        // @ts-ignore
+        super(WorkspaceGestureController);
         this._monitorIndex = props.monitorIndex;
     }
 
