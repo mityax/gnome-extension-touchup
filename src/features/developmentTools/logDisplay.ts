@@ -154,6 +154,7 @@ class LogDisplay extends Widgets.Column {
                                 iconName: 'folder-download-symbolic',
                                 iconSize: 16,
                             }),
+                            width: 30,
                             style: css({ padding: '5px' }),
                             onClicked: () => scrollView.apply((sv) => {
                                 sv.vadjustment.set_value(sv.vadjustment.upper);
@@ -164,6 +165,7 @@ class LogDisplay extends Widgets.Column {
                                 iconName: 'user-trash-symbolic',
                                 iconSize: 16,
                             }),
+                            width: 30,
                             style: css({ padding: '5px' }),
                             onClicked: () => this.logMsgContainer.current?.destroy_all_children(),
                         }),
