@@ -191,6 +191,8 @@ export class PatchManager {
                 debugName: this._generatePatchDebugName(debugName),
             });
         } else {
+            DEBUG: assert(typeof prototype[methodName] !== 'undefined', `Prototype has no such method: ${methodName}`);
+
             return this.patch(() => {
                 this._injectionManager.overrideMethod(prototype, methodName, (orig: (...args: any) => any) => {
                     return function (this: UnknownClass, ...args: any[]) {
@@ -214,9 +216,9 @@ export class PatchManager {
      *               `function` syntax to retrieve the correct value for `this`.
      * @param debugName A name for this patch for debug log messages
      */
-    appendToMethod(prototype: object, methodName: string, method: AnyFunc, debugName?: string): Patch
-    appendToMethod(prototype: object, methodName: string[], method: AnyFunc, debugName?: string): MultiPatch
-    appendToMethod(prototype: object, methodName: string | string[], method: AnyFunc, debugName?: string): Patch | MultiPatch {
+    appendToMethod<T extends UnknownClass>(prototype: T, methodName: string, method: AnyFunc, debugName?: string): Patch
+    appendToMethod<T extends UnknownClass>(prototype: T, methodName: string[], method: AnyFunc, debugName?: string): MultiPatch
+    appendToMethod<T extends UnknownClass>(prototype: T, methodName: string | string[], method: AnyFunc, debugName?: string): Patch | MultiPatch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
         if (Array.isArray(methodName)) {
@@ -228,6 +230,8 @@ export class PatchManager {
                 debugName: this._generatePatchDebugName(debugName),
             });
         } else {
+            DEBUG: assert(typeof prototype[methodName] !== 'undefined', `Prototype has no such method: ${methodName}`);
+
             return this.patchMethod(prototype, methodName, function(this: UnknownClass, orig, ...args) {
                 const res = orig.call(this, ...args);
                 method.call(this, ...args);
