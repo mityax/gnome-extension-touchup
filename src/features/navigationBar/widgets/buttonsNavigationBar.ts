@@ -73,8 +73,8 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
         });
     }
 
-    protected onUpdateToSurrounding(isWindowNear: boolean): void {
-        if (isWindowNear && !Main.overview.visible) {
+    protected onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean}): void {
+        if (surrounding.isWindowNear && !surrounding.isInOverview) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('touchup-navbar--transparent');
         } else {
@@ -122,7 +122,10 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                     child: new Widgets.Icon({
                         gicon: new AssetIcon('grid-large-symbolic'),
                     }),
-                    onClicked: () => Main.overview.dash.showAppsButton.checked = !Main.overview.dash.showAppsButton.checked,
+                    onClicked: () => {
+                        Main.overview.show();
+                        Main.overview.dash.showAppsButton.checked = !Main.overview.dash.showAppsButton.checked;
+                    },
                 });
             case "back":
                 return new Widgets.Button({
@@ -131,7 +134,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
                     child: new Widgets.Icon({
                         gicon: new AssetIcon('arrow2-left-symbolic'),
                     }),
-                    onClicked: () => navigateBack({ virtualKeyboardDevice: this._virtualKeyboardDevice }),
+                    onClicked: () => navigateBack({virtualKeyboardDevice: this._virtualKeyboardDevice}),
                     onLongPress: () => navigateBack({
                         virtualKeyboardDevice: this._virtualKeyboardDevice,
                         greedyMode: true,
@@ -140,10 +143,12 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
             case "spacer":
                 return new Widgets.Bin({ width: 20 });
             default:
-                logger.warn(`Unknown button for ButtonNavigationBar: ${buttonType}`);
+                DEBUG: {
+                    // If typescript complains here, that means a button is missing above:
+                    assertExhaustive(buttonType);
+                }
 
-                // If typescript complains here, that means a button is missing above:
-                assertExhaustive(buttonType);
+                logger.warn(`Unknown button for ButtonNavigationBar: ${buttonType}`);
 
                 return new St.Bin({});  // fallback to not crash on invalid settings
         }
