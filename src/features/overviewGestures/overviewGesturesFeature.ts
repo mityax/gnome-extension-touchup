@@ -55,7 +55,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()))
 
         this.pm.patch(() => {
-            Main.overview._overview._controls.add_action(gesture);
+            Main.overview._overview._controls.add_action_full('touchup-overview-background-gesture', Clutter.EventPhase.BUBBLE, gesture);
             return () => Main.overview._overview._controls.remove_action(gesture);
         });
     }
@@ -78,7 +78,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()));
 
             this.pm.patch(() => {
-                windowPreview.add_action_full('pan', Clutter.EventPhase.CAPTURE, gesture);
+                windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
                 return () => windowPreview.remove_action(gesture);
             });
 
@@ -190,7 +190,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
         this.pm.patch(() => {
             // @ts-ignore
             Main.layoutManager._backgroundGroup.add_action_full(
-                'touchup-background-swipe-gestures',
+                'touchup-background-swipe-gesture',
                 Clutter.EventPhase.BUBBLE,
                 gesture,
             );
