@@ -5,7 +5,7 @@
     "version-name": null,
     "version": 1000,
     "uuid": "touchup@mityax",
-    "shell-version": ["48"],
+    "shell-version": ["49"],
     "gettext-domain": "touchup",
     "settings-schema": "org.gnome.shell.extensions.touchup",
     "donations": {
