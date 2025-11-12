@@ -38,7 +38,7 @@ import St from "gi://St";
 import GObject from "gi://GObject";
 import {filterObject} from "$src/utils/utils";
 import Clutter from "gi://Clutter";
-import {NotifySignalProps, SignalPropsFromClasses} from "$src/utils/signal_props";
+import {SignalPropsFromClass} from "$src/utils/signal_props";
 
 
 /**
@@ -124,7 +124,7 @@ type UiProps<T extends St.Widget> = {
      * classes as keys and booleans, that indicate whether to set a style class or not, as values.
      */
     styleClass?: string | string[] | Record<string, boolean>,
-} & Partial<SignalPropsForWidget<T>>;
+} & Partial<SignalPropsFromClass<T>>;
 
 type ConstructorPropsFor<W extends St.Widget, ConstructorProps> = Override<Partial<ConstructorProps>, UiProps<W>>;
 
@@ -153,7 +153,12 @@ function initWidget<T extends St.Widget>(widget: T, props: UiProps<T>) {
     // Automatically connect signals from the constructor (e.g. `onClicked` or `notifySize`):
     for (const [key, value] of Object.entries(props)) {
         if (/^(on|notify)[A-Z]/.test(key) && typeof value === "function" && key !== "onCreated") {
-            const signalName = key.replace(/^on/, "").replace(/^notify/, 'notify::')
+            const signalName = key
+                .replace(/^notify/, 'notify::')
+                .replace(/^onCapturedEvent/, "captured-event::")
+                .replace(/^onEvent(?=\w)/, "event::")
+                .replace(/^onTransitionStopped/, "transition-stopped::")
+                .replace(/^on/, "")
                 .replace(/(\w)([A-Z])/g, "$1-$2").toLowerCase();
             widget.connect(signalName, value as any);
         }
@@ -310,12 +315,6 @@ export class Entry extends St.Entry {
         initWidget(this, config);
     }
 }
-
-
-// Defines signal properties for a widget, incorporating common widget classes and notify signals.
-type SignalPropsForWidget<T> = SignalPropsFromClasses<
-    [T, St.Widget, Clutter.Actor, GObject.InitiallyUnowned]
-> & NotifySignalProps<T>;
 
 
 type Override<What, With> = Omit<What, keyof With> & With
