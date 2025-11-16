@@ -8,15 +8,19 @@ import {LayoutManager} from "resource:///org/gnome/shell/ui/layout.js";
 
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
 import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
 import {Delay} from "$src/utils/delay";
 import {oneOf} from "$src/utils/utils";
+import {logger} from "$src/utils/logging";
+import PanAxis = Clutter.PanAxis;
 
 
 export class OverviewGesturesFeature extends ExtensionFeature {
     private _overviewController: OverviewGestureController;
     private _wsController: WorkspaceGestureController;
+    private _overviewBackgroundGesture: Clutter.PanGesture;
+    private _desktopBackgroundGesture: Clutter.PanGesture;
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -26,12 +30,12 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             monitorIndex: Main.layoutManager.primaryIndex
         });
 
-        this._setupOverviewBackgroundGestures();
-        this._setupDesktopBackgroundGestures();
+        this._overviewBackgroundGesture = this._setupOverviewBackgroundGesture();
+        this._desktopBackgroundGesture = this._setupDesktopBackgroundGestures();
         this._setupWindowPreviewGestures();
     }
 
-    private _setupOverviewBackgroundGestures() {
+    private _setupOverviewBackgroundGesture() {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
                 if (state.hasMovement) {
@@ -42,8 +46,9 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                 }
             },
             onGestureCompleted: state => {
-                this._overviewController.gestureEnd(oneOf(state.firstMotionDirection?.direction, ['up', 'down']));
-                this._wsController.gestureEnd(oneOf(state.firstMotionDirection?.direction, ['left', 'right']));
+                logger.debug(`Overview background gesture end`);
+                this._overviewController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
+                this._wsController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
             }
         });
 
@@ -58,9 +63,36 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             Main.overview._overview._controls.add_action_full('touchup-overview-background-gesture', Clutter.EventPhase.BUBBLE, gesture);
             return () => Main.overview._overview._controls.remove_action(gesture);
         });
+
+        return gesture;
     }
 
     private _setupWindowPreviewGestures() {
+        // FIXME: when swiping down a window preview, an error appears. This has something to do with the window preview
+        //  attempting ot show its overlay (in its `vfunc_enter_event`), while being destroyed (via `_updateWorkspacesViews`):
+        // The error does not appear to have any consequences.
+        // Stack trace:
+        // (gnome-shell:308033): Gjs-CRITICAL **: 09:47:04.572: JS ERROR: TypeError: this.window_container is null
+        // _hasAttachedDialogs@resource:///org/gnome/shell/ui/windowPreview.js:459:9
+        // _windowCanClose@resource:///org/gnome/shell/ui/windowPreview.js:256:22
+        // showOverlay@resource:///org/gnome/shell/ui/windowPreview.js:328:29
+        // vfunc_enter_event@resource:///org/gnome/shell/ui/windowPreview.js:562:14
+        // removeWindow@resource:///org/gnome/shell/ui/workspace.js:854:29
+        // addWindow/<.destroyId<@resource:///org/gnome/shell/ui/workspace.js:806:22
+        // _updateWorkspacesViews@resource:///org/gnome/shell/ui/workspacesView.js:1032:38
+        // prepareToEnterOverview@resource:///org/gnome/shell/ui/workspacesView.js:999:14
+        // prepareToEnterOverview@resource:///org/gnome/shell/ui/overviewControls.js:710:33
+        // gestureBegin@resource:///org/gnome/shell/ui/overviewControls.js:773:14
+        // _gestureBegin@resource:///org/gnome/shell/ui/overview.js:362:33
+        // _doBegin@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/overviewAndWorkspaceGestureController.js:86:23
+        // gestureProgress@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/overviewAndWorkspaceGestureController.js:48:22
+        // onGestureProgress@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/overviewGestures/overviewGesturesFeature.js:79:54
+        // emit/<@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/eventEmitter.js:7:55
+        // emit@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/eventEmitter.js:7:33
+        // push@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/ui/gestureRecognizer.js:123:22
+        // _setupWindowPreviewGestures/patchWindowPreview/<@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/overviewGestures/overviewGesturesFeature.js:61:60
+        // @resource:///org/gnome/shell/ui/init.js:21:20
+
         this.pm.appendToMethod(Workspace.prototype, '_addWindowClone', function(this: Workspace) {
             patchWindowPreview(this._windows.at(-1)!);
         });
@@ -71,94 +103,69 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             // @ts-ignore
             this.pm.setProperty(windowPreview._draggable._dndGesture, 'timeout_threshold', 500);
 
+            // @ts-ignore
+            this._overviewBackgroundGesture.can_not_cancel(windowPreview._draggable._dndGesture);
+
             // Construct our PanGesture:
-            const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+            const gesture = new Clutter.PanGesture({ max_n_points: 1, panAxis: PanAxis.Y });
             gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
             gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
             gesture.connect('cancel', () => recognizer.push(Clutter.get_current_event()));
+            gesture.connect('may-recognize', () => {
+                return (
+                    GestureRecognizerEvent.isTouch(gesture.get_point_event(0))  // only respond to touch gestures
+                    && gesture.get_accumulated_delta().get_y() <= 0);  // only respond to swipe-down gestures
+            });
 
             this.pm.patch(() => {
                 windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
                 return () => windowPreview.remove_action(gesture);
             });
 
-            let decidedOnGesture: 'swipe-up' | 'swipe-down' | 'swipe-horizontally' | null = null;
             const recognizer = new GestureRecognizer({
                 onGestureProgress: (state) => {
                     if (state.hasMovement) {
-                        if (decidedOnGesture === 'swipe-up'
-                            || state.firstMotionDirection?.direction === 'up') {
-                            windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
-                            decidedOnGesture = 'swipe-up';
-                        } else if (decidedOnGesture === 'swipe-down'
-                            || state.firstMotionDirection?.direction === 'down') {
-                            this._overviewController.gestureProgress(
-                                -state.totalMotionDelta.y / (this._overviewController.baseDist * 0.35));
-                            decidedOnGesture = 'swipe-down';
-                        } else if (decidedOnGesture === 'swipe-horizontally'
-                            || state.firstMotionDirection?.axis === 'horizontal') {
-                            this._wsController.gestureProgress(
-                                -state.totalMotionDelta.x / (this._wsController.baseDist * 0.62));
-                            decidedOnGesture = 'swipe-horizontally';
-                        }
+                        windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
                     }
                 },
                 onGestureCompleted: state => {
-                    if (decidedOnGesture === 'swipe-up') {
-                        if (state.finalMotionDirection?.direction === 'up') {
-                            windowPreview.pivotPoint = new Graphene.Point({x: 0.5, y: 0});
-                            // @ts-ignore
-                            windowPreview.ease({
-                                translationY: windowPreview.translationY - 120 * this._scaleFactor,
-                                opacity: 0,
-                                scaleX: 0.95,
-                                scaleY: 0.95,
-                                duration: 100,
-                                mode: Clutter.AnimationMode.EASE_OUT,
-                                onComplete: () => {
+                    if (state.finalMotionDirection?.direction === 'up') {
+                        windowPreview.pivotPoint = new Graphene.Point({x: 0.5, y: 0});
+                        windowPreview.ease({
+                            translationY: windowPreview.translationY - 120 * this._scaleFactor,
+                            opacity: 0,
+                            scaleX: 0.95,
+                            scaleY: 0.95,
+                            duration: 100,
+                            mode: Clutter.AnimationMode.EASE_OUT,
+                            onStopped: () => {
+                                // @ts-ignore
+                                windowPreview._deleteAll();  // same as `windowPreview._closeButton.emit('click')`
+
+                                // If the window has not been marked as destroyed after a short delay, undo all
+                                // transformations and ease the preview back into view:
+                                Delay.ms(10).then(() => {
                                     // @ts-ignore
-                                    windowPreview._deleteAll();  // same as `windowPreview._closeButton.emit('click')`
-
-                                    // If the window has not been marked as destroyed after a short delay, undo all
-                                    // transformations and ease the preview back into view:
-                                    Delay.ms(10).then(() => {
-                                        // @ts-ignore
-                                        if (!windowPreview._destroyed) {
-                                            // @ts-ignore
-                                            windowPreview.ease({
-                                                translationY: 0,
-                                                opacity: 255,
-                                                scaleX: 1,
-                                                scaleY: 1,
-                                                duration: 250,
-                                                mode: Clutter.AnimationMode.EASE_OUT,
-                                            });
-                                        }
-                                    });
-                                },
-                            });
-                        } else {
-                            // @ts-ignore
-                            windowPreview.ease({
-                                translationY: 0,
-                                duration: 150,
-                                mode: Clutter.AnimationMode.EASE_OUT_BACK,
-                            });
-                        }
-                    } else if (decidedOnGesture === 'swipe-horizontally') {
-                        this._wsController.gestureEnd(
-                            oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
-                        this._overviewController.gestureCancel();
-                    } else if (decidedOnGesture === 'swipe-down') {
-                        this._overviewController.gestureEnd(
-                            oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
-                        this._wsController.gestureCancel();
-                    } else if (state.isTap) {
-                        // @ts-ignore
-                        windowPreview._activate();
+                                    if (!windowPreview._destroyed) {
+                                        windowPreview.ease({
+                                            translationY: 0,
+                                            opacity: 255,
+                                            scaleX: 1,
+                                            scaleY: 1,
+                                            duration: 250,
+                                            mode: Clutter.AnimationMode.EASE_OUT,
+                                        });
+                                    }
+                                });
+                            },
+                        });
+                    } else {
+                        windowPreview.ease({
+                            translationY: 0,
+                            duration: 150,
+                            mode: Clutter.AnimationMode.EASE_OUT_BACK,
+                        });
                     }
-
-                    decidedOnGesture = null;
                 }
             });
         }
@@ -175,6 +182,7 @@ export class OverviewGesturesFeature extends ExtensionFeature {
                 }
             },
             onGestureCompleted: state => {
+                logger.debug(`Desktop background gesture end`);
                 this._overviewController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
                 this._wsController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
             }
@@ -225,6 +233,8 @@ export class OverviewGesturesFeature extends ExtensionFeature {
             global.window_group.visible = global.window_group.opacity !== 0;
             global.window_group.opacity = 255;
         });
+
+        return gesture;
     }
 
     get _scaleFactor(): number {
