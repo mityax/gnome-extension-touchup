@@ -5,7 +5,9 @@ import Clutter from "gi://Clutter";
 import {Delay} from "../delay";
 
 
-export default function showToast(text: string, actions: St.Button[]) {
+export default function showToast(text: string, actions?: St.Button[]) {
+    actions ??= [];
+
     const toast = new Widgets.Row({
         style: css({
             background: 'rgba(32,32,32,0.8)',
@@ -28,7 +30,6 @@ export default function showToast(text: string, actions: St.Button[]) {
     global.stage.add_child(toast);
 
     // Animate in:
-    // @ts-ignore
     toast.ease({
         y: global.screenHeight - toast.height - 100,
         duration: 300,
@@ -40,12 +41,12 @@ export default function showToast(text: string, actions: St.Button[]) {
 
     // Close the toast when any action is invoked or delay is up:
     actions.forEach(a => a.connect('clicked', () => ref.current?.destroy()));
-    // @ts-ignore
+
     Delay.ms(4000, 'resolve').then(() => ref.current?.ease({
         y: global.screenHeight,
         opacity: 0,
         duration: 150,
         mode: Clutter.AnimationMode.EASE_IN_QUAD,
-        onComplete: () => ref.current?.destroy(),
+        onStopped: () => ref.current?.destroy(),
     }));
 }

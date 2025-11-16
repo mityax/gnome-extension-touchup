@@ -1,21 +1,12 @@
-import Clutter from "gi://Clutter";
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-
-// @ts-ignore
-import {EdgeDragAction} from 'resource:///org/gnome/shell/ui/edgeDragAction.js';
-
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
-import St from "gi://St";
-import Shell from "gi://Shell";
-import {logger} from "$src/utils/logging";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
     constructor(pm: PatchManager) {
         super(pm);
 
+        /*
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
                 if (currentMenu?.menu) {
@@ -29,13 +20,13 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                         currentMenu.menu.actor.ease({
                             translationY: -currentMenu.menu.get_transformed_size()[1],
                             duration: 200,
-                            onComplete: () => currentMenu!.menu.actor.hide(),
+                            onStopped: () => currentMenu!.menu.actor.hide(),
                         });
                     } else {
                         currentMenu.menu.actor.ease({
                             translationY: 0,
                             duration: 200,
-                            //onComplete: () => currentMenu.menu.actor.hide(),
+                            //onStopped: () => currentMenu.menu.actor.hide(),
                         });
                     }
                 }
@@ -67,5 +58,6 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             }
             return Clutter.EVENT_PROPAGATE;
         });
+         */
     }
 }

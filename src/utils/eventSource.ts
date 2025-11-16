@@ -62,7 +62,7 @@ export default class EventSource {
                     reject(new Error('Session is null'));
                 } else {
                     try {
-                        const inputStream = session.send_finish(result) as Gio.InputStream;
+                        const inputStream = session.send_finish(result) as unknown as Gio.InputStream;
                         resolve(inputStream);
                     } catch (error) {
                         reject(error);

@@ -45,7 +45,7 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
         // Add virtual touchpad open button to panel:
         this.openButton = new VirtualTouchpadQuickSettingsItem(() => this.toggle());
         this.pm.patch(() => {
-            Main.panel.statusArea.quickSettings._system._systemItem.child.insert_child_at_index(
+            Main.panel.statusArea.quickSettings._system!._systemItem.child.insert_child_at_index(
                 this.openButton,
                 2,  // add after battery indicator and spacer
             );

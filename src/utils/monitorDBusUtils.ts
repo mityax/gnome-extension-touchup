@@ -9,38 +9,6 @@ export const Methods = Object.freeze({
     persistent: 2,
 });
 
-export function callDbusMethod(
-    method: string,
-    handler: Gio.AsyncReadyCallback<Gio.DBusConnection> | null,
-    params: GLib.Variant | null = null
-): void {
-    if (handler !== null && handler !== undefined) {
-        Gio.DBus.session.call(
-            'org.gnome.Mutter.DisplayConfig',
-            '/org/gnome/Mutter/DisplayConfig',
-            'org.gnome.Mutter.DisplayConfig',
-            method,
-            params,
-            null,
-            Gio.DBusCallFlags.NONE,
-            -1,
-            null,
-            handler
-        );
-    } else {
-        Gio.DBus.session.call(
-            'org.gnome.Mutter.DisplayConfig',
-            '/org/gnome/Mutter/DisplayConfig',
-            'org.gnome.Mutter.DisplayConfig',
-            method,
-            params,
-            null,
-            Gio.DBusCallFlags.NONE,
-            -1,
-            null
-        );
-    }
-}
 
 export function setMonitorTransform(transform: LogicalMonitorTransform, targetMonitor?: Monitor): void {
     DisplayConfigState.getCurrent()
@@ -246,7 +214,7 @@ export class DisplayConfigState {
     }
 
     packToApply(method: number): GLib.Variant {
-        const packing = [this.serial, method, [], {}];
+        const packing: any[4] = [this.serial, method, [], {}];
         const logicalMonitors = packing[2] as any[];
         const properties: Record<string, any> = packing[3];
 
@@ -281,6 +249,40 @@ export class DisplayConfigState {
         }
 
         return new GLib.Variant('(uua(iiduba(ssa{sv}))a{sv})', packing);
+    }
+}
+
+
+function callDbusMethod(
+    method: string,
+    handler: Gio.AsyncReadyCallback<Gio.DBusConnection> | null,
+    params: GLib.Variant | null = null
+): void {
+    if (handler !== null && handler !== undefined) {
+        Gio.DBus.session.call(
+            'org.gnome.Mutter.DisplayConfig',
+            '/org/gnome/Mutter/DisplayConfig',
+            'org.gnome.Mutter.DisplayConfig',
+            method,
+            params,
+            null,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            null,
+            handler
+        );
+    } else {
+        Gio.DBus.session.call(
+            'org.gnome.Mutter.DisplayConfig',
+            '/org/gnome/Mutter/DisplayConfig',
+            'org.gnome.Mutter.DisplayConfig',
+            method,
+            params,
+            null,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            null
+        );
     }
 }
 
