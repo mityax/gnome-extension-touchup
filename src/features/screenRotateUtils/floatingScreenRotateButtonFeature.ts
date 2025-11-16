@@ -11,51 +11,127 @@ import Mtk from "gi://Mtk";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/utils/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {logger} from "$src/utils/logging";
-import Ref = Widgets.Ref;
-
-type AccelerometerOrientation = 'normal' | 'right-up' | 'bottom-up' | 'left-up';
+import {assert, logger} from "$src/utils/logging";
+import {AccelerometerOrientation, SensorProxy} from "$src/features/screenRotateUtils/sensorProxy";
+import GLib from "gi://GLib";
+import {debounce} from "$src/utils/debounce";
+import BusNameWatcherFlags = Gio.BusNameWatcherFlags;
 
 
 export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
     private touchscreenSettings = new Gio.Settings({
         schema_id: 'org.gnome.settings-daemon.peripherals.touchscreen',
     });
-    private readonly floatingButton = new Ref<Widgets.Button>();
+    private floatingButton: FloatingRotateButton | null = null;
+    private sensorProxy: SensorProxy | null = null;
 
     constructor(pm: PatchManager) {
         super(pm);
 
-        this.pm.connectTo(global.backend.get_monitor_manager(), 'monitors-changed', (manager: Meta.MonitorManager) => {
-            this.removeFloatingRotateButton({animate: false});
+        void this.initSensorProxy();
+
+        // When orientation lock is enabled (i.e. the Shell's auto-rotate quicksetting is disabled), the accelerometer
+        // is released by the shell. Since we're sharing a DBus connection with the Shell, we're affected too
+        // and need to reclaim it again to receive updates:
+        this.pm.connectTo(
+            this.touchscreenSettings,
+            "changed::orientation-lock",
+            () => this.maybeClaimAccelerometer(),
+        );
+
+        // Destroy the current floating button when monitor configuration is modified:
+        this.pm.connectTo(
+            global.backend.get_monitor_manager(),
+            'monitors-changed',
+            (manager: Meta.MonitorManager) => this.floatingButton?.destroy({animate: false}),
+        );
+    }
+
+    private async initSensorProxy() {
+        this.sensorProxy = await new Promise((resolve, reject) => {
+            new SensorProxy(
+                Gio.DBus.system,
+                "net.hadess.SensorProxy",
+                "/net/hadess/SensorProxy",
+                (proxy, error) => {
+                    if (error === null)
+                        resolve(proxy);
+                    else
+                        reject(error);
+                },
+                null, /* cancellable */
+                Gio.DBusProxyFlags.NONE);
         });
 
-        this.pm.patch(() => {
-            const handlerId = Gio.DBus.system.signal_subscribe(
-                null,
-                'org.freedesktop.DBus.Properties',
-                'PropertiesChanged',
-                '/net/hadess/SensorProxy',
-                null,
-                Gio.DBusSignalFlags.NONE,
-                async (connection, sender_name, object_path, interface_name, signal_name, parameters) => {
-                    try {
-                        logger.debug("SensorProxy PropertiesChanged changed: ", parameters?.deepUnpack())
-                        const orientation: AccelerometerOrientation = (parameters?.deepUnpack() as any)
-                            ?.at(1)
-                            ?.AccelerometerOrientation
-                            ?.deepUnpack();
-                        if (orientation) {
-                            await this.onAccelerometerOrientationChanged(orientation);
-                        }
-                    } catch (e) {
-                        logger.debug("Error during handling SensorProxy's PropertiesChanged signal: ", e);
-                        logger.debug("The parameters were: ", parameters.deepUnpack());
-                    }
-                });
-            logger.debug("Subscribed to /net/hadess/SensorProxy:PropertiesChanged");
-            return () => Gio.DBus.system.signal_unsubscribe(handlerId);
+        this.pm.connectTo(this.sensorProxy!, "g-properties-changed", (_, changed: GLib.Variant) => {
+            if (Object.hasOwn(changed.unpack() as object, "AccelerometerOrientation")) {
+                void this.onAccelerometerOrientationChanged(this.sensorProxy!.AccelerometerOrientation);
+            }
         });
+
+        // Wait until iio-sensor-proxy is ready:
+        if (!this.sensorProxy!.gNameOwner) {
+            await new Promise((resolve) => {
+                const watchId = Gio.DBus.system.watch_name(
+                    "net.hadess.SensorProxy",
+                    BusNameWatcherFlags.NONE,
+                    () => {
+                        Gio.DBus.system.unwatch_name(watchId);
+                        resolve(null);
+                    },
+                    () => null,
+                );
+            });
+        }
+
+        // Perform initial accelerometer claim sync (after a delay to not conflict with the
+        // Shell's own potential claim):
+        Delay.s(1)
+            .then(() => this.maybeClaimAccelerometer());
+
+        // Try to claim it again a few times later - this apparently fixes the first claim
+        // above being ignored on some devices, likely due to some initialization process of
+        // undefined duration still going on. Claiming the accelerometer multiple times does
+        // not do any harm.
+        // FIXME: Find out why this is, and how do to it better
+        for (let delay of [10, 15, 20, 25, 35, 60]) {  // somewhat arbitrary delays - since those depend on unknown factors anyway.
+            Delay.s(delay)
+                .then(() => this.maybeClaimAccelerometer());
+        }
+    }
+
+    private async maybeClaimAccelerometer() {
+        if (!this.sensorProxy) return;
+        if (!this.sensorProxy.HasAccelerometer) {
+            logger.info("[SensorProxy] No accelerometer available.");
+            return;
+        }
+
+        if (this.isOrientationLockEnabled) {
+            logger.info("[SensorProxy] Claiming accelerometer!");
+            await this.sensorProxy.ClaimAccelerometerAsync();
+
+            /*logger.info("[SensorProxy] Claimed accelerometer, now fixing up GLib properties cache");
+            Gio.DBus.system.call(
+                "net.hadess.SensorProxy",
+                "/net/hadess/SensorProxy",
+                "org.freedesktop.DBus.Properties",
+                "Get",
+                new GLib.Variant("(ss)", ["net.hadess.SensorProxy", "AccelerometerOrientation"]),
+                new GLib.VariantType("(v)"),
+                Gio.DBusCallFlags.NO_AUTO_START,
+                -1,
+                null,
+                (source_object, res, data) => {
+                    logger.info("DBus callback ready: ", res, data);
+                    const propValue = Gio.DBus.system.call_finish(res);
+                    this.sensorProxy.set_cached_property('AccelerometerOrientation', propValue.get_variant());
+                    logger.info("DBus callback finished, accelerometer orientation: ",
+                        this.sensorProxy.AccelerometerOrientation,
+                        this.sensorProxy.get_cached_property('AccelerometerOrientation'),
+                        propValue.deepUnpack());
+                });*/
+        }
     }
 
     private get isOrientationLockEnabled(): boolean {
@@ -63,102 +139,41 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
     }
 
     private async onAccelerometerOrientationChanged(orientation: AccelerometerOrientation) {
-        this.removeFloatingRotateButton({animate: true});
+        const targetTransform = {
+            'normal': 0,
+            'left-up': 1,
+            'bottom-up': 2,
+            'right-up': 3,
+        }[orientation] as LogicalMonitorTransform & (0 | 1 | 2 | 3);
 
-        if (this.isOrientationLockEnabled) {
-            const targetTransform = {
-                'normal': 0,
-                'left-up': 1,
-                'bottom-up': 2,
-                'right-up': 3,
-            }[orientation] as LogicalMonitorTransform & (0 | 1 | 2 | 3);
-
-            const {geometry, transform: currentTransform} = await this.getBuiltinMonitorGeometryAndTransform();
-
-            if (currentTransform !== targetTransform) {
-                this.showFloatingRotateButton(currentTransform, targetTransform, geometry);
-            }
-        }
-    }
-
-    private showFloatingRotateButton(
-        currentTransform: LogicalMonitorTransform,
-        targetTransform: LogicalMonitorTransform & (0 | 1 | 2 | 3),
-        monitorGeometry: Mtk.Rectangle,
-    ): void {
-        let [aX, aY] = computeAlignment(currentTransform, targetTransform);
-
-        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
-        const buttonSize = 40 * sf;
-        const margin = Main.panel.allocation.y2 + 5 * sf;
-
-        let btn: Widgets.Button | null = this.pm.autoDestroy(new Widgets.Button({
-            ref: this.floatingButton,
-            styleClass: 'touchup-floating-screen-rotation-button',
-            iconName: 'rotation-allowed-symbolic',
-            width: 40 * sf,
-            height: 40 * sf,
-            x: monitorGeometry.x + clamp(monitorGeometry.width * aX, margin, monitorGeometry.width - buttonSize - margin),
-            y: monitorGeometry.y + clamp(monitorGeometry.height * aY, margin, monitorGeometry.height - buttonSize - margin),
-            onClicked: () => {
-                btn?.destroy();
-                setMonitorTransform(targetTransform);
-            },
-            onDestroy: () => btn = null,
-            opacity: 128,
-            scaleX: 0.5,
-            scaleY: 0.5,
-            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
-        }));
-
-        global.stage.add_child(btn);
-
-        // Animate in:
-        // @ts-ignore
-        btn.ease({
-            opacity: 255,
-            scaleX: 1,
-            scaleY: 1,
-            duration: 250, // ms
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-        });
-
-        // Rotate/wiggle animation:
-        for (let i = 0; i < 3; i++) {
-            Delay.ms(700 + 2000 * i).then(() => {
-                // @ts-ignore
-                btn?.ease({
-                    rotationAngleZ: btn.rotationAngleZ - 90,
-                    duration: 550, // ms
-                    mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
-                });
-            });
+        // If there's a floating button currently visible, that matches our `targetTransform`,
+        // there's nothing to do:
+        if (this.floatingButton !== null
+            && !this.floatingButton?.isDestroyed
+            && this.floatingButton?.targetTransform === targetTransform) {
+            return;
         }
 
-        // Animate out and destroy:
-        Delay.ms(7000).then(() => {
-            if (btn === this.floatingButton.current) {  // Check if btn is still the current button, to not destroy another one
-                this.removeFloatingRotateButton({animate: true});
-            }
-        });
-    }
+        const {geometry, transform: currentTransform} = await this.getBuiltinMonitorGeometryAndTransform();
 
-    private removeFloatingRotateButton({animate = false}: {animate: boolean}) {
-        if (animate) {
-            const btn = this.floatingButton.current;
-            // @ts-ignore
-            btn?.ease({
-                scaleX: 0.5,
-                scaleY: 0.5,
-                opacity: 128,
-                duration: 250, // ms
-                mode: Clutter.AnimationMode.EASE_IN_QUAD,
-                onComplete: () => btn?.destroy(),
-            });
-        } else {
-            this.floatingButton.current?.destroy();
+        // Destroy previous button, if it's still visible:
+        if (this.floatingButton?.isDestroyed === false) {
+            this.floatingButton!.destroy({animate: true});
         }
 
+        // If we're already in sync with the orientation reported by the accelerometer,
+        // there's nothing to do:
+        if (currentTransform === targetTransform) {
+            return;
+        }
+
+        // Show a new floating button for the accelerometer's reported orientation:
+        this.floatingButton = new FloatingRotateButton(
+            currentTransform, targetTransform, geometry,
+            () => this.applyOrientation(targetTransform),
+        );
+
+        await this.floatingButton.show();
     }
 
     private async getBuiltinMonitorGeometryAndTransform() {
@@ -169,6 +184,115 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
         const geometry = global.display.get_monitor_geometry(monitorIndex);
         const transform = state.getLogicalMonitorFor(monitorConnector)!.transform;
         return {geometry, transform};
+    }
+
+    private applyOrientation = debounce(setMonitorTransform, 100);
+
+    destroy() {
+        this.floatingButton?.destroy({animate: false});
+
+        // Only release the accelerometer if the orientation lock is enabled, since otherwise, the Shell
+        // still needs it, and releasing would break auto-rotate:
+        if (this.isOrientationLockEnabled) {
+            void this.sensorProxy?.ReleaseAccelerometerAsync();
+        }
+
+        super.destroy();
+    }
+}
+
+
+class FloatingRotateButton {
+    private readonly actor: Widgets.Button;
+    private destroyed: boolean = false;
+
+    constructor(readonly currentTransform: LogicalMonitorTransform,
+                readonly targetTransform: LogicalMonitorTransform & (0 | 1 | 2 | 3),
+                readonly monitorGeometry: Mtk.Rectangle,
+                readonly onClicked: () => void) {
+        let [aX, aY] = computeAlignment(this.currentTransform, this.targetTransform);
+
+        const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
+        const buttonSize = 40 * sf;
+        const margin = Main.panel.allocation.y2 + 5 * sf;
+
+        this.actor = new Widgets.Button({
+            styleClass: 'touchup-floating-screen-rotation-button',
+            iconName: 'rotation-allowed-symbolic',
+            width: 40 * sf,
+            height: 40 * sf,
+            x: monitorGeometry.x + clamp(monitorGeometry.width * aX, margin, monitorGeometry.width - buttonSize - margin),
+            y: monitorGeometry.y + clamp(monitorGeometry.height * aY, margin, monitorGeometry.height - buttonSize - margin),
+            onClicked: () => {
+                this.destroy({ animate: false });
+                this.onClicked();
+            },
+            opacity: 128,
+            scaleX: 0.5,
+            scaleY: 0.5,
+            pivotPoint: new Graphene.Point({x: 0.5, y: 0.5}),
+        });
+    }
+
+    async show() {
+        DEBUG: assert(
+            !this.destroyed,
+            "Cannot call FloatingRotateButton.show() after it has already been destroyed.",
+        );
+
+        global.stage.add_child(this.actor);
+
+        // Animate in:
+        this.actor.ease({
+            opacity: 255,
+            scaleX: 1,
+            scaleY: 1,
+            duration: 250, // ms
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+
+        // Rotate/wiggle animation:
+        await Delay.ms(500);
+        for (let i = 0; i < 3; i++) {
+            if (!this.destroyed) {
+                this.actor.ease({
+                    rotationAngleZ: this.actor.rotationAngleZ - 90,
+                    duration: 550, // ms
+                    mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
+                });
+
+                await Delay.ms(2000);
+            } else {
+                break;
+            }
+        }
+
+        // Animate out and destroy:
+        await Delay.ms(500);
+        this.destroy({animate: true});
+    }
+
+    destroy({animate = false}: {animate: boolean}) {
+        if (this.destroyed) return;
+
+        this.destroyed = true;
+
+        if (animate) {
+            this.actor.ease({
+                scaleX: 0.5,
+                scaleY: 0.5,
+                opacity: 128,
+                duration: 250, // ms
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                onStopped: () => this.actor.destroy()
+            });
+        } else {
+            this.actor.destroy();
+        }
+    }
+
+    get isDestroyed(): boolean {
+        return this.destroyed;
     }
 }
 
@@ -203,6 +327,3 @@ function computeAlignment(currentTransform: LogicalMonitorTransform, targetTrans
         7: [1.0 - baseY, 1.0 - baseX]     // 270° Flipped
     }[currentTransform] || [baseX, baseY];  // default value, just in case (even though this should never happen)
 }
-
-
-
