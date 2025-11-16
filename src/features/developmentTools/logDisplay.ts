@@ -28,7 +28,7 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
     private readonly logAddedCallbacks: LogCallback[] = [];
     private readonly logCallbackId: number;
 
-    constructor(props?: {initialValue?: boolean, onPressed?: (value: boolean) => void}) {
+    constructor(props?: {initialValue?: boolean, onPressed?: (value: boolean) => void, ref?: Widgets.Ref<DevelopmentLogDisplayButton>}) {
         super({
             label: 'Show log display',
             icon: 'format-justify-left-symbolic',
@@ -36,11 +36,12 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
                 this._onPressed(value);
                 props?.onPressed?.(value);
             },
+            ref: props?.ref,
         });
         this.value = props?.initialValue ?? true;
 
         this.logCallbackId = addLogCallback((t) => {
-            this.logAddedCallbacks.forEach((c) => c(t))
+            this.addLogItem(t);
         });
 
         this._addDisplays();
@@ -101,6 +102,10 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         this.logDisplays = [];
         super.destroy();
     }
+
+    public addLogItem(item: LogCallbackArguments) {
+        this.logAddedCallbacks.forEach((c) => c(item));
+    }
 }
 
 
@@ -131,7 +136,7 @@ class LogDisplay extends Widgets.Column {
                     children: [
                         new Widgets.Entry({
                             ref: searchEntry,
-                            notifyText: entry => this._applySearch(entry.text),
+                            notifyText: () => this._applySearch(searchEntry.current!.text),
                             width: 350,
                             hintText: "Search…",
                             primaryIcon: new Widgets.Icon({

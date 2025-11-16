@@ -65,7 +65,6 @@ export class HotRestartButton extends DevToolButton {
 
     protected _startIconAnimation() {
         const runner = new IntervalRunner(201, () => {
-            //@ts-ignore
             this.icon.ease({
                 opacity: this.icon.opacity == 128 ? 255 : 128,
                 duration: 200,

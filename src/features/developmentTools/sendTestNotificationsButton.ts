@@ -1,8 +1,7 @@
 import St from "gi://St";
 import GObject from "gi://GObject";
 import {DevToolButton} from "$src/features/developmentTools/developmentToolButton";
-import {Source, Urgency} from "resource:///org/gnome/shell/ui/messageTray.js";
-import {NotificationDestroyedReason} from "@girs/gnome-shell/ui/messageTray";
+import {NotificationDestroyedReason, Source, Urgency} from "resource:///org/gnome/shell/ui/messageTray.js";
 import {randomChoice} from "$src/utils/utils";
 import TouchUpExtension from "$src/extension";
 import {NotificationService} from "$src/services/notificationService";

@@ -1,6 +1,6 @@
 import {mkdirSync, writeFileSync} from 'fs';
-import {compile} from 'sass';
 import {dirname} from "path";
+import {compileAsync} from "sass-embedded";
 
 
 /**
@@ -17,11 +17,11 @@ import {dirname} from "path";
 export default function sassWriter({ input, output }) {
     return {
         name: 'sass-writer',
-        buildStart() {
+        async buildStart() {
             this.addWatchFile(input);
 
             try {
-                const result = compile(input, {
+                const result = await compileAsync(input, {
                     silenceDeprecations: ["import"]
                 });
 

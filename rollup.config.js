@@ -1,8 +1,7 @@
 import path from 'path';
 import {fileURLToPath} from 'url';
 import * as fs from "fs";
-import typescript from '@rollup/plugin-typescript';
-import {nodeResolve} from '@rollup/plugin-node-resolve';
+import typescript from 'rollup-plugin-typescript2';
 import strip from "@rollup/plugin-strip";
 import * as dotenv from "dotenv";
 import {execSync} from "child_process";
@@ -45,6 +44,12 @@ const PRESERVE_MODULES = !IS_WATCH_MODE && process.env.BUNDLE_JS !== 'true';
 
 
 /**
+ * Whether to skip type checking during build, resulting in a much faster build time.
+ */
+const DISABLE_CHECK = ['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHECK);
+
+
+/**
  * The extension metadata
  */
 const metadataRelease = JSON.parse(fs.readFileSync(path.join(rootDir, 'src', 'metadata.json')).toString());
@@ -81,11 +86,9 @@ export default {
         preserveModules: PRESERVE_MODULES,
     },
     plugins: [
-        nodeResolve({
-            preferBuiltins: false,
-        }),
         typescript({
-            tsconfig: './tsconfig.json',
+            tsconfig: 'tsconfig.json',
+            check: !DISABLE_CHECK,
         }),
 
         // Strip out debug-only/release-only code depending on build mode:
@@ -97,6 +100,7 @@ export default {
             ].filter(e => !!e),
             functions: [
                 IS_DEBUG_MODE ? null : 'logger.debug',
+                IS_DEBUG_MODE ? null : 'assert',
             ].filter(e => !!e),
             include: [
                 '**/*.js',

@@ -8,23 +8,21 @@
     "strict": true,
     "target": "ES2022",
     "paths" : {
-      "$src/*": ["./src/*"],
-      "gi://*": ["@girs/*"]
+      "$src/*": ["./src/*"]
+      // "gi://*": ["@girs/*"]
     },
     "lib": [
       "ES2023"
     ],
     "jsx": "preserve",
-    "sourceMap": false
+    "sourceMap": false,
   },
   "include": [
     "src/ambient.d.ts",
-    "@girs/gjs",
-    "*.d.ts"
   ],
   "files": [
     "src/extension.ts",
-    "src/prefs.ts",
+    "src/prefs.ts"
   ]
 }
 

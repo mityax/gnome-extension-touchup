@@ -140,7 +140,6 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 onScrollScrollView: (deltaY) => this.scrollNotificationList(deltaY),
                 onEaseBackPosition: () => {
                     gestureHelper.easeBackPositionOf(horizontalMoveActor!);
-                    // @ts-ignore
                     horizontalMoveActor!.ease({
                         opacity: 255,
                         duration: 200,
@@ -156,14 +155,12 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 },
                 onCollapse: () => {
                     if (isTray) {
-                        // @ts-ignore
                         message.ease({
                             y: -message.height,
-                            rotationZ: 90,
                             duration: 100,
                             mode: Clutter.AnimationMode.EASE_OUT,
                             // @ts-ignore
-                            onComplete: () => Main.messageTray._hideNotification(false),
+                            onStopped: () => Main.messageTray._hideNotification(false),
                         });
                         return { easeBackPosition: false };
                     } else if (message.expanded) {
@@ -172,13 +169,12 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                 },
                 onClose: (swipeDirection) => {
                     if (message.canClose()) {
-                        // @ts-ignore
                         horizontalMoveActor?.ease({
                             translationX: swipeDirection == 'right' ? message.width : -message.width,
                             opacity: 0,
                             duration: 150,
                             mode: Clutter.AnimationMode.EASE_OUT,
-                            onComplete: () => message.emit("close"),
+                            onStopped: () => message.emit("close"),
                         });
                     } else {
                         gestureHelper.easeBackPositionOf(horizontalMoveActor!);
@@ -401,7 +397,6 @@ class SwipeGesturesHelper {
     }
 
     public easeBackPositionOf(actor: Clutter.Actor) {
-        // @ts-ignore
         actor.ease({
             translationX: 0,
             translationY: 0,

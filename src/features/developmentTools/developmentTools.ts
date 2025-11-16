@@ -2,6 +2,7 @@ import {RestartButton} from "$src/features/developmentTools/restartButton";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {DevelopmentLogDisplayButton} from "$src/features/developmentTools/logDisplay";
 import * as Widgets from "$src/utils/ui/widgets";
+import {Ref} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import Graphene from "gi://Graphene";
@@ -27,6 +28,8 @@ type _PersistedState = {
 
 
 export class DevelopmentTools extends ExtensionFeature {
+    declare private logDisplay: Ref<DevelopmentLogDisplayButton>;
+
     // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
     // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
     get _persistedState(): _PersistedState {
@@ -55,6 +58,7 @@ export class DevelopmentTools extends ExtensionFeature {
             }),
             new Widgets.Bin({width: 25}),
             new DevelopmentLogDisplayButton({
+                ref: this.logDisplay,
                 initialValue: this._persistedState.showLogDisplays,
                 onPressed: (v) => this._persistedState.showLogDisplays = v,
             }),

@@ -48,7 +48,6 @@ export class RestartButton extends DevToolButton {
 
     protected _startIconAnimation() {
         const runner = new IntervalRunner(10, () => {
-            //@ts-ignore
             this.icon.ease({
                 rotationAngleZ: (this.icon.rotationAngleZ + 7) % 360,
                 duration: 10,

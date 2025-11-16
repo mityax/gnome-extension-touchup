@@ -3,9 +3,11 @@ import GObject from "gi://GObject";
 import Clutter from "gi://Clutter";
 import {css} from "$src/utils/ui/css";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
+import {PopupAnimation} from "resource:///org/gnome/shell/ui/boxpointer.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Cogl from "gi://Cogl";
 import * as Widgets from "$src/utils/ui/widgets";
+import {Ref} from "$src/utils/ui/widgets";
 import Side = St.Side;
 
 
@@ -13,6 +15,7 @@ type DevToolButtonConstructorProps = {
     icon: string | St.Widget,
     label: string | St.Widget,
     onPressed: () => void,
+    ref?: Ref<DevToolButton>,
 };
 
 
@@ -27,6 +30,7 @@ export class DevToolButton extends Widgets.Bin {
 
     constructor(props: DevToolButtonConstructorProps) {
         super({
+            ref: props.ref,
             styleClass: 'panel-button',
             reactive: true,
             canFocus: true,
@@ -42,8 +46,8 @@ export class DevToolButton extends Widgets.Bin {
             },
             notifyHover: () => {
                 this.hover
-                    ? this.tooltip.open(false, () => {})
-                    : this.tooltip.close(false, () => {});
+                    ? this.tooltip.open(PopupAnimation.NONE, () => {})
+                    : this.tooltip.close(PopupAnimation.NONE, () => {});
             },
         });
 
