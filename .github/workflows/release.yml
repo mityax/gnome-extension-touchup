@@ -95,7 +95,7 @@ jobs:
       # Upload to extensions.gnome.org
       - name: Upload to EGO
         run: |
-            gnome-extensions upload --user $USERNAME --password $PASSWORD $ZIPFILE
+            gnome-extensions upload --accept-tos --user $USERNAME --password $PASSWORD $ZIPFILE
         env:
           USERNAME: ${{ secrets.EGO_USER }}
           PASSWORD: ${{ secrets.EGO_PASSWORD }}
