@@ -24,6 +24,12 @@ jobs:
         with:
           node-version: 20
 
+      # Install basic deps
+      - name: Install basic dependencies
+        run: |
+          apt-get update
+          apt-get install -y git curl jq
+
       # Check if release for this version already exists
       - name: Check for existing release
         id: check_release
@@ -45,8 +51,7 @@ jobs:
       # Install GNOME Shell
       - name: Install GNOME Shell and system dependencies
         run: |
-          apt-get update
-          apt-get install -y git gnome-shell libglib2.0-dev libxml2-utils
+          apt-get install -y gnome-shell libglib2.0-dev libxml2-utils
 
       # Install dependencies
       - name: Install npm dependencies
