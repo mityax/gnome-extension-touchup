@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ubuntu:latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       # Check out code
@@ -39,7 +42,7 @@ jobs:
       - name: Install GNOME Shell and system dependencies
         run: |
           apt-get update
-          apt-get install -y gnome-shell libglib2.0-dev git
+          apt-get install -y git gnome-shell libglib2.0-dev libxml2-utils
 
       # Install dependencies
       - name: Install npm dependencies
