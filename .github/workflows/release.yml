@@ -10,7 +10,7 @@ jobs:
     name: Build and release
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:latest
+      image: fedora:43
     defaults:
       run:
         shell: bash
@@ -27,8 +27,7 @@ jobs:
       # Install basic deps
       - name: Install basic dependencies
         run: |
-          apt-get update
-          apt-get install -y git
+          dnf install -y git
 
       # Check if release for this version already exists
       - name: Check for existing release
@@ -43,9 +42,9 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # Install GNOME Shell
-      - name: Install GNOME Shell and system dependencies
+      - name: Install GNOME Shell
         run: |
-          apt-get install -y gnome-shell libglib2.0-dev libxml2-utils
+          dnf install -y gnome-shell
 
       # Install dependencies
       - name: Install npm dependencies
@@ -82,7 +81,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ${{ needs.build.outputs.zipfile }}
+            ${{ env.ZIPFILE }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
