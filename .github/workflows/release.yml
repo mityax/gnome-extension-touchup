@@ -30,7 +30,7 @@ jobs:
       # Install basic deps
       - name: Install basic dependencies
         run: |
-          dnf install -y git
+          dnf install -y git glib2-devel
 
       # Check if release for this version already exists
       - name: Check for existing release
