@@ -18,6 +18,9 @@ jobs:
     steps:
       # Check out code
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # fetch all history
+          fetch-tags: true    # fetch tags
 
       # Install Node
       - uses: actions/setup-node@v4
