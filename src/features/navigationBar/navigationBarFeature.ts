@@ -3,7 +3,6 @@ import BaseNavigationBar from "./widgets/baseNavigationBar";
 import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings";
-import Clutter from "gi://Clutter";
 import {logger} from "$src/utils/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {Patch, PatchManager} from "$src/utils/patchManager";
@@ -59,11 +58,16 @@ export class NavigationBarFeature extends ExtensionFeature {
 
         // Remove the OSK bottom drag action from the shell:
         this._removeOskActionPatch = this.pm.patch(() => {
-            let oskAction = global.stage.get_action('osk')!;
-            if (oskAction) global.stage.remove_action(oskAction);
+            let oskAction = global.stage.get_action('OSK show bottom drag');
+
+            if (oskAction) {
+                oskAction.enabled = false;
+            } else {
+                logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
+            }
 
             return () => {
-                if (oskAction) global.stage.add_action_full('osk', Clutter.EventPhase.CAPTURE, oskAction)
+                if (oskAction) oskAction.enabled = true;
             };
         });
 
