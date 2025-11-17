@@ -15,7 +15,6 @@ import {assert, logger} from "$src/utils/logging";
 import {AccelerometerOrientation, SensorProxy} from "$src/features/screenRotateUtils/sensorProxy";
 import GLib from "gi://GLib";
 import {debounce} from "$src/utils/debounce";
-import BusNameWatcherFlags = Gio.BusNameWatcherFlags;
 
 
 export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
@@ -68,21 +67,6 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
                 void this.onAccelerometerOrientationChanged(this.sensorProxy!.AccelerometerOrientation);
             }
         });
-
-        // Wait until iio-sensor-proxy is ready:
-        if (!this.sensorProxy!.gNameOwner) {
-            await new Promise((resolve) => {
-                const watchId = Gio.DBus.system.watch_name(
-                    "net.hadess.SensorProxy",
-                    BusNameWatcherFlags.NONE,
-                    () => {
-                        Gio.DBus.system.unwatch_name(watchId);
-                        resolve(null);
-                    },
-                    () => null,
-                );
-            });
-        }
 
         // Perform initial accelerometer claim sync (after a delay to not conflict with the
         // Shell's own potential claim):
