@@ -22,6 +22,9 @@ jobs:
           fetch-depth: 0      # fetch all history
           fetch-tags: true    # fetch tags
 
+      - run: |
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
       # Install Node
       - uses: actions/setup-node@v4
         with:
