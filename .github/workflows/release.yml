@@ -7,7 +7,10 @@ on:
 
 jobs:
   build:
+    name: Build and release
     runs-on: ubuntu-latest
+    container:
+      image: ubuntu:latest
 
     steps:
       # Check out code
@@ -67,9 +70,9 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.build.outputs.version }}
-          name: v${{ needs.build.outputs.version }}
-          body: "Release for version ${{ needs.build.outputs.version }}"
+          tag_name: v${{ env.VERSION }}
+          name: v${{ env.VERSION }}
+          body: "Release for version ${{ env.VERSION }}"
           draft: false
           prerelease: false
           files: |
