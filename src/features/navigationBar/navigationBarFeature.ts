@@ -19,7 +19,7 @@ export type NavbarMode = 'gestures' | 'buttons';
 export class NavigationBarFeature extends ExtensionFeature {
     declare private _currentNavBar: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
-    private _removeOskActionPatch: Patch;
+    private _disableOskActionPatch: Patch | null = null;
     private _updatePrimaryMonitorPatch: Patch;
     private readonly _debouncedPrimaryMonitorPatchSetActive: (props: {active: boolean, force?: boolean}) => void;
 
@@ -56,20 +56,13 @@ export class NavigationBarFeature extends ExtensionFeature {
         this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', () =>
             this._updateVisibility());
 
-        // Remove the OSK bottom drag action from the shell:
-        this._removeOskActionPatch = this.pm.patch(() => {
-            let oskAction = global.stage.get_action('OSK show bottom drag');
-
-            if (oskAction) {
-                oskAction.enabled = false;
-            } else {
-                logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
-            }
-
-            return () => {
-                if (oskAction) oskAction.enabled = true;
-            };
-        });
+        // Disable the OSK bottom drag action from the shell:
+        let oskAction = global.stage.get_action('OSK show bottom drag');
+        if (oskAction) {
+            this._disableOskActionPatch = this.pm.setProperty(oskAction, 'enabled', false);
+        } else {
+            logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
+        }
 
         this._updatePrimaryMonitorPatch = this._createPrimaryMonitorPatch();
         // Debounce the primary monitor changes to avoid concurrency issues in rare cases:
@@ -115,8 +108,8 @@ export class NavigationBarFeature extends ExtensionFeature {
             await this._updateVisibility();
 
             this._mode == 'gestures'
-                ? this._removeOskActionPatch.enable()
-                : this._removeOskActionPatch.disable();
+                ? this._disableOskActionPatch?.enable()
+                : this._disableOskActionPatch?.disable();
         } catch (e) {
             logger.error("Error in NavigationBarFeature.setMode: ", e);
         }
