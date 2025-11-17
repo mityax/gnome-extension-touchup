@@ -16,6 +16,11 @@ jobs:
         shell: bash
 
     steps:
+      # Install basic deps (git needs to be installed before checking out the repo!)
+      - name: Install basic dependencies
+        run: |
+          dnf install -y git glib2-devel  
+
       # Check out code
       - uses: actions/checkout@v4
         with:
@@ -27,16 +32,10 @@ jobs:
         with:
           node-version: 20
 
-      # Install basic deps
-      - name: Install basic dependencies
-        run: |
-          dnf install -y git glib2-devel
-
       # Check if release for this version already exists
       - name: Check for existing release
         id: check_release
         run: |
-          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           VERSION=$(node -p "require('./src/metadata.json')['version-name']")
           EXISTING=$(git ls-remote --tags origin "v$VERSION" | awk '{print $2}' | sed 's|refs/tags/||' || true)
           if [ -n "$EXISTING" ]; then
