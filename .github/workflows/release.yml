@@ -1,0 +1,103 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - deploy-ego
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out code
+      - uses: actions/checkout@v4
+
+      # Install Node
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Check if release for this version already exists
+      - name: Check for existing release
+        id: check_release
+        run: |
+          VERSION=$(node -p "require('./src/metadata.json')['version-name']")
+          EXISTING=$(gh release view "v$VERSION" --json tagName --jq .tagName || true)
+          if [ "$EXISTING" == "v$VERSION" ]; then
+            echo "Release v$VERSION already exists. Failing."
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Install dependencies
+      - run: npm ci
+
+      # Build
+      - run: npm run build:release
+
+      # Locate .zip file:
+      - name: Locate .zip
+        id: locate_zip
+        run: |
+          source tools/config.sh
+          shopt -s nullglob
+          ZIPFILES=("$distDir"/*.zip)
+          [[ ${#ZIPFILES[@]} -gt 0 ]] || { echo "zip file not present in $distDir"; exit 1; }
+          ZIPFILE="${ZIPFILES[0]}"
+          echo "zipfile=$ZIPFILE" >> $GITHUB_OUTPUT
+
+      # Upload zip as an artifact so the next job can access it
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-zip
+          path: ${{ env.ZIPFILE }}
+
+    outputs:
+      version: ${{ steps.check_release.outputs.version }}
+      zipfile: ${{ steps.locate_zip.outputs.zipfile }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download the built artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: built-zip
+
+      - name: Determine version from zip filename
+        id: version
+        run: |
+          ZIPFILE=$(ls *.zip)
+          VERSION=$(echo "$ZIPFILE" | sed -E 's/.*-([0-9]+\.[0-9]+\.[0-9]+)\.zip/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "zipfile=$ZIPFILE" >> $GITHUB_OUTPUT
+
+      # Upload to extensions.gnome.org
+      - name: Upload to EGO
+        run: |
+            apt install -y gnome-shell
+            gnome-extensions upload --user $USERNAME --password $PASSWORD $ZIPFILE
+        env:
+          USERNAME: ${{ secrets.EGO_USER }}
+          PASSWORD: ${{ secrets.EGO_PASSWORD }}
+
+      # Create the GitHub release
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: v${{ needs.build.outputs.version }}
+          body: "Release for version ${{ needs.build.outputs.version }}"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ needs.build.outputs.zipfile }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
