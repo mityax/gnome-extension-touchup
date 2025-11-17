@@ -28,9 +28,12 @@ jobs:
             echo "Release v$VERSION already exists. Failing."
             exit 1
           fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Install GNOME Shell
+      - run: apt install -y gnome-shell
 
       # Install dependencies
       - run: npm ci
@@ -47,45 +50,13 @@ jobs:
           ZIPFILES=("$distDir"/*.zip)
           [[ ${#ZIPFILES[@]} -gt 0 ]] || { echo "zip file not present in $distDir"; exit 1; }
           ZIPFILE="${ZIPFILES[0]}"
-          echo "zipfile=$ZIPFILE" >> $GITHUB_OUTPUT
+          echo "ZIPFILE=$ZIPFILE" >> $GITHUB_ENV
 
-      # Upload zip as an artifact so the next job can access it
+      # Upload zip as an artifact
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: built-zip
           path: ${{ env.ZIPFILE }}
-
-    outputs:
-      version: ${{ steps.check_release.outputs.version }}
-      zipfile: ${{ steps.locate_zip.outputs.zipfile }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      # Download the built artifact
-      - uses: actions/download-artifact@v4
-        with:
-          name: built-zip
-
-      - name: Determine version from zip filename
-        id: version
-        run: |
-          ZIPFILE=$(ls *.zip)
-          VERSION=$(echo "$ZIPFILE" | sed -E 's/.*-([0-9]+\.[0-9]+\.[0-9]+)\.zip/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "zipfile=$ZIPFILE" >> $GITHUB_OUTPUT
-
-      # Upload to extensions.gnome.org
-      - name: Upload to EGO
-        run: |
-            apt install -y gnome-shell
-            gnome-extensions upload --user $USERNAME --password $PASSWORD $ZIPFILE
-        env:
-          USERNAME: ${{ secrets.EGO_USER }}
-          PASSWORD: ${{ secrets.EGO_PASSWORD }}
 
       # Create the GitHub release
       - name: Create Release
@@ -101,3 +72,11 @@ jobs:
             ${{ needs.build.outputs.zipfile }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload to extensions.gnome.org
+      - name: Upload to EGO
+        run: |
+            gnome-extensions upload --user $USERNAME --password $PASSWORD $ZIPFILE
+        env:
+          USERNAME: ${{ secrets.EGO_USER }}
+          PASSWORD: ${{ secrets.EGO_PASSWORD }}
