@@ -36,6 +36,7 @@ jobs:
       - name: Check for existing release
         id: check_release
         run: |
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           VERSION=$(node -p "require('./src/metadata.json')['version-name']")
           EXISTING=$(git ls-remote --tags origin "v$VERSION" | awk '{print $2}' | sed 's|refs/tags/||' || true)
           if [ -n "$EXISTING" ]; then
