@@ -33,12 +33,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Install GNOME Shell
-      - run: |
+      - name: Install GNOME Shell and system dependencies
+        run: |
           sudo apt-get update
-          sudo apt-get install -y gnome-shell
+          sudo apt-get install -y gnome-shell libglib2.0-dev
 
       # Install dependencies
-      - run: npm ci
+      - name: Install npm dependencies
+        run: npm ci
 
       # Build
       - run: npm run build:release
