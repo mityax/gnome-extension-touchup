@@ -27,6 +27,11 @@ jobs:
           fetch-depth: 0      # fetch all history
           fetch-tags: true    # fetch tags
 
+      - name: Prepare repository
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+
       # Install Node
       - uses: actions/setup-node@v4
         with:
@@ -36,7 +41,6 @@ jobs:
       - name: Check for existing release
         id: check_release
         run: |
-          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
           VERSION=$(node -p "require('./src/metadata.json')['version-name']")
           EXISTING=$(git ls-remote --tags origin "v$VERSION" | awk '{print $2}' | sed 's|refs/tags/||' || true)
           if [ -n "$EXISTING" ]; then
