@@ -30,7 +30,6 @@ jobs:
       - name: Prepare repository
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
       # Install Node
       - uses: actions/setup-node@v4
