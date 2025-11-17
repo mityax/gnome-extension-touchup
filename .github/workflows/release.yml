@@ -29,7 +29,11 @@ jobs:
         id: check_release
         run: |
           VERSION=$(node -p "require('./src/metadata.json')['version-name']")
-          EXISTING=$(gh release view "v$VERSION" --json tagName --jq .tagName || true)
+          EXISTING=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              "https://api.github.com/repos/mityax/gnome-extension-touchup/releases/tags/v$VERSION" \
+              | jq -r '.tag_name // empty')
           if [ "$EXISTING" == "v$VERSION" ]; then
             echo "Release v$VERSION already exists. Failing."
             exit 1
