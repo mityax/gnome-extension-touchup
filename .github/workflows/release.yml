@@ -33,7 +33,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Install GNOME Shell
-      - run: apt install -y gnome-shell
+      - run: sudo apt-get install -y gnome-shell
 
       # Install dependencies
       - run: npm ci
