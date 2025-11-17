@@ -131,8 +131,5 @@ To donate, choose a platform below:
 <a href='https://ko-fi.com/Q5Q41A9U4G' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a><br />
 <i>Recommended! Most payment methods, one-time or recurring donations, no sign up required.</i>
 
-<a href='https://patreon.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white' border='0' alt='Buy Me a Coffee at patreon.com' /></a><br />
-<i>Many payment methods, best for a recurring donation.</i>
-
 <a href='https://buymeacoffee.com/mityax' target='_blank'><img height='36' style='border:0px;height:36px;vertical-align:middle' src='https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black' border='0' alt='Buy Me a Coffee' /></a><br />
 <i>Donate by card, no sign up required.</i>

@@ -25,11 +25,6 @@ export const donationPlatforms = Object.freeze([
         recommended: true,
     },
     {
-        name: 'Patreon',
-        url: 'https://www.patreon.com/mityax',
-        description: 'Many payment methods, best for a recurring donation.',
-    },
-    {
         name: 'Buy Me A Coffee',
         url: 'https://buymeacoffee.com/mityax',
         description: 'Donate by card, no sign up required.',

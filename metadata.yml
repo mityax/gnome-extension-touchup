@@ -31,7 +31,6 @@ release: &release
   url: https://github.com/mityax/gnome-extension-touchup
   donations:
     kofi: mityax
-    patreon: mityax
     buymeacoffee: mityax
     github: mityax
   uuid: touchup@mityax
