@@ -14,6 +14,7 @@ import disallowImportsPlugin from "./tools/rollup_plugins/rollup_plugin_disallow
 import createZip from "./tools/rollup_plugins/rollup_plugin_create_zip.js";
 import reloadSSENotifier from "./tools/rollup_plugins/rollup_plugin_reload_sse_notifier.js";
 import writeJsonPlugin from "./tools/rollup_plugins/rollup_plugin_write_json.js";
+import yaml from "js-yaml";
 
 dotenv.config();
 
@@ -52,8 +53,9 @@ const DISABLE_CHECK = ['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHE
 /**
  * The extension metadata
  */
-const metadataRelease = JSON.parse(fs.readFileSync(path.join(rootDir, 'src', 'metadata.json')).toString());
-const metadataDebug = JSON.parse(fs.readFileSync(path.join(rootDir, 'src', 'metadata-debug.json')).toString());
+const meta = yaml.load(fs.readFileSync(path.join(rootDir, 'metadata.yml')).toString());
+const metadataRelease = meta.release;
+const metadataDebug = meta.debug;
 const metadata = IS_DEBUG_MODE ? metadataDebug : metadataRelease;
 
 

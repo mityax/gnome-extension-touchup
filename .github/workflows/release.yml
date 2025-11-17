@@ -36,18 +36,6 @@ jobs:
         with:
           node-version: 20
 
-      # Check if release for this version already exists
-      - name: Check for existing release
-        id: check_release
-        run: |
-          VERSION=$(node -p "require('./src/metadata.json')['version-name']")
-          EXISTING=$(git ls-remote --tags origin "v$VERSION" | awk '{print $2}' | sed 's|refs/tags/||' || true)
-          if [ -n "$EXISTING" ]; then
-            echo "Tag v$VERSION already exists. Failing."
-            exit 1
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
       # Install GNOME Shell
       - name: Install GNOME Shell
         run: |
@@ -76,6 +64,18 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.ZIPFILE }}
+
+      # Check if release for this version already exists
+      - name: Check for existing release
+        id: check_release
+        run: |
+          VERSION=$(echo "$ZIPFILE" | sed -r 's/.*([0-9]+\.[0-9]+\.[0-9]+(\.debug|\.beta)?).*/\1/')
+          EXISTING=$(git ls-remote --tags origin "v$VERSION" | awk '{print $2}' | sed 's|refs/tags/||' || true)
+          if [ -n "$EXISTING" ]; then
+            echo "Tag v$VERSION already exists. Failing."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # Create the GitHub release
       - name: Create Release
