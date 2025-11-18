@@ -1,14 +1,14 @@
 import {execSync} from 'child_process';
 import path from 'path';
 
-export default function compileGSchemas({ schemasDir }) {
+export default function validateGSchemas({ schemasDir }) {
     return {
-        name: 'compile-gschemas',
+        name: 'validate-gschemas',
         writeBundle(options) {
             const pth = path.resolve(options.dir || '.', schemasDir);
 
             try {
-                execSync(`glib-compile-schemas "${pth}"`);
+                execSync(`glib-compile-schemas --dry-run "${pth}"`);
             } catch (e) {
                 throw new Error(
                     `Compiling gschemas in ${schemasDir} failed with exit code ${e.status}: ` +

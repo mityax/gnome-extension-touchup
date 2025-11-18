@@ -8,7 +8,7 @@ import {execSync} from "child_process";
 
 import sassWriter from "./tools/rollup_plugins/rollup_plugin_sass_writer.js";
 import gsettingsSchemaPlugin from "./tools/rollup_plugins/rollup_plugin_generate_settings_schema.js";
-import compileGSchemas from "./tools/rollup_plugins/rollup_plugin_compile_gschemas.js";
+import validateGSchemas from "./tools/rollup_plugins/rollup_plugin_compile_gschemas.js";
 import compileGResources from "./tools/rollup_plugins/rollup_plugin_compile_gresources.js";
 import disallowImportsPlugin from "./tools/rollup_plugins/rollup_plugin_disallow_imports.js";
 import createZip from "./tools/rollup_plugins/rollup_plugin_create_zip.js";
@@ -128,7 +128,7 @@ export default {
             schemaPath: '/org/gnome/shell/extensions/touchup/',
             validate: true,
         }),
-        compileGSchemas({
+        validateGSchemas({
             schemasDir: 'schemas',
         }),
 
