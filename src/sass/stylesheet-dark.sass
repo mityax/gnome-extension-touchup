@@ -12,12 +12,13 @@ $light-theme-color: color.adjust(#f6f5f4, $saturation: -100%)
             $height: 20px
 
             #dashtodockContainer #dash, #dash
-                padding-bottom: $height !important
+                padding-bottom: #{$height + 2px} !important  // two pixels additional padding for the looks
             #keyboard
-                padding-bottom: $height !important
+                padding-bottom: #{$height + 2px} !important  // two pixels additional padding for the looks
 
         &--buttons
             $height: 41px
+
             #dashtodockContainer #dash, #dash
                 padding-bottom: $height !important
             #keyboard

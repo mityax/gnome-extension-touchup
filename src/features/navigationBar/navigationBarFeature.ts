@@ -1,3 +1,5 @@
+//@ts-ignore
+import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import ExtensionFeature from "$src/utils/extensionFeature";
 import BaseNavigationBar from "./widgets/baseNavigationBar";
 import GestureNavigationBar from "./widgets/gestureNavigationBar";
@@ -20,7 +22,6 @@ export class NavigationBarFeature extends ExtensionFeature {
     declare private _currentNavBar: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
     private _disableOskActionPatch: Patch | null = null;
-    private _updatePrimaryMonitorPatch: Patch;
     private readonly _debouncedPrimaryMonitorPatchSetActive: (props: {active: boolean, force?: boolean}) => void;
 
 
@@ -36,6 +37,33 @@ export class NavigationBarFeature extends ExtensionFeature {
             this._updateVisibility());
 
         // Connect to settings:
+        this._connectSettings();
+
+        // Disable the OSK bottom drag action from the shell:
+        let oskAction = global.stage.get_action('OSK show bottom drag');
+        if (oskAction) {
+            this._disableOskActionPatch = this.pm.setProperty(oskAction, 'enabled', false);
+        } else {
+            logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
+        }
+
+        // Ensure the primary monitor follows the navigation bar (if configured to do so):
+        const primaryMonitorPatch = this._createPrimaryMonitorPatch();
+
+        // Debounce monitor changes to avoid concurrency issues in rare cases:
+        this._debouncedPrimaryMonitorPatchSetActive = debounce(
+            (props: {active: boolean, force?: boolean}) => {
+                primaryMonitorPatch.setEnabled(props.active, props.force)
+            }, 120);
+
+        // Prevent a navbar-sized gap between the opened OSk and the active window it moves up:
+        this._patchKeyboardMoveUpActiveWindow();
+
+        // Build the appropriate navigation bar:
+        void this.setMode(settings.navigationBar.mode.get());
+    }
+
+    private _connectSettings() {
         this.pm.connectTo(settings.navigationBar.mode, 'changed', (mode) =>
             this.setMode(mode));
         this.pm.connectTo(settings.navigationBar.ignoreTouchMode, 'changed', () =>
@@ -46,7 +74,7 @@ export class NavigationBarFeature extends ExtensionFeature {
             if (!enabled) {
                 this._debouncedPrimaryMonitorPatchSetActive({active: false});
             }
-            this._updateVisibility();
+            void this._updateVisibility();
         });
         this.pm.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
             if (this._mode === 'gestures') {
@@ -55,28 +83,50 @@ export class NavigationBarFeature extends ExtensionFeature {
         });
         this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', () =>
             this._updateVisibility());
+    }
 
-        // Disable the OSK bottom drag action from the shell:
-        let oskAction = global.stage.get_action('OSK show bottom drag');
-        if (oskAction) {
-            this._disableOskActionPatch = this.pm.setProperty(oskAction, 'enabled', false);
-        } else {
-            logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
-        }
+    /**
+     * When enabled, this patch changes the primary monitor to the one the navigation bar appears
+     * currently on.
+     */
+    private _createPrimaryMonitorPatch() {
+        let originalMonitor: Monitor | undefined;
 
-        this._updatePrimaryMonitorPatch = this._createPrimaryMonitorPatch();
-        // Debounce the primary monitor changes to avoid concurrency issues in rare cases:
-        this._debouncedPrimaryMonitorPatchSetActive = debounce(
-            (props: {active: boolean, force?: boolean}) => {
-                if (props.active) {
-                    this._updatePrimaryMonitorPatch.enable(props.force);
-                } else {
-                    this._updatePrimaryMonitorPatch.disable(props.force);
+        return this.pm.registerPatch(() => {
+            originalMonitor ??= Main.layoutManager.primaryMonitor!;
+            void this._setPrimaryMonitor(this._currentNavBar.monitor);
+            return () => {
+                void this._setPrimaryMonitor(originalMonitor!);
+                originalMonitor = undefined;
+            }
+        });
+    }
+
+    /**
+     * Patches the OSK such that it respects the navigation bar height properly when moving up
+     * the active window.
+     *
+     * This prevents an otherwise visible gap between the keyboard and the moved-up window.
+     */
+    private _patchKeyboardMoveUpActiveWindow() {
+        const self = this;
+        this.pm.patchMethod(
+            Keyboard.Keyboard.prototype,
+            ['gestureProgress', '_animateWindow'],
+            function (this: Keyboard.Keyboard, origMethod, calledMethod, window_or_delta, show) {
+                const origValue = this._focusWindowStartY;
+
+                if (self._currentNavBar?.reserveSpace) {
+                    this._focusWindowStartY = calledMethod === 'gestureProgress' || (calledMethod == '_animateWindow' && show)
+                        ? origValue + self._currentNavBar.actor.height
+                        : origValue;
                 }
-            }, 120);
 
-        // Build the appropriate navigation bar:
-        void this.setMode(settings.navigationBar.mode.get());
+                origMethod(window_or_delta, show);
+
+                this._focusWindowStartY = origValue;
+            },
+        );
     }
 
     async setMode(mode: NavbarMode) {
@@ -240,19 +290,6 @@ export class NavigationBarFeature extends ExtensionFeature {
         const state = await DisplayConfigState.getCurrent();
         const m = state.logicalMonitors.find(m => rect.contains_point(m.x + 1, m.y + 1))!;
         state.setPrimaryMonitor(m);
-    }
-
-    private _createPrimaryMonitorPatch() {
-        let originalMonitor: Monitor | undefined;
-
-        return this.pm.registerPatch(() => {
-            originalMonitor ??= Main.layoutManager.primaryMonitor!;
-            this._setPrimaryMonitor(this._currentNavBar.monitor);
-            return () => {
-                this._setPrimaryMonitor(originalMonitor!);
-                originalMonitor = undefined;
-            }
-        });
     }
 
     private get _invisibleMode() {

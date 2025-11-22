@@ -18,9 +18,17 @@ import {logger} from "$src/utils/logging";
 import {settings} from "$src/settings";
 
 
-// Area reserved on the left side of the navbar in which a swipe up opens the OSK
-// Note: This is in logical pixels, not physical pixels
+/**
+ * Area reserved on the left side of the navbar in which a swipe up opens the OSK,
+ * in logical pixels
+ */
 const LEFT_EDGE_OFFSET = 100;
+
+/**
+ * The full height of the navigation bar (not just the pill),
+ * in logical pixels
+ */
+const NAV_BAR_HEIGHT = 22;
 
 
 export default class GestureNavigationBar extends BaseNavigationBar<_EventPassthroughActor> {
@@ -32,14 +40,14 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     constructor(props: {reserveSpace: boolean, invisibleMode: boolean}) {
         super({ reserveSpace: props.reserveSpace });
 
-        this.setInvisibleMode(props.invisibleMode);
-
         this.styleClassUpdateInterval = new IntervalRunner(500, this.updateStyleClasses.bind(this));
         this.gestureManager = new NavigationBarGestureManager({
             edgeThreshold: this.computeHeight(),
         });
 
         this.actor.connect('notify::mapped', () => this.gestureManager.setEnabled(this.actor.mapped));
+
+        this.setInvisibleMode(props.invisibleMode);
 
         this.connect('notify::visible', _ => this._updateStyleClassIntervalEnabled());
         this.connect('notify::reserve-space', _ => {
@@ -81,7 +89,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     protected computeHeight() {
         const sf = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
 
-        return 22 * sf;
+        return NAV_BAR_HEIGHT * sf;
     }
 
     protected computePillSize() {
@@ -94,9 +102,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     }
 
     protected onBeforeReallocate() {
-        this.actor.set_height(this.computeHeight());
-        this.pill.set_width(this.computePillSize().width);
-        this.pill.set_height(this.computePillSize().height);
+        this.actor.set_height(this.isInInvisibleMode ? 0 : this.computeHeight());
+
+        this.pill.set_size(this.computePillSize().width, this.computePillSize().height);
 
         this.gestureManager.setEdgeThreshold(this.computeHeight());
     }
@@ -239,10 +247,22 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         this.styleClassUpdateInterval.setEnabled(this.isVisible && !this.reserveSpace);
     }
 
+    /**
+     * In invisible mode, the navigation bars height and opacity are set to 0; this is because
+     * we cannot use the `visible` property since this would infer with the Shell's own handling
+     * of that (in `Main.layoutManager.addTopChrome`)
+     */
     setInvisibleMode(invisible: boolean) {
         // We use opacity here instead of the actors `visible` property since [LayoutManager.addTopChrome] uses the
         // `visible` property itself which would interfere with this.
         this.actor.opacity = invisible ? 0 : 255;
+
+        // Reallocate, to adjust the navbar height to invisible mode:
+        this.reallocate();
+    }
+
+    get isInInvisibleMode() {
+        return this.actor.opacity === 0;
     }
 
     destroy() {

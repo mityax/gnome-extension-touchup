@@ -18,7 +18,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
     private _visible: boolean = false;
     private _reserveSpace: boolean = true;
 
-    protected readonly actor: A;
+    readonly actor: A;
 
     protected constructor({reserveSpace}: {reserveSpace: boolean}) {
         super();
