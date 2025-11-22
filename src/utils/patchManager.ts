@@ -100,7 +100,7 @@ export class PatchManager {
      * Set an objects property to a certain value and automatically reset it to the original value upon
      * [PatchManager] destruction or disabling.
      */
-    setProperty<A extends object, P extends keyof A>(instance: A, prop: P, value: A[P], debugName?: string) {
+    setProperty<T extends object, P extends keyof T>(instance: T, prop: P, value: T[P], debugName?: string) {
         const patch = this.patch(() => {
             const originalValue = instance[prop];
             instance[prop] = value;
@@ -178,14 +178,17 @@ export class PatchManager {
      * @param debugName A name for this patch for debug log messages
      */
     patchMethod<T extends UnknownClass>(prototype: T, methodName: string, method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch
-    patchMethod<T extends UnknownClass>(prototype: T, methodName: string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): MultiPatch
+    patchMethod<T extends UnknownClass>(prototype: T, methodName: string[], method: (originalMethod: AnyFunc, methodName: string, ...args: any[]) => any, debugName?: string): MultiPatch
     patchMethod<T extends UnknownClass>(prototype: T, methodName: string | string[], method: (originalMethod: AnyFunc, ...args: any[]) => any, debugName?: string): Patch | MultiPatch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
         if (Array.isArray(methodName)) {
             return new MultiPatch({
                 patches: methodName.map(m => this.patchMethod(
-                    prototype, m, method,
+                    prototype, m,
+                    function(this: UnknownClass, originalMethod, ...args) {
+                        method.call(this, originalMethod, m, ...args);
+                    },
                     `${debugName}#method(${prototype.constructor.name}:${m})`
                 )),
                 debugName: this._generatePatchDebugName(debugName),
