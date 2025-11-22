@@ -59,22 +59,13 @@ export class DevelopmentLogDisplayButton extends DevToolToggleButton {
         // @ts-ignore
         global.window_group.set_child_above_sibling(display, Main.layoutManager._backgroundGroup);
 
-        const updatePos = () => {
-            const margin = 15 * St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
-            const monitor = Main.layoutManager.primaryMonitor! ?? Main.layoutManager.monitors[0];
+        display.updateAllocation();
 
-            if (monitor !== undefined) {
-                display.set_position(monitor.x + margin, monitor.y + Main.panel.height + margin);
-            }
-        }
-
-        updatePos();
-
-        const id = global.backend.get_monitor_manager().connect('monitors-changed', () => updatePos());
+        const id = global.backend.get_monitor_manager().connect('monitors-changed', () => display.updateAllocation());
         display.connect('destroy', () => global.backend.get_monitor_manager().disconnect(id));
     }
 
-    private _createLogDisplay(): St.Widget {
+    private _createLogDisplay(): LogDisplay {
         const display = new LogDisplay();
         const cb = (msg: LogCallbackArguments) => display.addLogMessage(msg);
 
@@ -181,8 +172,6 @@ class LogDisplay extends Widgets.Column {
                     child: new Widgets.Column({
                         ref: logMsgColumn,
                     }),
-                    width: clamp(global.screenWidth * 0.5, 500, 1800),
-                    height: clamp(global.screenHeight * 0.5, 500, 1800),
                     hscrollbarPolicy: PolicyType.AUTOMATIC,
                     vscrollbarPolicy: PolicyType.AUTOMATIC,
                 })
@@ -314,6 +303,19 @@ class LogDisplay extends Widgets.Column {
                     child.show();
                 }
             }
+        }
+    }
+
+    updateAllocation() {
+        const margin = 15 * St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+        const monitor = Main.layoutManager.primaryMonitor! ?? Main.layoutManager.monitors[0];
+
+        if (monitor !== undefined) {
+            this.set_position(monitor.x + margin, monitor.y + Main.panel.height + margin);
+            this.set_size(
+                clamp(monitor.width * 0.5, 500, 1800),
+                clamp(monitor.height * 0.5, 500, 1800),
+            );
         }
     }
 }
