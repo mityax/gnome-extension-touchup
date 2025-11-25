@@ -11,18 +11,20 @@ $light-theme-color: color.adjust(#f6f5f4, $saturation: -100%)
         &--gestures
             $height: 20px
 
-            #dashtodockContainer #dash, #dash
-                padding-bottom: #{$height + 2px} !important  // two pixels additional padding for the looks
-            #keyboard
+            #keyboard,                   // add bottom padding to the OSK
+            #dash,                       // move up GNOME's built-in dash
+            #dashtodockContainer #dash,  // move up DashToDocks's dash, if enabled
+            #panelBox.dashtopanel        // move up DashToPanel's panel, if enabled
                 padding-bottom: #{$height + 2px} !important  // two pixels additional padding for the looks
 
         &--buttons
             $height: 41px
 
-            #dashtodockContainer #dash, #dash
-                padding-bottom: $height !important
-            #keyboard
-                padding-bottom: $height !important
+            #keyboard,                   // add bottom padding to the OSK
+            #dash,                       // move up GNOME's built-in dash
+            #dashtodockContainer #dash,  // move up DashToDocks's dash, if enabled
+            #panelBox.dashtopanel        // move up DashToPanel's panel, if enabled
+                padding-bottom: #{$height + 2px} !important
 
 .touchup-navbar
     $bar: &
