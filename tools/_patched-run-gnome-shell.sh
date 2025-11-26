@@ -39,8 +39,6 @@ usage() {
 	  --rtl                   Force right-to-left layout
 	  --locale=LOCALE         Use specified LOCALE
 
-	  --env VARIABLE=VALUE    Add environment variable (can be specified multiple times)
-
 	  --debug                 Run in gdb
 	  -v, --verbose           Enable debug logging
 

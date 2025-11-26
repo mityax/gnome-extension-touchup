@@ -1,5 +1,6 @@
-/.lib/
-.vagrant
 /dist/
-/_gnome-shell/
-tools/.gnome-shell
+/tools/.gnome-shell
+
+.vagrant
+node_modules
+/.lib/
