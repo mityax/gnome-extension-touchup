@@ -26,6 +26,9 @@ $light-theme-color: color.adjust(#f6f5f4, $saturation: -100%)
             #panelBox.dashtopanel        // move up DashToPanel's panel, if enabled
                 padding-bottom: #{$height + 2px} !important
 
+        #panelBox.dashtopanel  // if DashToPanel's panel is above the navbar, it must always be opaque
+            background: $dark-theme-color
+
 .touchup-navbar
     $bar: &
     $pill: #{$bar}__pill
