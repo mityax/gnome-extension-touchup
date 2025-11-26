@@ -96,7 +96,6 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
         Main.layoutManager.addTopChrome(this.actor, {
             affectsStruts: this.reserveSpace,
             trackFullscreen: true,
-            affectsInputRegion: true,
         });
     }
 

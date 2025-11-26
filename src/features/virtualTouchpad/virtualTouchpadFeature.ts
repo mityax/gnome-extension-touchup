@@ -37,7 +37,6 @@ export class VirtualTouchpadFeature extends ExtensionFeature {
             Main.layoutManager.addChrome(this.actor, {
                 affectsStruts: false,
                 trackFullscreen: false,
-                affectsInputRegion: true,
             });
             return () => Main.layoutManager.removeChrome(this.actor);
         });
