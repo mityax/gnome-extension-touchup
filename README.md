@@ -1,5 +1,5 @@
 
-# TouchUp [Beta]
+# TouchUp
 
 An extension for Gnome Shell that enhances the user experience for devices with a
 touchscreen – primarily focused (and tested) on tablets.
@@ -30,7 +30,9 @@ very frequently – you can help speed up progress by [donating](#support).
    - [x] Gesture mode
    - [x] Buttons mode
    - [x] Invisible gestures mode
-   - [x] Compatibility with the "Dash to Dock" extension (move the dock up)
+   - [x] Compatibility with:
+     - DashToDock (move the dock up)
+     - DashToPanel (move the panel up) – not yet released [[more info]](https://github.com/mityax/gnome-extension-touchup/issues/17#issuecomment-3590091058)
  - [ ] Edge swipe actions (left/right edge: back, top/bottom edge:
        show panel and navigation bar)
  - [x] Touch gestures for Gnome Shell notifications
