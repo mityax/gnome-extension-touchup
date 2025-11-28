@@ -1,16 +1,18 @@
 ---
-name: Bug report
-about: Report a problem with Touchup, that can be reproduced on Vanilla 
-  Gnome without other extensions enabled
+name: Compatibility issue
+about: Problems occurring when used on a shell derivative (e.g. Ubuntu) or 
+  with a specific other extension
 title: ''
-labels: bug
+labels: compatibility issue
 assignees: ''
 
 ---
 
-**Describe the bug**
+**Describe the issue**
 
-A clear and concise description of what the bug is.
+A clear and concise description of what problem occurs, and what other 
+software the incompatibility arises with (e.g. your shell derivative or another 
+extension).
 
 **To Reproduce**
 
@@ -30,10 +32,8 @@ If applicable, add screenshots to help explain your problem.
 
 **System:**
 
- - TouchUp Version [e.g. v1.3.1 from extensions.gnome.org]
- - Gnome Version [e.g. 49.1]
  - OS: [e.g. Fedora 45, Ubuntu 22.01, ...]
+ - Gnome Version [e.g. 49.1]
 
 **Additional context**
-
 Add any other context about the problem here.
