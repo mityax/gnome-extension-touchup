@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with Touchup, that can be reproduced on Vanilla 
+about: Report a problem with Touchup, that can be reproduced on vanilla 
   Gnome without other extensions enabled
 title: ''
 labels: bug
