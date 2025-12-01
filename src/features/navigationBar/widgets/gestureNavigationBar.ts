@@ -114,7 +114,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         this.gestureManager.setMonitor(monitorIndex);
     }
 
-    private async updateStyleClasses() {
+    private updateStyleClasses() {
         if (this.reserveSpace && this._isWindowNear) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('touchup-navbar--transparent');
@@ -124,12 +124,17 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             this.actor.add_style_class_name('touchup-navbar--transparent');
 
             // Adjust pill brightness:
-            let brightness = await this.findBestPillBrightness();
-            if (brightness == 'dark') {
-                this.pill.add_style_class_name('touchup-navbar__pill--dark')
-            } else {
-                this.pill.remove_style_class_name('touchup-navbar__pill--dark')
-            }
+            this.findBestPillBrightness().then(brightness => {
+                // Avoid doing anything in case the callback has been stopped during the time
+                // `findBestPillBrightness` was running:
+                if (!this.styleClassUpdateInterval.enabled) return;
+
+                if (brightness == 'dark') {
+                    this.pill.add_style_class_name('touchup-navbar__pill--dark')
+                } else {
+                    this.pill.remove_style_class_name('touchup-navbar__pill--dark')
+                }
+            });
         }
     }
 

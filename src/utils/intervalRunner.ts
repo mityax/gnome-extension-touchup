@@ -83,6 +83,10 @@ export class IntervalRunner {
         }
     }
 
+    get enabled(): boolean {
+        return this._timeoutId !== null;
+    }
+
     /**
      * Run the callback once after the given delay (unless `stop()` is called before that)
      */
