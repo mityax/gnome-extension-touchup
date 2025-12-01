@@ -42,7 +42,11 @@ export class NavigationBarFeature extends ExtensionFeature {
         // Disable the OSK bottom drag action from the shell:
         let oskAction = global.stage.get_action('OSK show bottom drag');
         if (oskAction) {
-            this._disableOskActionPatch = this.pm.setProperty(oskAction, 'enabled', false);
+            // this._disableOskActionPatch = this.pm.setProperty(oskAction, 'enabled', false);
+            this._disableOskActionPatch = this.pm.patch(() => {
+                global.stage.remove_action(oskAction);
+                return () => global.stage.add_action(oskAction);
+            });
         } else {
             logger.warn("Built-in OSK edge drag gesture could not be found and has thus not been disabled.")
         }
