@@ -50,7 +50,7 @@ fi
 
 # Find newest .zip in $distDir
 shopt -s nullglob
-zipFiles=("$distDir"/*.zip)
+zipFiles=($(ls -t "$distDir"/*.zip 2>/dev/null))
 [[ ${#zipFiles[@]} -gt 0 ]] || die "Extension zip file not present in $distDir"
 zipFile="${zipFiles[0]}"
 
