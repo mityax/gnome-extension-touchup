@@ -24,6 +24,7 @@ WATCH=0
 BUILD=0
 HEADLESS=0
 VERBOSE=0
+GDB=""
 forward_args=()
 
 for arg in "$@"; do
@@ -39,6 +40,9 @@ for arg in "$@"; do
       ;;
     --verbose)
       VERBOSE=1
+      ;;
+    --debug)
+      GDB="gdb --args"
       ;;
     *)
       forward_args+=("$arg")
@@ -97,9 +101,9 @@ shell_args+=( --wayland )
 
 if (( VERBOSE )); then
   echo "gnome-shell ${shell_args[*]} ${forward_args[*]}"
-  env "${shell_env[@]}" gnome-shell "${shell_args[@]}" "${forward_args[@]}" &
+  env "${shell_env[@]}" $GDB gnome-shell "${shell_args[@]}" "${forward_args[@]}" &
 else
-  env "${shell_env[@]}" gnome-shell "${shell_args[@]}" "${forward_args[@]}" 2> >(grep -i -P --color 'touchup|Gjs-CRITICAL' 1>&2) &
+  env "${shell_env[@]}" $GDB gnome-shell "${shell_args[@]}" "${forward_args[@]}" 2> >(grep -i -P --color 'touchup|Gjs-CRITICAL' 1>&2) &
 fi
 
 SHELL_PID=$!
