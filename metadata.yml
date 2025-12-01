@@ -1,6 +1,6 @@
 # Human-facing version names for release and debug builds:
-version: &version 1.3.1
-version-debug: &version-debug 1.3.1.debug
+version: &version 1.3.2
+version-debug: &version-debug 1.3.2.debug
 
 # The description that appears on EGO (extensions.gnome.org) and inside applications such
 # as "Extensions" or "Extension Manager":
