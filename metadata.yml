@@ -8,7 +8,7 @@ description: &description |-
   Enhances various aspects of the GNOME experience when using a touch device.
 
   Current features:
-    - Navigation bar (gestures and buttons mode), as knwon from Android
+    - Navigation bar (gestures and buttons mode), as known from Android
     - Touch gestures for notifications (dismiss, collapse, expand)
     - Make the notification area touch-scrollable
     - Onscreen Keyboard: key popups, extended keys, swipe to close.

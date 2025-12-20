@@ -364,7 +364,7 @@ export class PatchManager {
 
 export class Patch {
     readonly debugName: string | null;
-    private readonly _enableCallback: (...args: any) => any;
+    private readonly _enableCallback: PatchFunc;
     private _disableCallback?: (...args: any) => any;
     private _isEnabled: boolean = false;
 

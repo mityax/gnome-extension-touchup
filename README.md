@@ -45,6 +45,9 @@ very frequently – you can help speed up progress by [donating](#support).
    - [x] "Extended" keys (make padding between keys reactive)
    - [ ] Compatibility with the "GJS OSK" extension (?)
    - [x] Swipe-close keyboard
+   - [ ] Single-tap locale button or swipe space bar to switch input methods
+   - [ ] Show a quick paste action in suggestion bar after having copied 
+     something to the clipboard
  - [ ] Virtual Touchpad (use device as touchpad when connected to a
    second monitor) \[WIP]
  - [x] Floating temporary screen rotation button when auto-rotation
@@ -62,6 +65,7 @@ very frequently – you can help speed up progress by [donating](#support).
  - [ ] Option to display individual windows instead of workspaces when navigating
    using gesture navigation bar
  - [ ] Run arbitrary commands on touch-mode change
+ - [ ] Double-tap top panel, lockscreen or desktop background to sleep
 
 Each of these features can be enabled/disabled individually and most can be 
 further customized in the extension settings.
