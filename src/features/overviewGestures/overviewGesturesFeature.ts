@@ -13,6 +13,7 @@ import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/
 import {Delay} from "$src/utils/delay";
 import {oneOf} from "$src/utils/utils";
 import {logger} from "$src/utils/logging";
+import {Ref} from "$src/utils/ui/widgets";
 import PanAxis = Clutter.PanAxis;
 
 
@@ -119,7 +120,8 @@ export class OverviewGesturesFeature extends ExtensionFeature {
 
             this.pm.patch(() => {
                 windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
-                return () => windowPreview.remove_action(gesture);
+                const ref = new Ref(windowPreview);  // use a ref to automatically unset once destroyed
+                return () => ref.current?.remove_action(gesture);
             });
 
             const recognizer = new GestureRecognizer({
