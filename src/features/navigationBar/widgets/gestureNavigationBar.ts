@@ -16,6 +16,8 @@ import GObject from "gi://GObject";
 import Mtk from "gi://Mtk";
 import {logger} from "$src/utils/logging";
 import {settings} from "$src/settings";
+import GLib from "gi://GLib";
+import Cogl from "gi://Cogl";
 
 
 /**
@@ -141,111 +143,44 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     /**
      * Find the best pill brightness by analyzing what's on the screen behind the pill
      */
-    private async findBestPillBrightness(): Promise<'dark' | 'light'> {
-        try {
-            // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
-            //  that all have problems due to GJS/introspection limitations
-
-            const shooter = new Shell.Screenshot();
-            // @ts-ignore (typescript doesn't understand Gio._promisify(...) - see top of file)
-            // const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
-            // const wholeScreenTexture = content.get_texture();
-
-            // An area surrounding the pill to use for brightness analysis:
-            // const area = {
-            //     x: this.pill.x - 20 * this.scaleFactor,
-            //     y: this.y,
-            //     w: this.pill.width + 40 * this.scaleFactor,
-            //     h: this.height,
-            // };
-            // const verticalPadding = (area.h - this.pill.height) / 2;
-
-            // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
-            // const stream = Gio.MemoryOutputStream.new_resizable();
-            // // @ts-ignore (ts doesn't understand Gio._promisify())
-            // // noinspection JSVoidFunctionReturnValueUsed
-            // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
-            //     wholeScreenTexture, area.x, area.y, area.w, area.h,
-            //     this.scaleFactor, null, 0, 0, 1, stream
-            // );
-            // stream.close(null);
-            // //  -- memory leak is above this line --
-            // const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
-            //    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
-            //     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
-            // ]);
-            // const luminance = calculateLuminance(...avgColor);
-            // // Save pxibuf as png image to tempdir to inspect:
-            // // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
-
-            // Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
-            // try {
-            //     const ctx = Clutter.get_default_backend().get_cogl_context();
-            //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-            //     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
+    private findBestPillBrightness(): Promise<'dark' | 'light'> {
+        return new Promise<'dark' | 'light'>((resolve) => {
+            // Capture the pill's surrounding in a GLib idle task, to prevent it from running in bad scenarios.
             //
-            //     if (subtex) {
-            //         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
-            //         //const buf = new Uint8Array(size);
-            //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
-            //
-            //         logger.debug("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
-            //     } else {
-            //         logger.debug("Subtex is null");
-            //     }
-            // } catch (e) {
-            //     logger.debug("Error in updatePillBrightness: ", e);
-            // }
+            // Example: While the screen is being rotated by the Shell, this can cause Shell crashes (e.g. because
+            // it could result in capturing a screenshot outside the screens dimensions). In JS, we don't have
+            // precise enough control over what runs when to ensure this in another way.
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                let rect = this.pill.get_transformed_extents();
 
-            // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
-            // const ctx = Clutter.get_default_backend().get_cogl_context();
-            // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-            // logger.debug("subtex: ", subtex);
-            // if (subtex) {
-            //     /*(global.stage as Clutter.Stage).paint_to_buffer(
-            //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-            //         1,
-            //         buf,
-            //         0,
-            //         PixelFormat.ARGB_8888,
-            //         PaintFlag.NO_CURSORS,
-            //     );*/
-            //     /*
-            //     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
-            //     const fb = Cogl.Offscreen.new_with_texture(tex);
-            //     global.stage.paint_to_framebuffer(
-            //         fb,
-            //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-            //         1,
-            //         PaintFlag.NO_CURSORS,
-            //     );
-            //     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
-            //     */
-            // }
+                const shooter = new Shell.Screenshot();
 
-            // Individual pixel attempt:
-            let rect = this.pill.get_transformed_extents();
+                Promise
+                    .all([
+                        // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
+                        //  that all have problems due to GJS/introspection limitations
+                        // Notice 1: See the bottom of this file for a history of other attempts
+                        // Notice 2: Fetching multiple pixel colors this way concurrently has very bad performance
+                        shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
+                        // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+                    ])
+                    // @ts-ignore
+                    .then((results: [Cogl.Color, any][]) => {
+                        const colors = results.map(c => c[0]);
 
-            // @ts-ignore
-            let colors: Cogl.Color[] = (await Promise.all([
-                // We only use one pixel as doing this with multiple pixels appears to have very bad
-                // performance (screen lags, visible e.g. when moving a window):
-                shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
-                // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
-                // @ts-ignore
-            ])).map(c => c[0]);
-            // Calculate the luminance of the average RGB values:
-            let luminance = calculateLuminance(
-                colors.reduce((a, b) => a + b.red, 0) / colors.length,
-                colors.reduce((a, b) => a + b.green, 0) / colors.length,
-                colors.reduce((a, b) => a + b.blue, 0) / colors.length
-            );
+                        // Calculate the luminance of the average RGB values:
+                        let luminance = calculateLuminance(
+                            colors.reduce((a, b) => a + b.red, 0) / colors.length,
+                            colors.reduce((a, b) => a + b.green, 0) / colors.length,
+                            colors.reduce((a, b) => a + b.blue, 0) / colors.length
+                        );
 
-            return luminance > 0.5 ? 'dark' : 'light';
-        } catch (e) {
-            logger.error("Exception during `findBestPillBrightness` (falling back to 'dark' brightness): ", e);
-            return 'dark';
-        }
+                        resolve(luminance > 0.5 ? 'dark' : 'light');
+                    });
+
+                return GLib.SOURCE_REMOVE;
+            });
+        });
     }
 
     private _updateStyleClassIntervalEnabled() {
@@ -496,25 +431,82 @@ class _EventPassthroughActor extends Widgets.Bin {
 }
 
 
-// Note: these are potentially needed for some of the approaches in `updatePillBrightness`, should
-// they work one day:
+
+// ==== Previous attempts to calculate pill surrounding brightness ===
+// const shooter = new Shell.Screenshot();
+
+// @ts-ignore (TS doesn't understand Gio._promisify(...) - see top of file)
+// const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
+// const wholeScreenTexture = content.get_texture();
+
+// An area surrounding the pill to use for brightness analysis:
+// const area = {
+//     x: this.pill.x - 20 * this.scaleFactor,
+//     y: this.y,
+//     w: this.pill.width + 40 * this.scaleFactor,
+//     h: this.height,
+// };
+// const verticalPadding = (area.h - this.pill.height) / 2;
+
+// High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
+// const stream = Gio.MemoryOutputStream.new_resizable();
+// // @ts-ignore (ts doesn't understand Gio._promisify())
+// // noinspection JSVoidFunctionReturnValueUsed
+// const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
+//     wholeScreenTexture, area.x, area.y, area.w, area.h,
+//     this.scaleFactor, null, 0, 0, 1, stream
+// );
+// stream.close(null);
+// //  -- memory leak is above this line --
+// const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
+//    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
+//     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
+// ]);
+// const luminance = calculateLuminance(...avgColor);
+// // Save pxibuf as png image to tempdir to inspect:
+// // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
+
+// Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
+// try {
+//     const ctx = Clutter.get_default_backend().get_cogl_context();
+//     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+//     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
 //
-//Gio._promisify(Shell.Screenshot.prototype, 'screenshot_stage_to_content');
-//Gio._promisify(Shell.Screenshot.prototype, 'pick_color');
+//     if (subtex) {
+//         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
+//         //const buf = new Uint8Array(size);
+//         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
 //
-// if (typeof Cairo.format_stride_for_width === 'undefined') {
-//     // Polyfill since the GJS bindings of Cairo are missing `format_stride_width`
-//     Cairo.format_stride_for_width = (w: number, bpp: number = 32) => {  // bpp for Cairo.Format.ARGB32 (see https://github.com/ImageMagick/cairo/blob/main/src/cairo-image-surface.c#L741)
-//         // Translated from original C-Code (https://github.com/ImageMagick/cairo/blob/main/src/cairoint.h#L1570):
-//         //
-//         // #define CAIRO_STRIDE_ALIGNMENT (sizeof (uint32_t))
-//         // #define CAIRO_STRIDE_FOR_WIDTH_BPP(w,bpp) \
-//         //    ((((bpp)*(w)+7)/8 + CAIRO_STRIDE_ALIGNMENT-1) & -CAIRO_STRIDE_ALIGNMENT)
-//
-//         const CAIRO_STRIDE_ALIGNMENT = Uint32Array.BYTES_PER_ELEMENT || 4  // sizeof(uint32_t) is 4 bytes in most systems
-//         return (((bpp * w + 7) / 8 + CAIRO_STRIDE_ALIGNMENT - 1) & -CAIRO_STRIDE_ALIGNMENT);
+//         logger.debug("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+//     } else {
+//         logger.debug("Subtex is null");
 //     }
+// } catch (e) {
+//     logger.debug("Error in updatePillBrightness: ", e);
 // }
-//
 
-
+// Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
+// const ctx = Clutter.get_default_backend().get_cogl_context();
+// const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+// logger.debug("subtex: ", subtex);
+// if (subtex) {
+//     /*(global.stage as Clutter.Stage).paint_to_buffer(
+//         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+//         1,
+//         buf,
+//         0,
+//         PixelFormat.ARGB_8888,
+//         PaintFlag.NO_CURSORS,
+//     );*/
+//     /*
+//     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
+//     const fb = Cogl.Offscreen.new_with_texture(tex);
+//     global.stage.paint_to_framebuffer(
+//         fb,
+//         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+//         1,
+//         PaintFlag.NO_CURSORS,
+//     );
+//     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
+//     */
+// }
