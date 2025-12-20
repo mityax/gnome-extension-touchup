@@ -10,15 +10,16 @@ export default class WindowPositionTracker {
     private _signalIds: Map<GObject.Object, number[]> = new Map();
     private _updateDelay?: CancellablePromise<boolean | void>;
     private readonly callback: (windows: Meta.Window[]) => void;
+    private _updateLock = false;
 
     constructor(callback: (windows: Meta.Window[]) => void) {
         this.callback = callback;
 
         this._signalIds.set(Main.overview, [
             Main.overview.connect('showing', this._update.bind(this)),
-            Main.overview.connect('hiding', this._update.bind(this)),
-            Main.overview.connect('shown', this._update.bind(this)),
-            Main.overview.connect('hidden', this._update.bind(this)),
+            Main.overview.connect('hiding',  this._update.bind(this)),
+            Main.overview.connect('shown',   this._update.bind(this)),
+            Main.overview.connect('hidden',  this._update.bind(this)),
         ]);
 
         this._signalIds.set(Main.sessionMode, [
@@ -34,9 +35,9 @@ export default class WindowPositionTracker {
             global.windowGroup.connect('child-removed', this._onWindowActorRemoved.bind(this))
         ]);
 
-        // Use a delayed version of _updateTransparent to let the shell catch up
+        // Use a delayed version of _update to let the shell catch up
         this._signalIds.set(global.windowManager, [
-            global.windowManager.connect('switch-workspace', this._updateDelayed.bind(this))
+            global.windowManager.connect('switch-workspace', this._delayedUpdate.bind(this))
         ]);
 
         this._update();
@@ -44,8 +45,8 @@ export default class WindowPositionTracker {
 
     _onWindowActorAdded(container: Clutter.Actor, metaWindowActor: Meta.WindowActor) {
         this._signalIds.set(metaWindowActor, [
-            metaWindowActor.connect('notify::allocation', this._update.bind(this)),
-            metaWindowActor.connect('notify::visible', this._update.bind(this))
+            metaWindowActor.connect('notify::allocation', () => this._update()),
+            metaWindowActor.connect('notify::visible', () => this._update())
         ]);
     }
 
@@ -58,25 +59,34 @@ export default class WindowPositionTracker {
     }
 
     _update() {
-        if (!Main.layoutManager.primaryMonitor) {
-            return;
+        // Prevent concurrent runs of this function as the Shell will crash (for certain window types,
+        // e.g. Fedora Media Writer):
+        if (this._updateLock) return;
+        this._updateLock = true;
+
+        try {
+            if (!Main.layoutManager.primaryMonitor) {
+                return;
+            }
+
+            // Get all the windows in the active workspace that are in the primary monitor and visible.
+            const workspaceManager = global.workspaceManager;
+            const activeWorkspace = workspaceManager.get_active_workspace();
+            const windows = activeWorkspace.list_windows().filter((metaWindow: Meta.Window) => {
+                return metaWindow.is_on_primary_monitor()
+                    && metaWindow.showing_on_its_workspace()
+                    && !metaWindow.is_hidden()
+                    && metaWindow.get_window_type() !== Meta.WindowType.DESKTOP
+                    && !metaWindow.skipTaskbar;
+            });
+
+            this.callback(windows);
+        } finally {
+            this._updateLock = false;
         }
-
-        // Get all the windows in the active workspace that are in the primary monitor and visible.
-        const workspaceManager = global.workspaceManager;
-        const activeWorkspace = workspaceManager.get_active_workspace();
-        const windows = activeWorkspace.list_windows().filter((metaWindow: Meta.Window) => {
-            return metaWindow.is_on_primary_monitor()
-                && metaWindow.showing_on_its_workspace()
-                && !metaWindow.is_hidden()
-                && metaWindow.get_window_type() !== Meta.WindowType.DESKTOP
-                && !metaWindow.skipTaskbar;
-        });
-
-        this.callback(windows);
     }
 
-    _updateDelayed() {
+    _delayedUpdate() {
         this._updateDelay = Delay.ms(100).then(() => {
             this._update();
         });
