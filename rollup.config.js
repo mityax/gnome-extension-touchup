@@ -29,7 +29,7 @@ const outDir = 'dist/output'
 /**
  * Whether to create a debug or release build
  */
-const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MODE);
+const IS_DEBUG_MODE = !['yes', 'y', '1', 'true'].includes(process.env.RELEASE_MODE?.toLowerCase());
 
 
 /**
@@ -41,13 +41,13 @@ const IS_WATCH_MODE = !!process.env.ROLLUP_WATCH || process.argv.includes('-w') 
 /**
  * Whether to preserve modules or bundle all JS
  */
-const PRESERVE_MODULES = !IS_WATCH_MODE && process.env.BUNDLE_JS !== 'true';
+const PRESERVE_MODULES = !IS_WATCH_MODE && !['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHECK?.toLowerCase());
 
 
 /**
  * Whether to skip type checking during build, resulting in a much faster build time.
  */
-const DISABLE_CHECK = ['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHECK);
+const DISABLE_CHECK = ['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHECK?.toLowerCase());
 
 
 /**
