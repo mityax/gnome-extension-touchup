@@ -151,30 +151,18 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             // it could result in capturing a screenshot outside the screens dimensions). In JS, we don't have
             // precise enough control over what runs when to ensure this in another way.
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                if (!this.styleClassUpdateInterval.enabled)
+                    return GLib.SOURCE_REMOVE;
+
                 let rect = this.pill.get_transformed_extents();
 
-                const shooter = new Shell.Screenshot();
-
-                Promise
-                    .all([
-                        // FIXME: This relies on the color of a single pixel right now, see below for several other attempts
-                        //  that all have problems due to GJS/introspection limitations
-                        // Notice 1: See the bottom of this file for a history of other attempts
-                        // Notice 2: Fetching multiple pixel colors this way concurrently has very bad performance
-                        shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
-                        // shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
-                    ])
-                    // @ts-ignore
-                    .then((results: [Cogl.Color, any][]) => {
-                        const colors = results.map(c => c[0]);
-
-                        // Calculate the luminance of the average RGB values:
-                        let luminance = calculateLuminance(
-                            colors.reduce((a, b) => a + b.red, 0) / colors.length,
-                            colors.reduce((a, b) => a + b.green, 0) / colors.length,
-                            colors.reduce((a, b) => a + b.blue, 0) / colors.length
-                        );
-
+                // Get the color at one pixel centered above the navigation bar using Shell.Screenshot:
+                // Notice: See the bottom of this file for other (non-working) approaches.
+                new Shell.Screenshot()
+                    .pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2)
+                    .then((res) => {
+                        const color = (res as unknown as [Cogl.Color, any])[0];
+                        const luminance = calculateLuminance(color.red, color.green, color.blue);
                         resolve(luminance > 0.5 ? 'dark' : 'light');
                     });
 
