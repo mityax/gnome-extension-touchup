@@ -57,7 +57,9 @@ jobs:
           ZIPFILES=("$distDir"/*.zip)
           [[ ${#ZIPFILES[@]} -gt 0 ]] || { echo "zip file not present in $distDir"; exit 1; }
           ZIPFILE="${ZIPFILES[0]}"
+          ZIPFILE_BASENAME=$(basename "$ZIPFILE")
           echo "ZIPFILE=$ZIPFILE" >> $GITHUB_ENV
+          echo "ZIPFILE_BASENAME=$ZIPFILE_BASENAME" >> $GITHUB_ENV
 
       # Upload zip as an artifact
       - name: Upload build artifact
@@ -84,13 +86,13 @@ jobs:
         with:
           tag_name: v${{ env.VERSION }}
           name: v${{ env.VERSION }}
-          body: |-
-            To install TouchUp v${{ env.VERSION }}, either use the official
+          body: >-
+            To install **TouchUp v${{ env.VERSION }}**, either use the official
             [GNOME Extensions](https://extensions.gnome.org/extension/8102/touchup/) website or download the build 
             below and install it using:
             
             ```bash
-            gnome-extensions install -f ${{ env.ZIPFILE }}
+            gnome-extensions install -f ${{ env.ZIPFILE_BASENAME }}
             ```
           draft: false
           prerelease: false
