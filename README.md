@@ -66,6 +66,7 @@ very frequently – you can help speed up progress by [donating](#support).
    using gesture navigation bar
  - [ ] Run arbitrary commands on touch-mode change
  - [ ] Double-tap top panel, lockscreen or desktop background to sleep
+ - [ ] Hide window close buttons in touch mode
 
 Each of these features can be enabled/disabled individually and most can be 
 further customized in the extension settings.
