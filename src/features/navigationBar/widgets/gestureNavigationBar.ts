@@ -431,82 +431,103 @@ class _EventPassthroughActor extends Widgets.Bin {
 }
 
 
+DEBUG:
+    // ==== Previous attempts to calculate pill surrounding brightness ===
+    // const shooter = new Shell.Screenshot();
 
-// ==== Previous attempts to calculate pill surrounding brightness ===
-// const shooter = new Shell.Screenshot();
+    // @ts-ignore (TS doesn't understand Gio._promisify(...) - see top of file)
+    // const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
+    // const wholeScreenTexture = content.get_texture();
 
-// @ts-ignore (TS doesn't understand Gio._promisify(...) - see top of file)
-// const [content]: [Clutter.TextureContent] = await shooter.screenshot_stage_to_content();
-// const wholeScreenTexture = content.get_texture();
+    // An area surrounding the pill to use for brightness analysis:
+    // const area = {
+    //     x: this.pill.x - 20 * this.scaleFactor,
+    //     y: this.y,
+    //     w: this.pill.width + 40 * this.scaleFactor,
+    //     h: this.height,
+    // };
+    // const verticalPadding = (area.h - this.pill.height) / 2;
 
-// An area surrounding the pill to use for brightness analysis:
-// const area = {
-//     x: this.pill.x - 20 * this.scaleFactor,
-//     y: this.y,
-//     w: this.pill.width + 40 * this.scaleFactor,
-//     h: this.height,
-// };
-// const verticalPadding = (area.h - this.pill.height) / 2;
+    // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
+    // const stream = Gio.MemoryOutputStream.new_resizable();
+    // // @ts-ignore (ts doesn't understand Gio._promisify())
+    // // noinspection JSVoidFunctionReturnValueUsed
+    // const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
+    //     wholeScreenTexture, area.x, area.y, area.w, area.h,
+    //     this.scaleFactor, null, 0, 0, 1, stream
+    // );
+    // stream.close(null);
+    // //  -- memory leak is above this line --
+    // const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
+    //    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
+    //     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
+    // ]);
+    // const luminance = calculateLuminance(...avgColor);
+    // // Save pxibuf as png image to tempdir to inspect:
+    // // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
 
-// High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
-// const stream = Gio.MemoryOutputStream.new_resizable();
-// // @ts-ignore (ts doesn't understand Gio._promisify())
-// // noinspection JSVoidFunctionReturnValueUsed
-// const pixbuf: GdkPixbuf.Pixbuf = await Shell.Screenshot.composite_to_stream(  // takes around 4-14ms, most of the time 7ms
-//     wholeScreenTexture, area.x, area.y, area.w, area.h,
-//     this.scaleFactor, null, 0, 0, 1, stream
-// );
-// stream.close(null);
-// //  -- memory leak is above this line --
-// const avgColor = calculateAverageColor(pixbuf.get_pixels(), pixbuf.width, [
-//    {x: 0, y: 0, width: pixbuf.width, height: verticalPadding},  // above pill
-//     {x: 0, y: verticalPadding + this.pill.height, width: pixbuf.width, height: verticalPadding}  // below pill
-// ]);
-// const luminance = calculateLuminance(...avgColor);
-// // Save pxibuf as png image to tempdir to inspect:
-// // pixbuf.savev(`/tmp/pxibuf-1-${avgColor}-${luminance}.png`, 'png', null, null);
+    // Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
+    // try {
+    //     const ctx = Clutter.get_default_backend().get_cogl_context();
+    //     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+    //     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
+    //
+    //     if (subtex) {
+    //         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
+    //         //const buf = new Uint8Array(size);
+    //         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
+    //
+    //         logger.debug("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
+    //     } else {
+    //         logger.debug("Subtex is null");
+    //     }
+    // } catch (e) {
+    //     logger.debug("Error in updatePillBrightness: ", e);
+    // }
 
-// Low-level api attempt (not working; missing introspection annotations for `Cogl.SubTexture.get_data`):
-// try {
-//     const ctx = Clutter.get_default_backend().get_cogl_context();
-//     const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-//     //const surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, subtex.get_width(), subtex.get_height());
-//
-//     if (subtex) {
-//         //const size = subtex.get_data(PixelFormat.ARGB_8888, 0, null);
-//         //const buf = new Uint8Array(size);
-//         let [buf, size] = subtex.get_data(PixelFormat.ARGB_8888, 0);
-//
-//         logger.debug("Buf length: ", buf.length, " - max: ", Math.max(...buf.values()));
-//     } else {
-//         logger.debug("Subtex is null");
-//     }
-// } catch (e) {
-//     logger.debug("Error in updatePillBrightness: ", e);
-// }
+    // Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
+    // const ctx = Clutter.get_default_backend().get_cogl_context();
+    // const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
+    // logger.debug("subtex: ", subtex);
+    // if (subtex) {
+    //     /*(global.stage as Clutter.Stage).paint_to_buffer(
+    //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+    //         1,
+    //         buf,
+    //         0,
+    //         PixelFormat.ARGB_8888,
+    //         PaintFlag.NO_CURSORS,
+    //     );*/
+    //     /*
+    //     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
+    //     const fb = Cogl.Offscreen.new_with_texture(tex);
+    //     global.stage.paint_to_framebuffer(
+    //         fb,
+    //         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
+    //         1,
+    //         PaintFlag.NO_CURSORS,
+    //     );
+    //     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
+    //     */
+    // }
+    //
+    //
+    //
+    // Individual pixel approach but multiplied:
+    // final results = await Promise.all([
+    //     // Notice: Fetching multiple pixel colors this way concurrently has very bad performance:
+    //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2),
+    //     shooter.pick_color(rect.get_x() + rect.get_width() * 0.4, rect.get_y() + rect.get_height() + 3),
+    // ]);
+    // const colors = results.map(c => c[0]);
+    //
+    // // Calculate the luminance of the average RGB values:
+    // let luminance = calculateLuminance(
+    //     colors.reduce((a, b) => a + b.red, 0) / colors.length,
+    //     colors.reduce((a, b) => a + b.green, 0) / colors.length,
+    //     colors.reduce((a, b) => a + b.blue, 0) / colors.length
+    // );
+    //
+    // return luminance > 0.5 ? 'dark' : 'light';
 
-// Mid-level attempt (not working; missing introspection annotations for `Cogl.Framebuffer.read_pixels`):
-// const ctx = Clutter.get_default_backend().get_cogl_context();
-// const subtex = Cogl.SubTexture.new(ctx, wholeScreenTexture, area.x, area.y, area.w, area.h);
-// logger.debug("subtex: ", subtex);
-// if (subtex) {
-//     /*(global.stage as Clutter.Stage).paint_to_buffer(
-//         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-//         1,
-//         buf,
-//         0,
-//         PixelFormat.ARGB_8888,
-//         PaintFlag.NO_CURSORS,
-//     );*/
-//     /*
-//     const tex = Cogl.Texture2D.new_with_size(ctx, area.w, area.h);
-//     const fb = Cogl.Offscreen.new_with_texture(tex);
-//     global.stage.paint_to_framebuffer(
-//         fb,
-//         new Mtk.Rectangle({x: area.x, y: area.y, width: area.w, height: area.h}),
-//         1,
-//         PaintFlag.NO_CURSORS,
-//     );
-//     const buffer: Uint8Array = fb.read_pixels(0, 0, area.w, area.h, PixelFormat.ARGB_8888);
-//     */
-// }
+    void 0;
