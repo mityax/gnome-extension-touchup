@@ -14,7 +14,7 @@ import {Patch, PatchManager} from "$src/utils/patchManager";
 import {findActorBy} from "$src/utils/utils";
 import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureState} from "$src/utils/ui/gestureRecognizer";
 import Ref = Widgets.Ref;
 
 
@@ -93,17 +93,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
 
     private patchNotification(message: NotificationMessage, isTray: boolean) {
         return this.pm.patch(() => {
-            // Make message unreactive to prevent immediate notification activation on any event:
-            message.reactive = false;  // (this is necessary as message inherits from St.Button which conflicts with complex reactivity as we want it)
-            // Prevent the insensitive styling from being applied:
-            message.remove_style_pseudo_class('insensitive');
-
-            // Each message is wrapped by a single bin, which we use for reactivity:
-            const container = message.get_parent() as St.Bin;
-            container.reactive = true;
-            container.trackHover = true;
-
-            const notificationGroup = container.get_parent() as NotificationMessageGroup;
+            const notificationGroup = message.get_parent()!.get_parent()! as NotificationMessageGroup;
 
             // This is updated in each call to `onMoveHorizontally` and tracks which actor to move: the
             // [notificationGroup] or the [message]:
@@ -111,17 +101,8 @@ export class NotificationGesturesFeature extends ExtensionFeature {
 
             // Track and recognize touch and mouse events:
             const gestureHelper = new SwipeGesturesHelper({
-                actor: container,
+                actor: message,
                 scrollView: !isTray ? this.calendarMessageList?._scrollView : undefined,
-                onHover: (isTouch) => {
-                    message.add_style_pseudo_class('hover');
-
-                    // Expand the message when hovering with the pointer:
-                    if (isTray && !isTouch && !message.expanded) {
-                        message.expand(true);
-                    }
-                },
-                onHoverEnd: () => message.remove_style_pseudo_class('hover'),
                 onMoveHorizontally: (x) => {
                     horizontalMoveActor = notificationGroup.expanded || isTray ? message : notificationGroup;
                     if (message.canClose()) {
@@ -145,9 +126,8 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                         duration: 200,
                     })
                 },
-                onActivate: () =>
-                    // @ts-ignore
-                    message.notification.activate(),
+                // @ts-ignore
+                onActivate: () => message.notification.activate(),
                 onExpand: () => {
                     if (!message.expanded) {
                         message.expand(true);
@@ -185,19 +165,13 @@ export class NotificationGesturesFeature extends ExtensionFeature {
             // Use [Ref]s for the cleanup in order to skip cleanup on already
             // destroyed actors easily:
             let messageRef = new Ref(message);
-            let containerRef = new Ref(container);
 
             const undo = () => {
                 // Undo all the changes:
-                containerRef.apply(c => {
-                    gestureHelper.destroy();
-                    c.reactive = false;
-                    c.trackHover = false
-                });
                 messageRef.apply(m => {
                     m.translationX = 0;
-                    m.reactive = true;
                 });
+                gestureHelper.destroy();
             };
 
             message.connect('destroy', () => undo());
@@ -222,8 +196,6 @@ export class NotificationGesturesFeature extends ExtensionFeature {
  */
 class SwipeGesturesHelper {
     // Mid-gesture callbacks:
-    private readonly onHover?: (isTouch: boolean) => void;
-    private readonly onHoverEnd?: () => void;
     private readonly onMoveHorizontally?: (x: number) => void;
     private readonly onMoveVertically?: (y: number) => void;
     private readonly onScrollScrollView?: (deltaY: number) => void;
@@ -235,10 +207,11 @@ class SwipeGesturesHelper {
     private readonly onCollapse?: () => SwipeGesturesHelperCallbackFinishedResult;
     private readonly onEaseBackPosition?: () => void;
 
-    private readonly actor: Clutter.Actor;
+    private readonly actor: St.Widget;
     private readonly scrollView?: St.ScrollView;
+    private readonly gesture: Clutter.PanGesture;
     readonly recognizer: GestureRecognizer;
-    private _signalIds: number[];
+    private signalIds: number[];
 
     /**
      * Whether the gesture currently being performed is a scroll gesture. This is set to `true` when the
@@ -248,12 +221,10 @@ class SwipeGesturesHelper {
 
 
     constructor(props: {
-        actor: Clutter.Actor | St.Widget,
+        actor: St.Widget,
         scrollView?: St.ScrollView,
 
         // Mid-gesture callbacks:
-        onHover?: (isTouch: boolean) => void,
-        onHoverEnd?: () => void,
         onMoveHorizontally?: (x: number) => void,
         onMoveVertically?: (y: number) => void,
         onScrollScrollView?: (deltaY: number) => void,
@@ -268,8 +239,6 @@ class SwipeGesturesHelper {
         this.actor = props.actor;
         this.scrollView = props.scrollView;
 
-        this.onHover = props.onHover;
-        this.onHoverEnd = props.onHoverEnd;
         this.onMoveHorizontally = props.onMoveHorizontally;
         this.onMoveVertically = props.onMoveVertically;
         this.onScrollScrollView = props.onScrollScrollView;
@@ -281,66 +250,65 @@ class SwipeGesturesHelper {
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
         // Track and recognize touch and mouse events:
-        this.recognizer = new GestureRecognizer();
-
-        // Setup event handlers:
-        this._signalIds = [
-            this.actor.connect('touch-event', this._onEvent.bind(this)),
-            this.actor.connect('button-press-event', this._onEvent.bind(this)),
-            this.actor.connect('button-release-event', this._onEvent.bind(this)),
-            this.actor.connect('notify::hover', this._updateHover.bind(this)),
-        ];
-
-        // To not disconnect after destruction, clear [_signalIds] when the actor is destroyed:
-        this.actor.connect('destroy', () => this._signalIds = []);
-    }
-
-    private _onEvent(_: Clutter.Actor, e: Clutter.Event) {
-        const state = this.recognizer.push(GestureRecognizerEvent.fromClutterEvent(e));
-
-        if (state.hasGestureJustStarted) {
-            this._updateHover();
-        }
-
-        if (state.isDuringGesture) {
-            if (state.firstMotionDirection?.axis === 'horizontal') {
-                this.onMoveHorizontally?.(state.totalMotionDelta.x);
-            } else if (state.firstMotionDirection?.axis == 'vertical') {
-                // Scroll the message list, if possible:
-                const dy = state.currentMotionDelta.y;
-                if (!state.startsWithHold && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
-                    this.onScrollScrollView?.(dy);
-                    if (state.hasMovement) {
-                        this.isScrollGesture = true;
-                    }
-                } else {
-                    this.onMoveVertically?.(state.totalMotionDelta.y)
-                }
+        this.recognizer = new GestureRecognizer({
+            onGestureProgress: state => this._onGestureProgress(state),
+            onGestureCompleted: () => {
+                this._executeFinishedGesture();
+                this.isScrollGesture = false;
             }
-        }
+        });
 
-        if (state.hasGestureJustEnded) {
-            this._onGestureFinished();
-            this._updateHover();
-            this.isScrollGesture = false;
-        }
+        this.gesture = new Clutter.PanGesture({
+            max_n_points: 1
+        });
+        this.gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
+        this.gesture.connect('end', () => this.recognizer.push(Clutter.get_current_event()));
+        this.gesture.connect('cancel', () => this.recognizer.push(Clutter.get_current_event()));
+        this.actor.add_action(this.gesture);
+
+        // Ensure the notification remains its "active" background color while dragged.
+        //
+        // This is needed since the "active" pseudo class is removed by St already when the pointer/finger begins to
+        // move, not when it is actually lifted/released from the notification. This would cause a brief
+        // flickering of the active state background color when interacting with a notification via swipe gesture.
+        this.signalIds = [
+            this.actor.connect("touch-event", (_, e: Clutter.Event) => {
+                if (e.type() === Clutter.EventType.TOUCH_BEGIN)
+                    this.actor.add_style_class_name("touchup-notification--touched")
+                else if (e.type() === Clutter.EventType.TOUCH_END || e.type() === Clutter.EventType.TOUCH_CANCEL)
+                    this.actor.remove_style_class_name("touchup-notification--touched");
+            }),
+            this.actor.connect("notify::hover", () => {
+                if (!this.actor.hover)
+                    this.actor.remove_style_class_name("touchup-notification--touched");
+            }),
+            this.actor.connect("destroy", () => this.destroy()),
+        ];
     }
 
-    private _updateHover() {
-        if (this.recognizer.currentState.isDuringGesture || (this.actor instanceof St.Widget && this.actor.hover)) {
-            this.onHover?.(this.recognizer.currentState.isTouchGesture);
-        } else {
-            this.onHoverEnd?.();
+    private _onGestureProgress(state: GestureState) {
+        if (state.firstMotionDirection?.axis === 'horizontal') {
+            this.onMoveHorizontally?.(state.totalMotionDelta.x);
+        } else if (state.firstMotionDirection?.axis == 'vertical') {
+            // Scroll the message list, if possible:
+            const dy = state.currentMotionDelta.y;
+            if (!state.startsWithHold && this.canScrollScrollView(dy > 0 ? 'up' : 'down')) {
+                this.onScrollScrollView?.(dy);
+                if (state.hasMovement) {
+                    this.isScrollGesture = true;
+                }
+            } else {
+                this.onMoveVertically?.(state.totalMotionDelta.y)
+            }
         }
     }
 
     destroy() {
-        for (let signalId of this._signalIds) {
-            this.actor.disconnect(signalId);
-        }
+        this.signalIds.forEach((id) => this.actor.disconnect(id));
+        this.actor.remove_action(this.gesture);
     }
 
-    private _onGestureFinished() {
+    private _executeFinishedGesture() {
         let defaultShouldEaseBack = false;
         let res: SwipeGesturesHelperCallbackFinishedResult = undefined;
 
