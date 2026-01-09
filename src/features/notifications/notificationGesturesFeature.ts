@@ -207,7 +207,7 @@ class SwipeGesturesHelper {
     private readonly onCollapse?: () => SwipeGesturesHelperCallbackFinishedResult;
     private readonly onEaseBackPosition?: () => void;
 
-    private readonly actor: St.Widget;
+    private readonly actor: Ref<St.Widget>;
     private readonly scrollView?: St.ScrollView;
     private readonly gesture: Clutter.PanGesture;
     readonly recognizer: GestureRecognizer;
@@ -236,7 +236,7 @@ class SwipeGesturesHelper {
         onCollapse?: () => SwipeGesturesHelperCallbackFinishedResult,
         onEaseBackPosition?: () => void,
     }) {
-        this.actor = props.actor;
+        this.actor = new Ref(props.actor);
         this.scrollView = props.scrollView;
 
         this.onMoveHorizontally = props.onMoveHorizontally;
@@ -249,7 +249,7 @@ class SwipeGesturesHelper {
         this.onCollapse = props.onCollapse;
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
-        // Track and recognize touch and mouse events:
+        // Track and recognize touch events:
         this.recognizer = new GestureRecognizer({
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: () => {
@@ -264,7 +264,7 @@ class SwipeGesturesHelper {
         this.gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
         this.gesture.connect('end', () => this.recognizer.push(Clutter.get_current_event()));
         this.gesture.connect('cancel', () => this.recognizer.push(Clutter.get_current_event()));
-        this.actor.add_action(this.gesture);
+        props.actor.add_action(this.gesture);
 
         // Ensure the notification remains its "active" background color while dragged.
         //
@@ -272,17 +272,16 @@ class SwipeGesturesHelper {
         // move, not when it is actually lifted/released from the notification. This would cause a brief
         // flickering of the active state background color when interacting with a notification via swipe gesture.
         this.signalIds = [
-            this.actor.connect("touch-event", (_, e: Clutter.Event) => {
+            props.actor.connect("touch-event", (actor, e: Clutter.Event) => {
                 if (e.type() === Clutter.EventType.TOUCH_BEGIN)
-                    this.actor.add_style_class_name("touchup-notification--touched")
+                    actor.add_style_class_name("touchup-notification--touched")
                 else if (e.type() === Clutter.EventType.TOUCH_END || e.type() === Clutter.EventType.TOUCH_CANCEL)
-                    this.actor.remove_style_class_name("touchup-notification--touched");
+                    actor.remove_style_class_name("touchup-notification--touched");
             }),
-            this.actor.connect("notify::hover", () => {
-                if (!this.actor.hover)
-                    this.actor.remove_style_class_name("touchup-notification--touched");
+            props.actor.connect("notify::hover", (actor) => {
+                if (!actor.hover)
+                    actor.remove_style_class_name("touchup-notification--touched");
             }),
-            this.actor.connect("destroy", () => this.destroy()),
         ];
     }
 
@@ -304,8 +303,11 @@ class SwipeGesturesHelper {
     }
 
     destroy() {
-        this.signalIds.forEach((id) => this.actor.disconnect(id));
-        this.actor.remove_action(this.gesture);
+        this.actor.apply(actor => {
+            this.signalIds.forEach((id) => actor.disconnect(id));
+            actor.remove_action(this.gesture);
+            actor.remove_style_class_name("touchup-notification--touched");
+        })
     }
 
     private _executeFinishedGesture() {
@@ -361,7 +363,7 @@ class SwipeGesturesHelper {
     }
 
     private _defaultOnEaseBackPosition() {
-        this.easeBackPositionOf(this.actor);
+        this.easeBackPositionOf(this.actor.current!);
     }
 
     public easeBackPositionOf(actor: Clutter.Actor) {
