@@ -255,7 +255,11 @@ class SwipeGesturesHelper {
             onGestureCompleted: () => {
                 this._executeFinishedGesture();
                 this.isScrollGesture = false;
-            }
+            },
+            onGestureCanceled: () => {
+                this.onEaseBackPosition?.();
+                this.isScrollGesture = false;
+            },
         });
 
         this.gesture = new Clutter.PanGesture({
@@ -263,7 +267,7 @@ class SwipeGesturesHelper {
         });
         this.gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
         this.gesture.connect('end', () => this.recognizer.push(Clutter.get_current_event()));
-        this.gesture.connect('cancel', () => this.recognizer.push(Clutter.get_current_event()));
+        this.gesture.connect('cancel', () => this.recognizer.cancel());
         props.actor.add_action(this.gesture);
 
         // Ensure the notification remains its "active" background color while dragged.
@@ -314,7 +318,7 @@ class SwipeGesturesHelper {
         let defaultShouldEaseBack = false;
         let res: SwipeGesturesHelperCallbackFinishedResult = undefined;
 
-        if (this.recognizer.currentState.isTap || !this.recognizer.currentState.isTouchGesture) {
+        if (this.recognizer.currentState.isTap) {
             res = this.onActivate?.();
         } else {
             const lastMotion = this.recognizer.currentState.lastMotionDirection;

@@ -165,6 +165,12 @@ export class FloatingScreenRotateButtonFeature extends ExtensionFeature {
         const monitorConnector = (state.builtinMonitor ?? state.monitors[0]).connector;
         const monitorIndex = global.backend.get_monitor_manager().get_monitor_for_connector(monitorConnector);
 
+        // FIXME: This error occurs (sometimes) when connect to multiple monitors during login:
+        // Unhandled promise rejection. Stack trace of the failed promise:
+        //     onAccelerometerOrientationChanged@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/screenRotateUtils/floatingScreenRotateButtonFeature.js:94:44
+        //     initSensorProxy/<@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/screenRotateUtils/floatingScreenRotateButtonFeature.js:42:27
+        //     @resource:///org/gnome/shell/ui/init.js:21:20
+        // Nov 18 21:37:18 device gnome-shell[11960]: meta_display_get_monitor_geometry: assertion 'monitor >= 0 && monitor < n_logical_monitors' failed
         const geometry = global.display.get_monitor_geometry(monitorIndex);
         const transform = state.getLogicalMonitorFor(monitorConnector)!.transform;
         return {geometry, transform};

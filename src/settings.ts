@@ -109,11 +109,21 @@ export const settings = {
             ["workspace-previous", "workspace-next", "spacer", "apps", "overview", "back"]),
     },
 
-    overviewGestures: {
+    backgroundNavigationGestures: {
         /**
-         * Whether to enable the overview gestures feature or not.
+         * Whether to enable the desktop background navigation gestures feature or not.
          */
-        enabled: new BoolSetting('overview-gestures-enabled', true),
+        desktopBackgroundGesturesEnabled: new BoolSetting('desktop-background-gestures-enabled', true),
+
+        /**
+         * Whether to enable the overview background navigation gestures feature or not.
+         */
+        overviewBackgroundGesturesEnabled: new BoolSetting('overview-background-gestures-enabled', true),
+
+        /**
+         * Whether to enable the overview window preview swipe-up-to-close feature or not.
+         */
+        windowPreviewGesturesEnabled: new BoolSetting('window-preview-gestures-enabled', true),
     },
 
     osk: {

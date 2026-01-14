@@ -28,16 +28,26 @@ export class MiscPage extends Adw.PreferencesPage {
             ]
         }));
 
-        BETA: this.add(buildPreferencesGroup({
-            title: "Overview Gestures",
-            description: "Control overview and app list or close apps using intuitive swipe gestures " +
-                "on your desktop background and in the overview.",
+
+        this.add(buildPreferencesGroup({
+            title: "Desktop and Overview Gestures",
+            description: "Fine-tune which gestures you would like to use on desktop background and in the overview.",
             children: [
                 buildSwitchRow({
-                    title: "Enable Overview Gestures",
-                    subtitle: "Toggle to enable or disable the overview gestures feature",
-                    setting: settings.overviewGestures.enabled
-                })
+                    title: "Enable Desktop Background Gestures",
+                    subtitle: "Navigate by single-finger swiping on the desktop background",
+                    setting: settings.backgroundNavigationGestures.desktopBackgroundGesturesEnabled,
+                }),
+                buildSwitchRow({
+                    title: "Enable Overview Background Gestures",
+                    subtitle: "Navigate by single-finger swiping on the overview background",
+                    setting: settings.backgroundNavigationGestures.overviewBackgroundGesturesEnabled,
+                }),
+                buildSwitchRow({
+                    title: "Enable Swipe-Up-To-Close Windows",
+                    subtitle: "Close windows by swiping them up in the overview, long-press and drag to move",
+                    setting: settings.backgroundNavigationGestures.windowPreviewGesturesEnabled,
+                }),
             ]
         }));
 

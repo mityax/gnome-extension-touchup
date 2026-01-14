@@ -17,7 +17,7 @@ DEBUG: assert(MIN_MOTION_DIRECTION_DETECTION_DISTANCE <= MOVEMENT_THRESHOLD,
 export enum EventType {
     start = 's',
     motion = 'm',
-    end = 'e'
+    end = 'e',
 }
 
 export class GestureRecognizerEvent {
@@ -27,14 +27,19 @@ export class GestureRecognizerEvent {
     readonly timeUS: number;
     readonly type: EventType;
     readonly isPointerEvent: boolean;
+    readonly isCancelEvent: boolean;
 
-    constructor(props: {x: number, y: number, slot: number, time_us: number, type: EventType, isPointerEvent: boolean}) {
+    constructor(props: {
+        x: number, y: number, slot: number, time_us: number, type: EventType, isPointerEvent: boolean,
+        isCancelEvent: boolean
+    }) {
         this.x = props.x;
         this.y = props.y;
         this.slot = props.slot;
         this.timeUS = props.time_us;
         this.type = props.type;
         this.isPointerEvent = props.isPointerEvent;
+        this.isCancelEvent = props.isCancelEvent;
     }
 
     static fromClutterEvent(event: Clutter.Event) {
@@ -67,6 +72,7 @@ export class GestureRecognizerEvent {
             slot: isPointerEvent ? -1 : event.get_event_sequence().get_slot(),
             time_us: event.get_time_us(),
             isPointerEvent,
+            isCancelEvent: event.type() === Clutter.EventType.TOUCH_CANCEL,
         });
     }
 
@@ -127,6 +133,8 @@ export class GestureRecognizer extends EventEmitter<{
     'gesture-started': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
     'gesture-progress': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
     'gesture-completed': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
+    'gesture-canceled': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
+    'gesture-ended': [GestureState, GestureRecognizerEvent, Clutter.Event | null],
 }> {
     private _state: GestureState;
     private readonly _scaleFactor: number;
@@ -136,6 +144,8 @@ export class GestureRecognizer extends EventEmitter<{
         onGestureStarted?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
         onGestureProgress?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
         onGestureCompleted?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
+        onGestureCanceled?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
+        onGestureEnded?: (state: GestureState, event: GestureRecognizerEvent, rawEvent: Clutter.Event | null) => void,
     }) {
         super();
 
@@ -147,6 +157,8 @@ export class GestureRecognizer extends EventEmitter<{
         if (props?.onGestureStarted)   this.connect('gesture-started', props.onGestureStarted);
         if (props?.onGestureProgress)  this.connect('gesture-progress', props.onGestureProgress);
         if (props?.onGestureCompleted) this.connect('gesture-completed', props.onGestureCompleted);
+        if (props?.onGestureCanceled)  this.connect('gesture-canceled', props.onGestureCanceled);
+        if (props?.onGestureEnded)  this.connect('gesture-ended', props.onGestureEnded);
     }
 
     push(event: GestureRecognizerEvent | Clutter.Event): GestureState {
@@ -167,7 +179,8 @@ export class GestureRecognizer extends EventEmitter<{
             if (this._state.isDuringGesture) {
                 this.emit('gesture-progress', this._state, event, rawEvent);
             } else {
-                this.emit('gesture-completed', this._state, event, rawEvent);
+                this.emit(event.isCancelEvent ? 'gesture-canceled' : 'gesture-completed', this._state, event, rawEvent);
+                this.emit('gesture-ended', this._state, event, rawEvent);
             }
         }
 
@@ -176,6 +189,19 @@ export class GestureRecognizer extends EventEmitter<{
 
     get currentState(): GestureState {
         return this._state;
+    }
+
+    cancel() {
+        const lastEvent = this._state.events.at(-1);
+        this.push(new GestureRecognizerEvent({
+            type: EventType.end,
+            x: lastEvent?.x ?? -1,
+            y: lastEvent?.y ?? -1,
+            slot: lastEvent?.slot ?? -1,
+            time_us: Clutter.get_current_event_time(),
+            isPointerEvent: lastEvent?.isPointerEvent ?? false,
+            isCancelEvent: true,
+        }));
     }
 }
 
@@ -497,6 +523,13 @@ export class GestureState {
     }
 
     /**
+     * Returns true if there is at least one event present but the gesture is not yet completed.
+     */
+    get isDuringGesture(): boolean {
+        return this._events.length > 0 && !this.hasGestureJustEnded;
+    }
+
+    /**
      * Returns true if all event sequences (= all touch points or the mouse pointer) have ended.
      */
     get hasGestureJustEnded(): boolean {
@@ -509,10 +542,10 @@ export class GestureState {
     }
 
     /**
-     * Returns true if there is at least one event present but the gesture is not yet completed.
+     * Returns true if the gesture has been canceled.
      */
-    get isDuringGesture(): boolean {
-        return this._events.length > 0 && !this.hasGestureJustEnded;
+    get hasGestureBeenCanceled(): boolean {
+        return this._events.at(-1)?.isCancelEvent ?? false;
     }
 
     /**

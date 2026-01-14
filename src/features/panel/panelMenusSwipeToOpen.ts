@@ -14,7 +14,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                     currentMenu.menu.actor.show();
                 }
             },
-            onGestureCompleted: state => {
+            onGestureEnded: state => {
                 if (currentMenu?.menu) {
                     if (state.lastMotionDirection?.direction === 'up') {
                         currentMenu.menu.actor.ease({

@@ -57,7 +57,7 @@ export default abstract class ExtensionFeature {
         }
     }
 
-    protected getSubFeature<T extends ExtensionFeature>(type: { new (...args: any[]): T }): T | null {
+    getSubFeature<T extends ExtensionFeature>(type: { new (...args: any[]): T }): T | null {
         return this._subFeatures.find(f => f instanceof type) as T ?? null;
     }
 

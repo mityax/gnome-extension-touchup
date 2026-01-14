@@ -21,14 +21,14 @@ export default class TouchUpExtension extends Extension {
   features: ExtensionFeature[] = [];
 
   async enable() {
+    TouchUpExtension.instance = this;
+
     initLogger();
 
     logger.debug("*************************************************")
     logger.debug(`          Starting TouchUp v. ${this.metadata.version}          `)
     logger.debug("*************************************************")
     logger.debug()
-
-    TouchUpExtension.instance = this;
 
     // This is the root patch manager of which all other patch managers are descendents:
     this.pm = new PatchManager("root");
@@ -88,12 +88,11 @@ export default class TouchUpExtension extends Extension {
     );
 
     await this.defineFeature(
-      'overview-gestures',
+      'background-gestures',
       async pm => {
-        const m = (await import('$src/features/overviewGestures/overviewGesturesFeature'));
-        return new m.OverviewGesturesFeature(pm);
+        const m = (await import('$src/features/backgroundNavigationGestures/backgroundNavigationGesturesFeature'));
+        return new m.BackgroundNavigationGesturesFeature(pm);
       },
-      settings.overviewGestures.enabled,
     )
 
     await this.defineFeature(
@@ -225,11 +224,11 @@ export default class TouchUpExtension extends Extension {
     this.features.forEach(f => f.destroy());
     this.features = [];
 
-    TouchUpExtension.instance = undefined;
-
     logger.debug("TouchUp extension successfully unloaded.");
 
     uninitLogger();
+
+    TouchUpExtension.instance = undefined;
   }
 
   getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {

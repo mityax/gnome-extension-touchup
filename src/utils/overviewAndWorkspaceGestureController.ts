@@ -169,7 +169,7 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
     }
 
     protected _doCancel() {
-        Main.overview._gestureEnd({}, 300, this._cancelProgress);
+        Main.overview._gestureEnd(null, 300, this._cancelProgress);
     }
 
     get baseDist() {

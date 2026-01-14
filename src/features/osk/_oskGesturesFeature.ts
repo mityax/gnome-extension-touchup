@@ -35,7 +35,7 @@ export default class OSKGesturesFeature extends ExtensionFeature {
                     keyboard.gestureProgress(keyboard.height - state.totalMotionDelta.y);
                 }
             },
-            onGestureCompleted: state => {
+            onGestureEnded: state => {
                 if (
                     state.hasStrongMovement
                     && state.firstMotionDirection?.direction === 'down'

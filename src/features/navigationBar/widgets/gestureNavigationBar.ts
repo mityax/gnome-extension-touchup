@@ -241,6 +241,7 @@ class NavigationBarGestureManager {
         this._recognizer = new GestureRecognizer({
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureCompleted: state => this._onGestureCompleted(state),
+            onGestureCanceled: _ => this._onGestureCanceled(),
         });
 
         // Action that listens to appropriate events on the stage:
@@ -252,7 +253,7 @@ class NavigationBarGestureManager {
             this._shouldHandleSequence(e));
         this._gesture.connect('pan-update', () => this._recognizer.push(Clutter.get_current_event()));
         this._gesture.connect('end', () => this._recognizer.push(Clutter.get_current_event()));
-        this._gesture.connect('cancel', () => this._onGestureCancel())
+        this._gesture.connect('cancel', () => this._recognizer.cancel())
 
         global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
 
@@ -290,20 +291,18 @@ class NavigationBarGestureManager {
     }
 
     private _onGestureProgress(state: GestureState) {
-        if (state.hasMovement) {
-            if (!this._hasStarted) {
-                this._startGestures(state);
-            }
+        if (!this._hasStarted) {
+            this._startGestures(state);
+        }
 
-            if (this._isKeyboardGesture) {
-                Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
-            } else {
-                const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
-                this._targetOverviewProgress = this._overviewController.initialProgress
-                    + (-state.totalMotionDelta.y / (this._overviewController.baseDist * baseDistFactor));
-                this._targetWorkspaceProgress = this._wsController.initialProgress
-                    - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
-            }
+        if (this._isKeyboardGesture) {
+            Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
+        } else {
+            const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
+            this._targetOverviewProgress = this._overviewController.initialProgress
+                + (-state.totalMotionDelta.y / (this._overviewController.baseDist * baseDistFactor));
+            this._targetWorkspaceProgress = this._wsController.initialProgress
+                - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
         }
     }
 
@@ -368,7 +367,12 @@ class NavigationBarGestureManager {
         this._targetWorkspaceProgress = null;
     }
 
-    private _onGestureCancel() {
+    private _onGestureCanceled() {
+        this._idleRunner.stop();
+        this._hasStarted = false;
+        this._targetOverviewProgress = null;
+        this._targetWorkspaceProgress = null;
+
         Main.keyboard._keyboard?.gestureCancel();
         this._overviewController.gestureCancel();
         this._wsController.gestureCancel();
@@ -395,9 +399,9 @@ class NavigationBarGestureManager {
     }
 
     destroy() {
+        global.stage.remove_action(this._gesture);
         this._overviewController.destroy();
         this._wsController.destroy();
-        global.stage.remove_action(this._gesture);
     }
 }
 
