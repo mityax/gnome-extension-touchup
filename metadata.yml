@@ -12,11 +12,12 @@ description: &description |-
     - Touch gestures for notifications (dismiss, collapse, expand)
     - Make the notification area touch-scrollable
     - Onscreen Keyboard: key popups, extended keys, swipe to close.
+    - Manually open the keyboard by swiping up the bottom left navigation bar edge
     - Floating rotate button when auto-rotation is off, as known from Android
     - Overview and desktop background gestures (switch workspaces, open/close overview)
     - Overview window preview gestures (swipe up to close windows, hold+move to drag)
 
-  A lot more is planned, have a look at the roadmap for that: https://github.com/mityax/gnome-extension-touchup
+  A lot more is planned; take a look at the roadmap for that: https://github.com/mityax/gnome-extension-touchup
 
   If you find this extension valuable, please donate to make sure the work can go on! :)
 

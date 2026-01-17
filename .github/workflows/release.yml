@@ -92,7 +92,9 @@ jobs:
             below and install it using:
             
             ```bash
+            
             gnome-extensions install -f ${{ env.ZIPFILE_BASENAME }}
+            
             ```
           draft: false
           prerelease: false
