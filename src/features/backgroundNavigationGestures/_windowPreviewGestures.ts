@@ -120,7 +120,7 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
 
                 // If the window has not been marked as destroyed after a short delay, undo all
                 // transformations and ease the preview back into view:
-                Delay.ms(10).then(() => {
+                Delay.ms(200).then(() => {
                     // @ts-ignore
                     if (!windowPreview._destroyed) {
                         windowPreview.ease({
