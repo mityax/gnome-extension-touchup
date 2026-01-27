@@ -1,9 +1,9 @@
 import * as Widgets from "$src/utils/ui/widgets";
 import GObject from "gi://GObject";
 import Clutter from "gi://Clutter";
-import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
+import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/gestures/navigationGestureControllers";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent, GestureState} from "$src/utils/gestures/gestureRecognizer";
 import {css} from "$src/utils/ui/css";
 import {clamp, oneOf} from "$src/utils/utils";
 import GLib from "gi://GLib";

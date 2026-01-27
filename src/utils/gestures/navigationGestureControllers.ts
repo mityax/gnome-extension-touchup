@@ -1,4 +1,4 @@
-import {clamp, UnknownClass} from "./utils";
+import {clamp, UnknownClass} from "$src/utils/utils";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {logger} from "$src/utils/logging";
 

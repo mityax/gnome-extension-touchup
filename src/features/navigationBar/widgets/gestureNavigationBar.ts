@@ -1,14 +1,13 @@
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 import {IntervalRunner} from "$src/utils/intervalRunner";
-import {clamp, oneOf} from "$src/utils/utils";
+import {clamp} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
-import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
-import {GestureRecognizer, GestureState} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureState} from "$src/utils/gestures/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
@@ -17,8 +16,7 @@ import {logger} from "$src/utils/logging";
 import {settings} from "$src/settings";
 import GLib from "gi://GLib";
 import Cogl from "gi://Cogl";
-import {SmoothFollower, SmoothFollowerLane} from "$src/utils/smoothFollower";
-import {overviewGestureMaxSpeed, workspaceGestureMaxSpeed} from "$src/config";
+import {SmoothNavigationGestureController} from "$src/utils/gestures/smoothNavigationGestureController";
 
 
 /**
@@ -206,12 +204,7 @@ class NavigationBarGestureManager {
     private readonly _gesture: Clutter.PanGesture;
     private _recognizer: GestureRecognizer;
 
-    private _overviewController: OverviewGestureController;
-    private _wsController: WorkspaceGestureController;
-
-    private readonly _overviewLane: SmoothFollowerLane;
-    private readonly _wsLane: SmoothFollowerLane;
-    private _smoothFollower: SmoothFollower;
+    private _navigationGestureController: SmoothNavigationGestureController;
 
     /**
      * This virtual input device is used to emulate touch events in click-through-navbar scenarios.
@@ -228,25 +221,7 @@ class NavigationBarGestureManager {
         this._edgeThreshold = props.edgeThreshold;
 
         // The controller used to actually perform the navigation gestures:
-        this._overviewController = new OverviewGestureController();
-        this._wsController = new WorkspaceGestureController({
-            monitorIndex: props.monitor?.index ?? Main.layoutManager.primaryIndex,
-        });
-
-        // Use a [SmoothFollower] to make the gestures asynchronously follow the users finger:
-        this._overviewLane = new SmoothFollowerLane({
-            maxSpeed: overviewGestureMaxSpeed,  // per ms
-            onUpdate: value =>
-                this._overviewController.gestureProgress(value - this._overviewController.initialProgress),
-        });
-        this._wsLane = new SmoothFollowerLane({
-            maxSpeed: workspaceGestureMaxSpeed, // per ms
-            onUpdate: value => this._wsController.gestureProgress(value - this._wsController.initialProgress),
-        });
-        this._smoothFollower = new SmoothFollower([
-            this._overviewLane,
-            this._wsLane,
-        ]);
+        this._navigationGestureController = new SmoothNavigationGestureController();
 
         // Our [GestureRecognizer] to interpret the gestures:
         this._recognizer = new GestureRecognizer({
@@ -277,7 +252,7 @@ class NavigationBarGestureManager {
     }
 
     setMonitor(monitorIndex: number) {
-        this._wsController.monitorIndex = monitorIndex;
+        this._navigationGestureController.monitorIndex = monitorIndex;
     }
 
     setEdgeThreshold(edgeThreshold: number) {
@@ -317,10 +292,11 @@ class NavigationBarGestureManager {
             Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
         } else {
             const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
-            this._overviewLane.target = this._overviewController.initialProgress
-                + (-state.totalMotionDelta.y / (this._overviewController.baseDist * baseDistFactor));
-            this._wsLane.target = this._wsController.initialProgress
-                - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
+            const d = state.totalMotionDelta;
+            this._navigationGestureController.gestureProgress(
+                -d.y / (this._navigationGestureController.overviewBaseDist * baseDistFactor),
+                -d.x / (this._navigationGestureController.workspaceBaseDist * 0.62)
+            );
         }
     }
 
@@ -342,26 +318,16 @@ class NavigationBarGestureManager {
         }
 
         if (!this._isKeyboardGesture) {
-            // Start navigation gestures:
-            this._overviewController.gestureBegin();
-            this._wsController.gestureBegin();
-
-            this._overviewLane.currentValue = this._overviewController.initialProgress;
-            this._wsLane.currentValue = this._wsController.initialProgress;
-
-            this._smoothFollower.start();
+            this._navigationGestureController.gestureBegin();
         }
     }
 
     private _onGestureCompleted(state: GestureState) {
-        this._smoothFollower.stop();
-        this._hasStarted = false;
 
         const direction = state.lastMotionDirection?.direction ?? null;
 
         if (state.isTap) {
-            this._overviewController.gestureCancel();
-            this._wsController.gestureCancel();
+            this._navigationGestureController.gestureCancel();
 
             logger.debug("Emitting virtual tap");
 
@@ -377,29 +343,22 @@ class NavigationBarGestureManager {
                 Main.keyboard._keyboard?.gestureCancel();
             }
         } else {
-            this._overviewController.gestureEnd(oneOf(direction, ['up', 'down']));
-            this._wsController.gestureEnd(oneOf(direction, ['left', 'right']));
+            this._navigationGestureController.gestureEnd(direction);
         }
 
-        this._overviewLane.target = null;
-        this._wsLane.target = null;
+        this._hasStarted = false;
     }
 
     private _onGestureCanceled() {
-        this._smoothFollower.stop();
-        this._hasStarted = false;
-        this._overviewLane.target = null;
-        this._wsLane.target = null;
-
         Main.keyboard._keyboard?.gestureCancel();
-        this._overviewController.gestureCancel();
-        this._wsController.gestureCancel();
+        this._navigationGestureController.gestureCancel();
+
+        this._hasStarted = false;
     }
 
     destroy() {
         global.stage.remove_action(this._gesture);
-        this._overviewController.destroy();
-        this._wsController.destroy();
+        this._navigationGestureController.destroy();
     }
 }
 

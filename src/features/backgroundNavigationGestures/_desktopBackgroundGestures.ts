@@ -1,41 +1,41 @@
-import {GestureRecognizer} from "$src/utils/ui/gestureRecognizer";
-import {oneOf} from "$src/utils/utils";
+import {GestureRecognizer} from "$src/utils/gestures/gestureRecognizer";
 import {LayoutManager} from "resource:///org/gnome/shell/ui/layout.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {PatchManager} from "$src/utils/patchManager";
-import {OverviewGestureController, WorkspaceGestureController} from "$src/utils/overviewAndWorkspaceGestureController";
 import Clutter from "gi://Clutter";
 import ExtensionFeature from "$src/utils/extensionFeature";
+import {SmoothNavigationGestureController} from "$src/utils/gestures/smoothNavigationGestureController";
 
 
 export class DesktopBackgroundGesturesFeature extends ExtensionFeature {
-    constructor(props: {
-        pm: PatchManager,
-        overviewController: OverviewGestureController,
-        wsController: WorkspaceGestureController
-    }) {
-        super(props.pm);
+    private _navigationGestureController: SmoothNavigationGestureController;
+
+    constructor(pm: PatchManager) {
+        super(pm);
+
+        this._navigationGestureController = new SmoothNavigationGestureController();
 
         const recognizer = new GestureRecognizer({
+            onGestureStarted: _ => this._navigationGestureController.gestureBegin(),
             onGestureProgress: state => {
-                props.overviewController.gestureProgress(
-                    -state.totalMotionDelta.y / (props.overviewController.baseDist * 0.25));
-                props.wsController.gestureProgress(
-                    -state.totalMotionDelta.x / (props.wsController.baseDist * 0.62));
+                const d = state.totalMotionDelta;
+                this._navigationGestureController.gestureProgress(
+                    -d.y / (this._navigationGestureController.overviewBaseDist * 0.25),
+                    -d.x / (this._navigationGestureController.workspaceBaseDist * 0.62)
+                );
             },
             onGestureCompleted: state => {
-                props.overviewController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['up', 'down']));
-                props.wsController.gestureEnd(oneOf(state.finalMotionDirection?.direction, ['left', 'right']));
+                this._navigationGestureController.gestureEnd(state.finalMotionDirection?.direction);
             },
-            onGestureCanceled: state => {
-                props.overviewController.gestureCancel();
-                props.wsController.gestureCancel();
-            }
+            onGestureCanceled: _ => this._navigationGestureController.gestureCancel(),
         });
 
-        const gesture = new Clutter.PanGesture({ max_n_points: 1 });
+        const gesture = new Clutter.PanGesture();
         gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
-        gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('end', () => {
+            recognizer.push(Clutter.get_current_event());
+            recognizer.ensureEnded();
+        });
         gesture.connect('cancel', () => recognizer.cancel())
 
         // @ts-ignore
@@ -78,5 +78,10 @@ export class DesktopBackgroundGesturesFeature extends ExtensionFeature {
             global.window_group.visible = global.window_group.opacity !== 0;
             global.window_group.opacity = 255;
         });
+    }
+
+    destroy() {
+        this._navigationGestureController.destroy();
+        super.destroy();
     }
 }

@@ -1,5 +1,5 @@
 import St from "gi://St";
-import WindowPositionTracker from "$src/utils/ui/windowPositionTracker";
+import WindowPositionTracker from "$src/utils/windowPositionTracker";
 import Meta from "gi://Meta";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";

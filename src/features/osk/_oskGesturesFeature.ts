@@ -5,7 +5,7 @@ import Clutter from "gi://Clutter";
 
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
 import Graphene from "gi://Graphene";

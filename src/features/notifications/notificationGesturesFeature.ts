@@ -14,7 +14,7 @@ import {Patch, PatchManager} from "$src/utils/patchManager";
 import {findActorBy} from "$src/utils/utils";
 import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
-import {GestureRecognizer, GestureState} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureState} from "$src/utils/gestures/gestureRecognizer";
 import Ref = Widgets.Ref;
 
 

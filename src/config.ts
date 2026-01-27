@@ -48,4 +48,4 @@ export const feedbackPlatforms = Object.freeze([
 export const overviewGestureMaxSpeed = 0.004;
 
 /** How fast (in prog/ms) the workspace follows the users finger during gestures (i.e. horizontal speed) */
-export const workspaceGestureMaxSpeed = 0.0012;
+export const workspaceGestureMaxSpeed = 0.0016;

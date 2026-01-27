@@ -1,4 +1,4 @@
-import {IdleRunner} from "./idleRunner";
+import {IdleRunner} from "$src/utils/idleRunner";
 
 /**
  * One “lane” of a smooth‑following animation.

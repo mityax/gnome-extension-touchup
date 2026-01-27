@@ -2,7 +2,7 @@ import {PatchManager} from "$src/utils/patchManager";
 import {Workspace} from "resource:///org/gnome/shell/ui/workspace.js";
 import type {WindowPreview} from "resource:///org/gnome/shell/ui/windowPreview.js";
 import Clutter from "gi://Clutter";
-import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/ui/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import {Ref} from "$src/utils/ui/widgets";
 import Graphene from "gi://Graphene";
 import {Delay} from "$src/utils/delay";
@@ -42,7 +42,7 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
         // onGestureProgress@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/overviewGestures/overviewGesturesFeature.js:79:54
         // emit/<@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/eventEmitter.js:7:55
         // emit@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/eventEmitter.js:7:33
-        // push@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/ui/gestureRecognizer.js:123:22
+        // push@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/utils/gestures/gestureRecognizer.js:123:22
         // _setupWindowPreviewGestures/patchWindowPreview/<@file:///home/x/.local/share/gnome-shell/extensions/touchup@mityax/features/overviewGestures/overviewGesturesFeature.js:61:60
         // @resource:///org/gnome/shell/ui/init.js:21:20
 
