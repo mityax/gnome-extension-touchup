@@ -176,6 +176,7 @@ export class GestureRecognizer extends EventEmitter<{
             this.emit('gesture-started', this._state, event, rawEvent);
         } else {
             this._state = this._state.copyWith(event);
+
             if (this._state.isDuringGesture) {
                 this.emit('gesture-progress', this._state, event, rawEvent);
             } else {
@@ -191,6 +192,11 @@ export class GestureRecognizer extends EventEmitter<{
         return this._state;
     }
 
+    /**
+     * Emit an `end` event with `isCancelEvent: true`. This effectively cancels the
+     * entire active gesture and results in the [GestureRecognizer] calling the
+     * appropriate canceled and ended callbacks.
+     */
     cancel() {
         const lastEvent = this._state.events.at(-1);
         this.push(new GestureRecognizerEvent({
@@ -202,6 +208,26 @@ export class GestureRecognizer extends EventEmitter<{
             isPointerEvent: lastEvent?.isPointerEvent ?? false,
             isCancelEvent: true,
         }));
+    }
+
+    /**
+     * Emit `end` events for all active slots. Effectively this manually commits a gesture
+     * and will emit the appropriate completed and ended callbacks.
+     */
+    ensureEnded() {
+        for (const e of this._state._eventsBySlots) {
+            if (e.at(-1)?.type !== EventType.end) {
+                this.push(new GestureRecognizerEvent({
+                    type: EventType.end,
+                    x: e.at(-1)!.x ?? -1,
+                    y: e.at(-1)!.y ?? -1,
+                    slot: e.at(-1)!.slot ?? -1,
+                    time_us: Clutter.get_current_event_time(),
+                    isPointerEvent: e.at(-1)!.isPointerEvent ?? false,
+                    isCancelEvent: false,
+                }));
+            }
+        }
     }
 }
 
@@ -237,7 +263,9 @@ export class GestureState {
         return this._cachedValue(
             'is-tap',
             () => {
-                if (this._events.length < 2 || !this.hasGestureJustEnded) return false;
+                if (this._events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount != 1) {
+                    return false;
+                }
 
                 const hold = _matchHold(this._events, {
                     maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
@@ -259,7 +287,9 @@ export class GestureState {
         return this._cachedValue(
             'is-long-tap',
             () => {
-                if (this._events.length < 2 || !this.hasGestureJustEnded) return false;
+                if (this._events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount !== 1) {
+                    return false;
+                }
 
                 const hold = _matchHold(this._events, {
                     maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
@@ -534,10 +564,14 @@ export class GestureState {
      */
     get hasGestureJustEnded(): boolean {
         return this._cachedValue(
-            'is-gesture-completed',
-            () => this.events.length > 0
-                && !this._eventsBySlots
-                    .some((seq) => seq.at(-1)!.type !== EventType.end)
+            'has-gesture-just-ended',
+            () => {
+                if (this.hasGestureBeenCanceled) return true;
+
+                return this.events.length > 0
+                    && !this._eventsBySlots
+                        .some((seq) => seq.at(-1)!.type !== EventType.end);
+            }
         );
     }
 
