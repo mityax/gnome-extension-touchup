@@ -6,6 +6,13 @@ export class IdleRunner {
     private readonly _priority: number;
     private lastRun: number | null = null;
 
+    /**
+     * Constructs an IdleRunner using the given callback and idle priority.
+     *
+     * @param callback A callback to call as often as possible, receives a `stop` function and the time since the last
+     *                 invocation (in microseconds).
+     * @param priority The idle priority. One of the Glib.PRIORITY_* constants.
+     */
     constructor(callback: (stop: () => void, dt: number | null) => any, priority: number = GLib.PRIORITY_DEFAULT_IDLE) {
         this.callback = callback;
         this._priority = priority;
@@ -32,7 +39,7 @@ export class IdleRunner {
 
         const iid = GLib.idle_add(this._priority,
             () => {
-                let now = Date.now();
+                let now = GLib.get_monotonic_time();
                 let dt = this.lastRun != null ? now - this.lastRun : null;
                 this.lastRun = now;
 

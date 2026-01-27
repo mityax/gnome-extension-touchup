@@ -4,7 +4,6 @@ import {IntervalRunner} from "$src/utils/intervalRunner";
 import {clamp, oneOf} from "$src/utils/utils";
 import Shell from "gi://Shell";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {IdleRunner} from "$src/utils/idleRunner";
 import {calculateLuminance} from "$src/utils/colors";
 import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigationBar";
 import * as Widgets from "$src/utils/ui/widgets";
@@ -18,6 +17,8 @@ import {logger} from "$src/utils/logging";
 import {settings} from "$src/settings";
 import GLib from "gi://GLib";
 import Cogl from "gi://Cogl";
+import {SmoothFollower, SmoothFollowerLane} from "$src/utils/smoothFollower";
+import {overviewGestureMaxSpeed, workspaceGestureMaxSpeed} from "$src/config";
 
 
 /**
@@ -202,17 +203,15 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
 
 class NavigationBarGestureManager {
-    private static readonly _overviewMaxSpeed = 0.005;
-    private static readonly _workspaceMaxSpeed = 0.0016;
-
     private readonly _gesture: Clutter.PanGesture;
+    private _recognizer: GestureRecognizer;
+
     private _overviewController: OverviewGestureController;
     private _wsController: WorkspaceGestureController;
-    private _recognizer: GestureRecognizer;
-    private _idleRunner: IdleRunner;
 
-    private _targetWorkspaceProgress: number | null = 0;
-    private _targetOverviewProgress: number | null = null;
+    private readonly _overviewLane: SmoothFollowerLane;
+    private readonly _wsLane: SmoothFollowerLane;
+    private _smoothFollower: SmoothFollower;
 
     /**
      * This virtual input device is used to emulate touch events in click-through-navbar scenarios.
@@ -234,8 +233,20 @@ class NavigationBarGestureManager {
             monitorIndex: props.monitor?.index ?? Main.layoutManager.primaryIndex,
         });
 
-        // Use an [IdleRunner] to make the gestures asynchronously follow the users' finger:
-        this._idleRunner = new IdleRunner((_, dt) => this._onIdleRun(dt ?? undefined));
+        // Use a [SmoothFollower] to make the gestures asynchronously follow the users finger:
+        this._overviewLane = new SmoothFollowerLane({
+            maxSpeed: overviewGestureMaxSpeed,  // per ms
+            onUpdate: value =>
+                this._overviewController.gestureProgress(value - this._overviewController.initialProgress),
+        });
+        this._wsLane = new SmoothFollowerLane({
+            maxSpeed: workspaceGestureMaxSpeed, // per ms
+            onUpdate: value => this._wsController.gestureProgress(value - this._wsController.initialProgress),
+        });
+        this._smoothFollower = new SmoothFollower([
+            this._overviewLane,
+            this._wsLane,
+        ]);
 
         // Our [GestureRecognizer] to interpret the gestures:
         this._recognizer = new GestureRecognizer({
@@ -306,9 +317,9 @@ class NavigationBarGestureManager {
             Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
         } else {
             const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
-            this._targetOverviewProgress = this._overviewController.initialProgress
+            this._overviewLane.target = this._overviewController.initialProgress
                 + (-state.totalMotionDelta.y / (this._overviewController.baseDist * baseDistFactor));
-            this._targetWorkspaceProgress = this._wsController.initialProgress
+            this._wsLane.target = this._wsController.initialProgress
                 - (state.totalMotionDelta.x / this._wsController.baseDist) * 1.6;
         }
     }
@@ -335,15 +346,15 @@ class NavigationBarGestureManager {
             this._overviewController.gestureBegin();
             this._wsController.gestureBegin();
 
-            this._targetOverviewProgress = this._overviewController.initialProgress;
-            this._targetWorkspaceProgress = this._wsController.initialProgress;
+            this._overviewLane.currentValue = this._overviewController.initialProgress;
+            this._wsLane.currentValue = this._wsController.initialProgress;
 
-            this._idleRunner.start();
+            this._smoothFollower.start();
         }
     }
 
     private _onGestureCompleted(state: GestureState) {
-        this._idleRunner.stop();
+        this._smoothFollower.stop();
         this._hasStarted = false;
 
         const direction = state.lastMotionDirection?.direction ?? null;
@@ -370,39 +381,19 @@ class NavigationBarGestureManager {
             this._wsController.gestureEnd(oneOf(direction, ['left', 'right']));
         }
 
-        this._targetOverviewProgress = null;
-        this._targetWorkspaceProgress = null;
+        this._overviewLane.target = null;
+        this._wsLane.target = null;
     }
 
     private _onGestureCanceled() {
-        this._idleRunner.stop();
+        this._smoothFollower.stop();
         this._hasStarted = false;
-        this._targetOverviewProgress = null;
-        this._targetWorkspaceProgress = null;
+        this._overviewLane.target = null;
+        this._wsLane.target = null;
 
         Main.keyboard._keyboard?.gestureCancel();
         this._overviewController.gestureCancel();
         this._wsController.gestureCancel();
-    }
-
-    private _onIdleRun(dt: number = 0) {
-        let overviewProg = this._overviewController.currentProgress;
-        let workspaceProg = this._wsController.currentProgress;
-
-        if (this._targetOverviewProgress !== null
-            && Math.abs(this._targetOverviewProgress - overviewProg) > 5 * NavigationBarGestureManager._overviewMaxSpeed) {
-            let d = this._targetOverviewProgress - overviewProg;
-            overviewProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * NavigationBarGestureManager._overviewMaxSpeed);
-        }
-
-        if (this._targetWorkspaceProgress !== null
-            && Math.abs(this._targetWorkspaceProgress - workspaceProg) > 5 * NavigationBarGestureManager._workspaceMaxSpeed) {
-            let d = this._targetWorkspaceProgress - workspaceProg;
-            workspaceProg += Math.sign(d) * Math.min(Math.abs(d) ** 2, dt * NavigationBarGestureManager._workspaceMaxSpeed);
-        }
-
-        this._overviewController.gestureProgress(overviewProg - this._overviewController.initialProgress);
-        this._wsController.gestureProgress(workspaceProg - this._wsController.initialProgress);
     }
 
     destroy() {
