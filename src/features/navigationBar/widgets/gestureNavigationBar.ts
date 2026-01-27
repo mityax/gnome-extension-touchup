@@ -245,14 +245,15 @@ class NavigationBarGestureManager {
         });
 
         // Action that listens to appropriate events on the stage:
-        this._gesture = new Clutter.PanGesture({
-            max_n_points: 1,
-        });
+        this._gesture = new Clutter.PanGesture();
 
         this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
             this._shouldHandleSequence(e));
         this._gesture.connect('pan-update', () => this._recognizer.push(Clutter.get_current_event()));
-        this._gesture.connect('end', () => this._recognizer.push(Clutter.get_current_event()));
+        this._gesture.connect('end', () => {
+            this._recognizer.push(Clutter.get_current_event());
+            this._recognizer.ensureEnded();
+        });
         this._gesture.connect('cancel', () => this._recognizer.cancel())
 
         global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
@@ -284,6 +285,12 @@ class NavigationBarGestureManager {
     }
 
     private _shouldHandleSequence(event: Clutter.Event): boolean {
+        // If we're already during a gesture, capture all other events too to prevent other interactions:
+        if (this._gesture.state === Clutter.GestureState.RECOGNIZING) {
+            return true;
+        }
+
+        // If we're not yet during a gesture, only capture sequences that start on the navigation bar area:
         const [x, y] = event.get_coords();
         const monitorRect = this._getMonitorRect(x, y);
 
