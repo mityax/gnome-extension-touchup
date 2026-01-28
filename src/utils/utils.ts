@@ -28,7 +28,9 @@ export function findActorBy<T extends Clutter.Actor>(topActor: T, test: (actor: 
 }
 
 /**
- * Recursively walks the topActor's nested children, collecting all children that satisfy `test`.
+ * Recursively walks the topActor's nested children, collecting all actors that satisfy `test`.
+ *
+ * Does net descend further into the children of matching actors.
  */
 export function findAllActorsBy(topActor: Clutter.Actor, test: (actor: Clutter.Actor) => boolean): Clutter.Actor[] {
     const res: Clutter.Actor[] = [];

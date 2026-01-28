@@ -168,7 +168,7 @@ export class GestureRecognizer extends EventEmitter<{
             event = GestureRecognizerEvent.fromClutterEvent(event);
         }
 
-        if (this._state.hasGestureJustEnded) {
+        if (!this._state.isDuringGesture) {
             this._state = GestureState.initial({
                 firstEvent: event,
                 scaleFactor: this._scaleFactor
