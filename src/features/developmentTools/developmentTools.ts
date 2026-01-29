@@ -19,6 +19,10 @@ import Cogl from "gi://Cogl";
 import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
 import {TouchModeService} from "$src/services/touchModeService";
 import {logger} from "$src/utils/logging";
+import {Delay} from "$src/utils/delay";
+
+
+const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
 
 
 type _PersistedState = {
@@ -32,6 +36,8 @@ export class DevelopmentTools extends ExtensionFeature {
 
     // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
     // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
+    private _hotRestartButton: Ref<HotRestartButton> = new Ref();
+    
     get _persistedState(): _PersistedState {
         // @ts-ignore
         return window._touchUpPersistedState ??= {
@@ -75,7 +81,10 @@ export class DevelopmentTools extends ExtensionFeature {
             new Widgets.Bin({width: 15}),
             new RestartButton(),
             new Widgets.Bin({width: 10}),
-            new HotRestartButton(TouchUpExtension.instance!.metadata.uuid),
+            new HotRestartButton({
+                extensionUuid: TouchUpExtension.instance!.metadata.uuid,
+                ref: this._hotRestartButton,
+            }),
             new Widgets.Bin({width: 10}),
             new Widgets.Bin({width: 1, backgroundColor: Cogl.Color.from_string('grey')[1]}),
             new Widgets.Bin({width: 10}),
@@ -106,25 +115,49 @@ export class DevelopmentTools extends ExtensionFeature {
         });
     }
 
-    private _setupLiveReload() {
-        const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
+    private _setupLiveReload(isRetry?: boolean) {
+        if (!watchEventUrl || !BUILD_OUTPUT_DIR) return;
 
-        if (!watchEventUrl || !BUILD_OUTPUT_DIR) return () => {};
+        const source = new EventSource(watchEventUrl);
+
+        let stopRebuildIndicator: (() => any) | undefined;
+        
+        source.on('rebuild-started', () => {
+            logger.debug("Rebuild started");
+            stopRebuildIndicator = this._hotRestartButton.current?.notifyRebuildStarted();
+        });
+
+        source.on('rebuild-failed', (data) => {
+            logger.debug("Rebuild failed");
+            const error = JSON.parse(data)['error'] as {message: string, stack: string};
+            stopRebuildIndicator?.();
+            logger.error(`Rebuilding failed: ${error.message}\n${error.stack}`);
+        });
+
+        source.on('rebuild-finished', debounce((data) => {
+            logger.debug("Rebuild finished");
+            _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
+                baseUri: `file://${BUILD_OUTPUT_DIR}`,
+                // `data` is a JSON-string containing info about changed files, e.g.:
+                //   {"added":[],"removed":[],"updated":["src/extension.ts"]}
+                // We're lazy here and just check whether '.js"' or '.ts"' is present in that string:
+                stylesheetsOnly: !/\.[jt]s"/.test(data),
+            }).catch((e) => void logger.error("Error during auto-hot-reloading extension: ", e));
+            
+            stopRebuildIndicator?.();
+        }, 500));
 
         this.pm.patch(() => {
-            const source = new EventSource(watchEventUrl);
-            source.on('reload', debounce((data) => {
-                _hotReloadExtension(TouchUpExtension.instance!.metadata.uuid, {
-                    baseUri: `file://${BUILD_OUTPUT_DIR}`,
-                    // `data` is a JSON-string containing info about changed files, e.g.:
-                    //   {"added":[],"removed":[],"updated":["src/extension.ts"]}
-                    // We're lazy here and just check whether '.js"' or '.ts"' is present in that string:
-                    stylesheetsOnly: !/\.[jt]s"/.test(data),
-                }).catch((e) => void logger.error("Error during auto-hot-reloading extension: ", e));
-            }, 500));
             source.start()
                 .then(_ => logger.debug(`[Live-reload] Connected to ${watchEventUrl}`))
-                .catch((e) => logger.error(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e));
+                .catch((e) => {
+                    logger.error(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e);
+
+                    // Retry once again after 5 seconds in case the server is not yet up:
+                    if (!isRetry) {
+                        Delay.s(5).then(() => this._setupLiveReload(true));
+                    }
+                });
 
             return () => source.close();
         });

@@ -41,7 +41,7 @@ const IS_WATCH_MODE = !!process.env.ROLLUP_WATCH || process.argv.includes('-w') 
 /**
  * Whether to preserve modules or bundle all JS
  */
-const PRESERVE_MODULES = !IS_WATCH_MODE && !['yes', 'y', '1', 'true'].includes(process.env.DISABLE_CHECK?.toLowerCase());
+const PRESERVE_MODULES = !IS_WATCH_MODE && !['yes', 'y', '1', 'true'].includes(process.env.BUNDLE_JS?.toLowerCase());
 
 
 /**

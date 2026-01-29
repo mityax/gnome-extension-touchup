@@ -14,6 +14,7 @@ import {
 } from "$src/features/developmentTools/developmentReloadUtils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {logger} from "$src/utils/logging";
+import {Ref} from "$src/utils/ui/widgets";
 
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
@@ -26,9 +27,10 @@ export class HotRestartButton extends DevToolButton {
 
     private readonly extensionUuid: string;
 
-    constructor(extensionUuid: string) {
+    constructor(props: {extensionUuid: string, ref?: Ref<HotRestartButton>}) {
         super({
             label: 'Rebuild and hot-restart',
+            ref: props.ref,
             icon: new St.Icon({
                 gicon: new AssetIcon('camera-flash-symbolic'),
                 iconSize: 16,
@@ -37,7 +39,7 @@ export class HotRestartButton extends DevToolButton {
             }),
             onPressed: () => this._onPressed(),
         });
-        this.extensionUuid = extensionUuid;
+        this.extensionUuid = props.extensionUuid;
     }
 
     private async _onPressed() {
@@ -48,6 +50,7 @@ export class HotRestartButton extends DevToolButton {
                 res = await this._withAnimatedIcon(() => _rebuildExtension({
                     buildForHotReload: true,
                     showDialogOnError: true,
+                    disableTypeCheck: true,
                 }));
             }
             this.icon.opacity = 255;
@@ -84,6 +87,10 @@ export class HotRestartButton extends DevToolButton {
         let res = await whileRunning();
         stop();
         return res;
+    }
+
+    notifyRebuildStarted(): () => void {
+        return this._startIconAnimation();
     }
 }
 

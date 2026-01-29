@@ -3,8 +3,9 @@ import {IdleRunner} from "$src/utils/idleRunner";
 /**
  * One “lane” of a smooth‑following animation.
  *
- * Holds a current value, a target value and a max speed.  Whenever the value is moved
- * toward the target the supplied `onUpdate` callback is invoked with the new value.
+ * Holds a current value, a target value, and an update callback.  Whenever the value
+ * is moved toward the target the supplied `onUpdate` callback is invoked with the
+ * new value.
  */
 export class SmoothFollowerLane {
     /** The current value of this lane */

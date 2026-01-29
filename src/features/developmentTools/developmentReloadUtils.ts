@@ -49,7 +49,10 @@ export function _restartShell() {
  * Thus, GTypeNames will no longer match the class names – this should not have any consequences relevant to this
  * extension, but it is good to be aware of this, still.
  */
-export async function _hotReloadExtension(extensionUuid: string, config?: { baseUri?: string, stylesheetsOnly?: boolean }) {
+export async function _hotReloadExtension(extensionUuid: string, config?: {
+    baseUri?: string,
+    stylesheetsOnly?: boolean,
+}) {
     assert(!config?.baseUri || config.baseUri.startsWith('file://'), "Only file:// uris are supported as baseUri.");
 
     const reloadId = `hr${Date.now().toString()}`;
@@ -120,7 +123,11 @@ export async function _hotReloadExtension(extensionUuid: string, config?: { base
 }
 
 
-export async function _rebuildExtension(opts: {showDialogOnError: boolean, buildForHotReload: boolean}) {
+export async function _rebuildExtension(opts: {
+    showDialogOnError: boolean,
+    buildForHotReload: boolean,
+    disableTypeCheck?: boolean,
+}) {
     try {
         const launcher = new Gio.SubprocessLauncher({
             flags: Gio.SubprocessFlags.STDIN_PIPE |
@@ -131,6 +138,10 @@ export async function _rebuildExtension(opts: {showDialogOnError: boolean, build
 
         if (opts.buildForHotReload) {
             launcher.setenv('BUNDLE_JS', 'true', true);
+        }
+
+        if (opts.disableTypeCheck) {
+            launcher.setenv('DISABLE_CHECK', 'true', true);
         }
 
         logger.debug("Rebuilding extension, cwd: ", PROJECT_DIR);

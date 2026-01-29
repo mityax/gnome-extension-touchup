@@ -1,6 +1,7 @@
 import http from 'http';
 import path from 'path';
 
+
 /**
  * A Rollup plugin that starts an SSE (Server-Sent Events) server, notifying
  * connected clients when a build completes.
@@ -31,74 +32,67 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
         }
     }
 
-    // Listen for system exit signals
-    const setupSignalHandlers = () => {
-        const cleanup = () => {
-            stopServer();
-        };
-
-        process.once('SIGINT', cleanup);
-        process.once('SIGTERM', cleanup);
-        process.once('SIGABRT', cleanup);
-        process.once('SIGTSTP', cleanup);
-    };
+    function sendEvent(event, data) {
+        clients.forEach(res => {
+            res.write(`event: ${event}\n`);
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+        });
+    }
 
     return {
         name: 'reload-sse-notifier',
-
         watchChange(id) {
             changedFiles.add(path.relative(process.cwd(), id));
         },
-
         buildStart() {
-            if (!serverStarted && this.meta.watchMode) {
+            // This plugin only has an effect in watch mode:
+            if (!this.meta.watchMode) return;
+
+            // Start the server:
+            if (!serverStarted) {
                 console.log(`[sse-build-notifier] Starting SSE server at http://localhost:${port}/watch`);
-
-                server = http.createServer((req, res) => {
-                    if (req.url === '/watch') {
-                        res.writeHead(200, {
-                            'Content-Type': 'text/event-stream',
-                            'Cache-Control': 'no-cache',
-                            'Connection': 'keep-alive',
-                            'Access-Control-Allow-Origin': '*',
-                        });
-                        res.write('\n');
-                        clients.push(res);
-
-                        req.on('close', () => {
-                            clients = clients.filter(client => client !== res);
-                        });
-                    } else {
-                        res.writeHead(404);
-                        res.end();
-                    }
-                });
-
+                server = _createServer(
+                    (client) => clients.push(client),
+                    (client) => clients = clients.filter(c => c !== client),
+                );
                 server.listen(port, () => {
                     console.log(`[sse-build-notifier] SSE server running at http://localhost:${port}/watch`);
                 });
                 server.on('error', err => {
                     console.error(`[sse-build-notifier] SSE server encountered an error: `, err);
                 });
-
                 serverStarted = true;
-                setupSignalHandlers();
+
+                // When the process is killed, stop the server gracefully:
+                setupExitHandler(stopServer);
+            }
+
+            sendEvent('rebuild-started', {timestamp: new Date().toISOString()});
+        },
+        buildEnd(error) {
+            if (!this.meta.watchMode) return;
+
+            if (error) {
+                sendEvent('rebuild-failed', {
+                    timestamp: new Date().toISOString(),
+                    error: {
+                        message: error.message,
+                        stack: error.stack,
+                    },
+                });
             }
         },
-
         writeBundle() {
-            if (this.meta.watchMode && clients.length > 0) {
+            if (!this.meta.watchMode) return;
+
+            if (clients.length > 0) {
                 const fileList = Array.from(changedFiles);
-                const payload = JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    changedFiles: fileList
-                });
 
                 console.log(`[reload-sse-notifier] Sending reload event to ${clients.length} connected client(s) (changed files: ${fileList.length})`);
 
-                clients.forEach(res => {
-                    res.write(`event: reload\n`);
-                    res.write(`data: ${payload}\n\n`);
+                sendEvent('rebuild-finished', {
+                    timestamp: new Date().toISOString(),
+                    changedFiles: fileList
                 });
 
                 changedFiles.clear();
@@ -112,3 +106,39 @@ export default function reloadSSENotifier({ port = 35729 } = {}) {
         }
     };
 }
+
+
+
+function _createServer(onClientAdded, onClientRemoved) {
+    return http.createServer((req, resp) => {
+        if (req.url === '/watch') {
+            resp.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*',
+            });
+            resp.write('\n');
+            onClientAdded(resp);
+
+            req.on('close', () => {
+                onClientRemoved(resp);
+            });
+        } else {
+            resp.writeHead(404);
+            resp.end();
+        }
+    });
+}
+
+// Listen for system exit signals
+const setupExitHandler = (callback) => {
+    const cleanup = () => {
+        callback();
+    };
+
+    process.once('SIGINT', cleanup);
+    process.once('SIGTERM', cleanup);
+    process.once('SIGABRT', cleanup);
+    process.once('SIGTSTP', cleanup);
+};
