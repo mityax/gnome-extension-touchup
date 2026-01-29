@@ -27,12 +27,16 @@ class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             )
         ) as PanelMenu.Button[];
 
-        // Disable "recognize_on_press" to allow dragging:
+        // Disable "recognize_on_press" on the panel menu buttons to allow dragging:
         menus.forEach(m => {
+
+            // Notice:
+            // `PanelMenu.Button._clickGesture` is only available from Shell >= v50
+            // -> https://github.com/GNOME/gnome-shell/commit/80bc9d773cc550e9ca448741ac174b54c61073b6
+            // @ts-ignore
+            if (!m._clickGesture) return;
+
             pm.setProperty(
-                // Notice:
-                // `PanelMenu.Button._clickGesture` is only available from Shell >= v50
-                // -> https://github.com/GNOME/gnome-shell/commit/80bc9d773cc550e9ca448741ac174b54c61073b6
                 // @ts-ignore
                 m._clickGesture as Clutter.ClickGesture,
                 'recognize_on_press',
