@@ -114,6 +114,8 @@ class LogDisplay extends Widgets.Column {
         const scrollView = new Ref<Widgets.ScrollView>();
         const searchEntry = new Ref<Widgets.Entry>();
 
+        const sf = St.ThemeContext.get_for_stage(global.stage as Stage).scaleFactor;
+
         super({
             style: css({
                 backgroundColor: 'rgba(0,0,0,0.7)',
@@ -128,7 +130,7 @@ class LogDisplay extends Widgets.Column {
                         new Widgets.Entry({
                             ref: searchEntry,
                             notifyText: () => this._applySearch(searchEntry.current!.text),
-                            width: 350,
+                            width: 350 * sf,
                             hintText: "Search…",
                             primaryIcon: new Widgets.Icon({
                                 iconName: 'folder-saved-search-symbolic',
@@ -150,10 +152,12 @@ class LogDisplay extends Widgets.Column {
                                 iconName: 'folder-download-symbolic',
                                 iconSize: 16,
                             }),
-                            width: 30,
+                            width: 30 * sf,
                             style: css({ padding: '5px' }),
                             onClicked: () => scrollView.apply((sv) => {
-                                sv.vadjustment.set_value(sv.vadjustment.upper);
+                                sv.vadjustment.ease(sv.vadjustment.upper, {
+                                    duration: 200,
+                                })
                             }),
                         }),
                         new Widgets.Button({
@@ -161,7 +165,7 @@ class LogDisplay extends Widgets.Column {
                                 iconName: 'user-trash-symbolic',
                                 iconSize: 16,
                             }),
-                            width: 30,
+                            width: 30 * sf,
                             style: css({ padding: '5px' }),
                             onClicked: () => this.logMsgContainer.current?.destroy_all_children(),
                         }),
