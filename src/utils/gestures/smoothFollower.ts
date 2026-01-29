@@ -13,27 +13,17 @@ export class SmoothFollowerLane {
     /** The target value of this lane. This is what the `currentValue` is smoothly driven towards. */
     target: number | null;
 
-    /** The maximum speed at which `currentValue` can change in units per millisecond. */
-    maxSpeed: number;
-
     /** Callback to apply to new `currentValue` whenever it changed */
     onUpdate: (value: number) => void;
-
-    /** When `currentValue` is closer than `toleranceFactor * maxSpeed` to `target`, it is not changed anymore */
-    toleranceFactor: number = 5;
 
     constructor(props: {
         currentValue?: number,
         target?: number,
-        maxSpeed: number,
         onUpdate: (value: number) => void,
-        toleranceFactor?: number,
     }) {
         this.currentValue = props.currentValue ?? null;
         this.target = props.target ?? null;
-        this.maxSpeed = props.maxSpeed;
         this.onUpdate = props.onUpdate;
-        this.toleranceFactor = props.toleranceFactor ?? 5;
     }
 }
 
@@ -46,26 +36,57 @@ export class SmoothFollowerLane {
  * interaction is performed by mutating the lane objects.
  */
 export class SmoothFollower extends IdleRunner {
-    private readonly _lanes: SmoothFollowerLane[] = [];
+    private readonly _lanes: {
+        lane: SmoothFollowerLane,
+        internalState: {
+            velocity: number,
+        }
+    }[] = [];
 
     constructor(lanes: SmoothFollowerLane[]) {
         super((_, dt) => this._update(dt));
 
-        this._lanes = lanes;
+        this._lanes = lanes.map(lane => ({
+            lane,
+            internalState: {velocity: 0},
+        }));
     }
 
     private _update(dt: number | null) {
         dt ??= 1;
 
-        for (let lane of this._lanes) {
+        for (let {lane, internalState} of this._lanes) {
             if (lane.target !== null && lane.currentValue !== null) {
-                const dist = lane.target - lane.currentValue;
+                lane.currentValue = this._criticallyDampedSpring(
+                    lane.currentValue,
+                    lane.target,
+                    dt,
+                    internalState,
+                );
 
-                if (Math.abs(dist) > lane.toleranceFactor * lane.maxSpeed) {
-                    lane.currentValue += Math.sign(dist) * Math.min(dist ** 2, dt * (lane.maxSpeed / 1000));
-                    lane.onUpdate(lane.currentValue);
-                }
+                lane.onUpdate(lane.currentValue);
             }
         }
+    }
+
+    static readonly smoothTime = 0.04;  // in seconds
+    static readonly omega = 2.0 / this.smoothTime;
+
+    private _criticallyDampedSpring(
+        current: number,
+        target: number,
+        dt: number,
+        state: typeof this._lanes[0]['internalState'],
+    ): number {
+        dt = dt / 1000 / 1000;  // convert to seconds
+
+        const x = SmoothFollower.omega * dt;
+        const exp = 1.0 / (1.0 + x + 0.48*x**2 + 0.235*x**3);
+
+        const change = current - target;
+        const temp = (state.velocity + SmoothFollower.omega * change) * dt;
+
+        state.velocity = (state.velocity - SmoothFollower.omega * temp) * exp;
+        return target + (change + temp) * exp;
     }
 }

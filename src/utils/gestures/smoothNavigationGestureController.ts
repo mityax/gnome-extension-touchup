@@ -1,5 +1,4 @@
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {overviewGestureMaxSpeed, workspaceGestureMaxSpeed} from "$src/config";
 import {OverviewGestureController, WorkspaceGestureController} from "./navigationGestureControllers";
 import {SmoothFollower, SmoothFollowerLane} from "./smoothFollower";
 import {oneOf} from "../utils";
@@ -31,12 +30,10 @@ export class SmoothNavigationGestureController {
 
         // Use a [SmoothFollower] to make the gestures asynchronously follow the users finger:
         this._overviewLane = new SmoothFollowerLane({
-            maxSpeed: overviewGestureMaxSpeed,  // per ms
             onUpdate: value =>
                 this._overviewController.gestureProgress(value - this._overviewController.initialProgress),
         });
         this._wsLane = new SmoothFollowerLane({
-            maxSpeed: workspaceGestureMaxSpeed, // per ms
             onUpdate: value => this._wsController.gestureProgress(value - this._wsController.initialProgress),
         });
         this._smoothFollower = new SmoothFollower([
