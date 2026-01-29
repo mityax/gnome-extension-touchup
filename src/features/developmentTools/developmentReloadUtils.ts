@@ -1,4 +1,3 @@
-import Meta from "gi://Meta";
 import Gio from "gi://Gio";
 import {assert, logger} from "$src/utils/logging";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
@@ -15,9 +14,19 @@ import PolicyType = St.PolicyType;
 export const PROJECT_DIR  = GLib.getenv('TOUCHUP_PROJECT_DIR');
 export const BUILD_OUTPUT_DIR = GLib.getenv("TOUCHUP_BUILD_DIRECTORY")?.replace(/\/$/, "");
 
+const restartMarkerFile = GLib.getenv("TOUCHUP_RESTART_MARKER_FILE");
 
 export function _restartShell() {
-    Meta.restart('Restarting…', global.context);
+    if (!restartMarkerFile) {
+        throw "Cannot restart Shell, marker file environment variable was not given by calling process.";
+    }
+
+    try {
+        GLib.file_set_contents(restartMarkerFile, "restart");  // tell the wrapper script to restart after exiting
+        global.context.terminate();
+    } catch (error) {
+        logger.error("Error during restarting the Shell:", error);
+    }
 }
 
 

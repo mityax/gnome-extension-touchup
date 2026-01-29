@@ -148,6 +148,8 @@ export function repr(item: any): string {
             return `<${item.constructor.name} object ${item.message ? '– "' + item.message + '"' : ' (no error message)'}>`;
         } else if (item instanceof Gio.IOErrorEnum) {
             return `<Gio.IOErrorEnum {code: ${item.code}, message: ${item.message}}>`
+        } else if (item instanceof GLib.Error) {
+            return `<GLib.Error {code: ${item.code}, message: ${item.message}}>`
         } else if (json) {
             return `<${item.constructor.name} object ${json.length > 300 ? json.substring(0, 300) + ' [...]' : json}>`;
         } else {

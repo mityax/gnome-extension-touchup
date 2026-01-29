@@ -11,6 +11,7 @@ export toolsDir="$projectDir/tools"
 export shellRepoRoot="$toolsDir/.gnome-shell"
 export shellRepoToolsDir="$shellRepoRoot/tools/toolbox"
 
+export finalExtensionInstallationDirectory="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_ID"
 
 # Load the .env file(s)
 set -a
