@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# This script is meant to be run from within "run.sh" only; its task is to
+#
+# This script is meant to be run from within "run.sh" only. Its task is to
 #  1. Remove the currently installed extension, if any
-#  2. Invoke a script passed via the environment variable "PROCESS_SCRIPT", that is assumed start GNOME Shell
+#  2. Invoke a script passed via the environment variable "PROCESS_SCRIPT",
+#     that is assumed start GNOME Shell
 #  3. Install the latest extension zip file from the build folder
+#
+# Notably, this script is the entrypoint for the dbus session that is spawned
+# for the Shell; Thus, any code that needs to work within the same DBus session
+# must be put in here.
+#
 
 die() { log "$@" >&2; exit 1; }
 log() { echo -e "\033[1m\033[34m[touchup-wrapper]\033[0m $*"; }
