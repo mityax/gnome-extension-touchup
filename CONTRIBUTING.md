@@ -97,11 +97,13 @@ will put the shell in a clean state before loading the extension.
 
 #### Extension Features
 The extension is divided into distinct features, that can be enabled and 
-disabled separately, based on a setting. Each feature, can have multiple
+disabled separately, based on a setting. Each feature can have multiple
 sub-features. A very basic `ExtensionFeature` can be implemented like this:
 
 ```typescript
 // features/rotateStage/rotateStage.ts
+
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {PatchManager} from "./patchManager";
