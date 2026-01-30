@@ -126,7 +126,6 @@ export async function _hotReloadExtension(extensionUuid: string, config?: {
 export async function _rebuildExtension(opts: {
     showDialogOnError: boolean,
     buildForHotReload: boolean,
-    disableTypeCheck?: boolean,
 }) {
     try {
         const launcher = new Gio.SubprocessLauncher({
@@ -138,10 +137,6 @@ export async function _rebuildExtension(opts: {
 
         if (opts.buildForHotReload) {
             launcher.setenv('BUNDLE_JS', 'true', true);
-        }
-
-        if (opts.disableTypeCheck) {
-            launcher.setenv('DISABLE_CHECK', 'true', true);
         }
 
         logger.debug("Rebuilding extension, cwd: ", PROJECT_DIR);

@@ -158,6 +158,9 @@ ENV_VARS+=(
   SHELL_DEBUG=backtrace-warnings
 )
 
+# Pass through "DISABLE_CHECK" env variable for consistent type-checking in initial build and rebuilds:
+[[ -n "${DISABLE_CHECK}" ]] && ENV_VARS+=("DISABLE_CHECK=${DISABLE_CHECK}")
+
 if should_run_nested; then
   if has_devkit; then
     ARGS+=( --devkit )
@@ -178,10 +181,7 @@ fi
 
 if $BUILD; then
   log "Building..."
-  if ! npm run build; then
-    log "Build failed"
-    exit 1
-  fi
+  npm run build || die "Build failed"
 fi
 
 #######################################

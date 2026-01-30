@@ -49,8 +49,7 @@ export class HotRestartButton extends DevToolButton {
             if (PROJECT_DIR && BUILD_OUTPUT_DIR) {
                 res = await this._withAnimatedIcon(() => _rebuildExtension({
                     buildForHotReload: true,
-                    showDialogOnError: true,
-                    disableTypeCheck: true,
+                    showDialogOnError: true
                 }));
             }
             this.icon.opacity = 255;
