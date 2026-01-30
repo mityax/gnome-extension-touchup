@@ -70,7 +70,7 @@ export class SmoothFollower extends IdleRunner {
         }
     }
 
-    static readonly smoothTime = 0.04;  // in seconds
+    static readonly smoothTime = 0.05;  // in seconds
     static readonly omega = 2.0 / this.smoothTime;
 
     private _criticallyDampedSpring(
@@ -89,5 +89,15 @@ export class SmoothFollower extends IdleRunner {
 
         state.velocity = (state.velocity - SmoothFollower.omega * temp) * exp;
         return target + (change + temp) * exp;
+    }
+
+    stop() {
+        super.stop();
+
+        for (const l of this._lanes) {
+            l.lane.target = null;
+            l.lane.currentValue = null;
+            l.internalState.velocity = 0;
+        }
     }
 }
