@@ -22,7 +22,10 @@ export function _restartShell() {
     }
 
     try {
-        GLib.file_set_contents(restartMarkerFile, "restart");  // tell the wrapper script to restart after exiting
+        // Tell the wrapper script to restart after exiting:
+        GLib.file_set_contents(restartMarkerFile, "restart");
+
+        // Cleanly terminate the mainloop (this is how the `debugexit` command does it, too):
         global.context.terminate();
     } catch (error) {
         logger.error("Error during restarting the Shell:", error);
