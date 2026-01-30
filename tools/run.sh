@@ -159,7 +159,7 @@ ENV_VARS+=(
 )
 
 # Pass through "DISABLE_CHECK" env variable for consistent type-checking in initial build and rebuilds:
-[[ -n "${DISABLE_CHECK}" ]] && ENV_VARS+=("DISABLE_CHECK=${DISABLE_CHECK}")
+[[ -n "${DISABLE_CHECK:-}" ]] && ENV_VARS+=("DISABLE_CHECK=${DISABLE_CHECK}")
 
 if should_run_nested; then
   if has_devkit; then
