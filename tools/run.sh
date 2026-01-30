@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-die() { log "$@" >&2; exit 1; }
-
 #######################################
 # Configuration
 #######################################
@@ -11,8 +9,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 cd "$SCRIPT_DIR"
 
 source config.sh
-
-RESTART_FILE="${XDG_RUNTIME_DIR:-/tmp}/touchup_wrapper_restart.$$"
 
 # Default process command (can be overridden by heredoc via stdin)
 DEFAULT_PROCESS_CMD=(gnome-shell)
@@ -30,6 +26,7 @@ HEADLESS=false
 ENV_VARS=()
 ARGS=()
 
+RESTART_MARKER_FILE="${XDG_RUNTIME_DIR:-/tmp}/touchup_wrapper_restart.$$"
 DEV_SERVER_PID=""
 DEV_SERVER_PGID=""
 
@@ -86,6 +83,11 @@ done
 
 log() {
   echo -e "\033[1m\033[34m[touchup-wrapper]\033[0m $*"
+}
+
+die() {
+  log "$*" >&2
+  exit 1
 }
 
 filter_output() {
@@ -150,12 +152,10 @@ trap cleanup EXIT
 ENV_VARS+=(
   "TOUCHUP_PROJECT_DIR=\"$projectDir\""
   "TOUCHUP_BUILD_DIRECTORY=\"$buildDir\""
-  "TOUCHUP_RESTART_MARKER_FILE=\"${RESTART_FILE}\""
-)
+  "TOUCHUP_RESTART_MARKER_FILE=\"${RESTART_MARKER_FILE}\""
 
-ENV_VARS+=(
-  G_MESSAGES_DEBUG="GNOME Shell"
-  SHELL_DEBUG=backtrace-warnings
+  "G_MESSAGES_DEBUG=\"GNOME Shell\""
+  "SHELL_DEBUG=backtrace-warnings"
 )
 
 # Pass through "DISABLE_CHECK" env variable for consistent type-checking in initial build and rebuilds:
@@ -273,13 +273,13 @@ while true; do
   EXIT_CODE=$?
 
   # If the marker file has been created, restart the shell:
-  if [[ -f "$RESTART_FILE" ]]; then
+  if [[ -f "$RESTART_MARKER_FILE" ]]; then
     log "Shell exited with code ${EXIT_CODE} and requested restart"
     echo
     echo
     log "***************************************************************"
 
-    rm "$RESTART_FILE"
+    rm "$RESTART_MARKER_FILE"
     continue
   fi
 
