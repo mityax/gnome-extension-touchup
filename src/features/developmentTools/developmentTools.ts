@@ -151,11 +151,11 @@ export class DevelopmentTools extends ExtensionFeature {
             source.start()
                 .then(_ => logger.debug(`[Live-reload] Connected to ${watchEventUrl}`))
                 .catch((e) => {
-                    logger.error(`[Live-reload] Failed to start listening to SSE events on ${watchEventUrl}: `, e);
-
                     // Retry once again after 5 seconds in case the server is not yet up:
                     if (!isRetry) {
-                        Delay.s(5).then(() => this._setupLiveReload(true));
+                        Delay.s(3).then(() => this._setupLiveReload(true));
+                    } else {
+                        logger.error(`[Live-reload] Failed connect to dev server (at ${watchEventUrl}) twice, giving up:`, e);
                     }
                 });
 

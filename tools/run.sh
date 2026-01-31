@@ -23,8 +23,8 @@ VERBOSE=false
 USE_TOOLBOX=false
 HEADLESS=false
 
-ENV_VARS=()
-ARGS=()
+SHELL_ENV=()
+SHELL_ARGS=()
 
 RESTART_MARKER_FILE="${XDG_RUNTIME_DIR:-/tmp}/touchup_wrapper_restart.$$"
 DEV_SERVER_PID=""
@@ -57,8 +57,8 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --greeter)
-      ENV_VARS+=("GDM_GREETER_TEST=1")
-      ARGS+=(--mode=gdm)
+      SHELL_ENV+=("GDM_GREETER_TEST=1")
+      SHELL_ARGS+=(--mode=gdm)
       shift
       ;;
     --headless)
@@ -67,11 +67,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --)
       shift
-      ARGS+=("$@")
+      SHELL_ARGS+=("$@")
       break
       ;;
     *)
-      ARGS+=("$1")
+      SHELL_ARGS+=("$1")
       shift
       ;;
   esac
@@ -115,7 +115,7 @@ load_env_file() {
   while IFS='=' read -r key value; do
     # skip empty lines and comments
     [[ -z "$key" || "$key" == \#* ]] && continue
-    ENV_VARS+=("$key=\"$value\"")
+    SHELL_ENV+=("$key=$value")
   done < "$1"
 }
 
@@ -146,29 +146,29 @@ cleanup() {
 trap cleanup EXIT
 
 #######################################
-# Prepare ENV and ARGS
+# Prepare ENV and SHELL_ARGS
 #######################################
 
-ENV_VARS+=(
-  "TOUCHUP_PROJECT_DIR=\"$projectDir\""
-  "TOUCHUP_BUILD_DIRECTORY=\"$buildDir\""
-  "TOUCHUP_RESTART_MARKER_FILE=\"${RESTART_MARKER_FILE}\""
+SHELL_ENV+=(
+  "TOUCHUP_PROJECT_DIR=$projectDir"
+  "TOUCHUP_BUILD_DIRECTORY=$buildDir"
+  "TOUCHUP_RESTART_MARKER_FILE=$RESTART_MARKER_FILE"
 
-  "G_MESSAGES_DEBUG=\"GNOME Shell\""
+  "G_MESSAGES_DEBUG=GNOME Shell"
   "SHELL_DEBUG=backtrace-warnings"
 )
 
 # Pass through "DISABLE_CHECK" env variable for consistent type-checking in initial build and rebuilds:
-[[ -n "${DISABLE_CHECK:-}" ]] && ENV_VARS+=("DISABLE_CHECK=${DISABLE_CHECK}")
+[[ -n "${DISABLE_CHECK:-}" ]] && SHELL_ENV+=("DISABLE_CHECK=${DISABLE_CHECK}")
 
 if should_run_nested; then
   if has_devkit; then
-    ARGS+=( --devkit )
+    SHELL_ARGS+=( --devkit )
   else
     die Mutter has to be built with devkit support
   fi
 else
-  ARGS+=( --wayland )
+  SHELL_ARGS+=( --wayland )
 fi
 
 # Load .env file:
@@ -198,7 +198,7 @@ if $WATCH; then
   # Put it in its own process group
   DEV_SERVER_PGID=$(ps -o pgid= $DEV_SERVER_PID | tr -d ' ')
 
-  ENV_VARS+=("TOUCHUP_WATCH_EVENT_URL=\"http://localhost:${TOUCHUP_WATCH_PORT:-35729}/watch\"")
+  SHELL_ENV+=("TOUCHUP_WATCH_EVENT_URL=http://localhost:${TOUCHUP_WATCH_PORT:-35729}/watch")
 fi
 
 #######################################
@@ -212,7 +212,7 @@ if ! [ -t 0 ]; then
   PROCESS_SCRIPT="$(cat)"
 else
   # No heredoc -> generate script that runs default command
-  printf -v joined_args ' %q' "${ARGS[@]}"
+  printf -v joined_args ' %q' "${SHELL_ARGS[@]}"
   printf -v joined_cmd  ' %q' "${DEFAULT_PROCESS_CMD[@]}"
 
   PROCESS_SCRIPT="${DEFAULT_PROCESS_CMD[*]}${joined_args}"
@@ -222,15 +222,15 @@ fi
 # Execution functions
 #######################################
 
-run_process_host() {
-  env "${ENV_VARS[@]}" bash -s <<EOF 2>&1 | filter_output || true
-export PROCESS_SCRIPT="${PROCESS_SCRIPT}"
-dbus-run-session ./_run-and-install-extension.sh
-EOF
+run_host() {
+  env "${SHELL_ENV[@]}"                \
+    PROCESS_SCRIPT="$PROCESS_SCRIPT"  \
+    dbus-run-session ./_install-and-run-extension.sh 2>&1 | filter_output || true
+
   return "${PIPESTATUS[0]}"
 }
 
-run_process_toolbox() {
+run_toolbox() {
   command -v podman >/dev/null || die "podman is required but not installed"
   command -v toolbox >/dev/null || die "toolbox is required but not installed"
 
@@ -243,16 +243,11 @@ run_process_toolbox() {
       fi
   fi
 
-  local EXPORTS=""
-  for kv in "${ENV_VARS[@]}"; do
-    EXPORTS+="export ${kv}; "
-  done
+  toolbox run --container "${TOOLBOX_NAME}" \
+      env "${SHELL_ENV[@]}"                  \
+      PROCESS_SCRIPT="$PROCESS_SCRIPT"      \
+      dbus-run-session ./_install-and-run-extension.sh 2>&1 | filter_output || true
 
-  toolbox run --container "${TOOLBOX_NAME}" bash -s <<EOF 2>&1 | filter_output || true
-${EXPORTS}
-export PROCESS_SCRIPT="${PROCESS_SCRIPT}"
-dbus-run-session ./_run-and-install-extension.sh
-EOF
   return "${PIPESTATUS[0]}"
 }
 
@@ -264,10 +259,10 @@ EOF
 while true; do
   if $USE_TOOLBOX; then
     log "Starting GNOME Shell (using ${TOOLBOX_NAME} toolbox)"
-    run_process_toolbox
+    run_toolbox
   else
     log "Starting GNOME Shell (on host)"
-    run_process_host
+    run_host
   fi
 
   EXIT_CODE=$?

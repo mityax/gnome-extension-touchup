@@ -16,7 +16,7 @@
     "dev": "tools/run.sh --build --toolbox",
     "dev:host": "tools/run.sh --build",
     "watch": "tools/run.sh --build --watch --toolbox",
-    "watch:host": "tools/run.sh --build --watch --toolbox",
+    "watch:host": "tools/run.sh --build --watch",
     "prefs": "npm run enable && gnome-extensions prefs touchup@mityax",
     "logs": "journalctl -f -n 20 | grep touchup",
     "logs:file": "source $(pwd)/.env && tail -f $TOUCHUP_LOGFILE",

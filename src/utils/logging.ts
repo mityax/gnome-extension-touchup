@@ -89,14 +89,16 @@ export class Logger {
         }[level];
 
         let msg = text.map(item => {
-            return item && item instanceof Error
-                ? `${item.name}: ${(item.message || '')}`
+            let errorMatch = matchError(item);
+            return errorMatch
+                ? `${errorMatch.errorType}: ${errorMatch.message}`
                 : repr(item);
         }).join(" ");
 
         // If the last item is an error, we append its stack trace to the log message:
-        if (text.at(-1) instanceof Error && text.at(-1).stack) {
-            msg += '\n' + text.at(-1).stack.trim();
+        let errorMatch = matchError(text.at(-1));
+        if (errorMatch?.stack) {
+            msg += '\n' + errorMatch.stack.trim();
         }
 
         consoleLogFn(tag, msg);
@@ -144,12 +146,9 @@ export function repr(item: any): string {
     } catch (e) {}
 
     if (item && typeof item === 'object' && item.constructor && item.constructor.name) {
-        if (item instanceof Error) {
-            return `<${item.constructor.name} object ${item.message ? '– "' + item.message + '"' : ' (no error message)'}>`;
-        } else if (item instanceof Gio.IOErrorEnum) {
-            return `<Gio.IOErrorEnum {code: ${item.code}, message: ${item.message}}>`
-        } else if (item instanceof GLib.Error) {
-            return `<GLib.Error {code: ${item.code}, message: ${item.message}}>`
+        let errorMatch = matchError(item);
+        if (errorMatch !== null) {
+            return `<${errorMatch.errorType} object ${errorMatch.message}>`;
         } else if (json) {
             return `<${item.constructor.name} object ${json.length > 300 ? json.substring(0, 300) + ' [...]' : json}>`;
         } else {
@@ -192,4 +191,32 @@ export function assert(condition: boolean, message?: string | {isWarning: boolea
             }
         }
     }
+}
+
+
+// Helpers:
+
+/** Check if the given item is of a known error class, and return a unified error interface, if so. */
+function matchError(item: any): {errorType: string, message: string, stack?: string} | null {
+    if (item instanceof Error) {
+        return {
+            errorType: item.constructor.name,
+            message: item.message,
+            stack: item.stack,
+        }
+    } else if (item instanceof Gio.IOErrorEnum) {
+        return {
+            errorType: `Gio.IOErrorEnum(${item.code})`,
+            message: item.message,
+            stack: item.stack,
+        }
+    } else if (item instanceof GLib.Error) {
+        return {
+            errorType: `GLib.Error(${item.code})`,
+            message: item.message,
+            stack: item.stack,
+        }
+    }
+
+    return null;
 }
