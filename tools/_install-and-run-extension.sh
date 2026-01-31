@@ -5,7 +5,7 @@ set -euo pipefail
 # This script is meant to be run from within "run.sh" only. Its task is to
 #  1. Remove the currently installed extension, if any
 #  2. Install the latest extension zip file from the build folder
-#  3. Invoke a script passed via the environment variable "PROCESS_SCRIPT",
+#  3. Invoke a script passed via the environment variable "RUN_SHELL_SCRIPT",
 #     that is assumed start GNOME Shell
 #
 # Notably, this script is the entrypoint for the dbus session that is spawned
@@ -42,5 +42,5 @@ log "Enabling extension (via id $EXTENSION_ID)..."
 gnome-extensions enable "$EXTENSION_ID" || die "Failed to enable extension"
 
 # Run the script that will start GNOME Shell:
-bash -c "$PROCESS_SCRIPT"
+bash -c "$RUN_SHELL_SCRIPT"
 

@@ -10,8 +10,8 @@ cd "$SCRIPT_DIR"
 
 source config.sh
 
-# Default process command (can be overridden by heredoc via stdin)
-DEFAULT_PROCESS_CMD=(gnome-shell)
+# Default GNOME Shell invocation command (can be overridden by heredoc via stdin)
+DEFAULT_SHELL_CMD=(gnome-shell)
 
 #######################################
 # State variables
@@ -205,17 +205,17 @@ fi
 # Detect heredoc override
 #######################################
 
-PROCESS_SCRIPT=""
+RUN_SHELL_SCRIPT=""
 
 if ! [ -t 0 ]; then
   # Heredoc provided -> use it
-  PROCESS_SCRIPT="$(cat)"
+  RUN_SHELL_SCRIPT="$(cat)"
 else
   # No heredoc -> generate script that runs default command
   printf -v joined_args ' %q' "${SHELL_ARGS[@]}"
-  printf -v joined_cmd  ' %q' "${DEFAULT_PROCESS_CMD[@]}"
+  printf -v joined_cmd  ' %q' "${DEFAULT_SHELL_CMD[@]}"
 
-  PROCESS_SCRIPT="${DEFAULT_PROCESS_CMD[*]}${joined_args}"
+  RUN_SHELL_SCRIPT="${DEFAULT_SHELL_CMD[*]}${joined_args}"
 fi
 
 #######################################
@@ -224,7 +224,7 @@ fi
 
 run_host() {
   env "${SHELL_ENV[@]}"                \
-    PROCESS_SCRIPT="$PROCESS_SCRIPT"  \
+    RUN_SHELL_SCRIPT="$RUN_SHELL_SCRIPT"  \
     dbus-run-session ./_install-and-run-extension.sh 2>&1 | filter_output || true
 
   return "${PIPESTATUS[0]}"
@@ -245,7 +245,7 @@ run_toolbox() {
 
   toolbox run --container "${TOOLBOX_NAME}" \
       env "${SHELL_ENV[@]}"                  \
-      PROCESS_SCRIPT="$PROCESS_SCRIPT"      \
+      RUN_SHELL_SCRIPT="$RUN_SHELL_SCRIPT"      \
       dbus-run-session ./_install-and-run-extension.sh 2>&1 | filter_output || true
 
   return "${PIPESTATUS[0]}"
