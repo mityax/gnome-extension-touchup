@@ -151,7 +151,7 @@ export class DevelopmentTools extends ExtensionFeature {
             source.start()
                 .then(_ => logger.debug(`[Live-reload] Connected to ${watchEventUrl}`))
                 .catch((e) => {
-                    // Retry once again after 5 seconds in case the server is not yet up:
+                    // Retry once again after 3 seconds in case the server is not yet up:
                     if (!isRetry) {
                         Delay.s(3).then(() => this._setupLiveReload(true));
                     } else {
