@@ -167,6 +167,8 @@ if should_run_nested; then
   else
     die Mutter has to be built with devkit support
   fi
+elif $HEADLESS; then
+  SHELL_ARGS+=( --headless )
 else
   SHELL_ARGS+=( --wayland )
 fi
@@ -258,7 +260,7 @@ run_toolbox() {
 
 while true; do
   if $USE_TOOLBOX; then
-    log "Starting GNOME Shell (using ${TOOLBOX_NAME} toolbox)"
+    log "Starting GNOME Shell (using toolbox ${TOOLBOX_NAME})"
     run_toolbox
   else
     log "Starting GNOME Shell (on host)"
@@ -284,4 +286,3 @@ done
 
 log "Shell exited with code ${EXIT_CODE}"
 exit "${EXIT_CODE}"
-

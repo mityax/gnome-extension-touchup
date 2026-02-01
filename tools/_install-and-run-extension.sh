@@ -42,5 +42,5 @@ log "Enabling extension (via id $EXTENSION_ID)..."
 gnome-extensions enable "$EXTENSION_ID" || die "Failed to enable extension"
 
 # Run the script that will start GNOME Shell:
+log "Running \"${RUN_SHELL_SCRIPT}\""
 bash -c "$RUN_SHELL_SCRIPT"
-
