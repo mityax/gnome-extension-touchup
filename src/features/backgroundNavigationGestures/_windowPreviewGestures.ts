@@ -15,6 +15,7 @@ import TouchUpExtension from "$src/extension";
 import {
     BackgroundNavigationGesturesFeature
 } from "$src/features/backgroundNavigationGestures/backgroundNavigationGesturesFeature";
+import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
 
 
 export class WindowPreviewGestureFeature extends ExtensionFeature {
@@ -80,9 +81,14 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
             });
 
             const recognizer = new GestureRecognizer({
-                onGestureProgress: (state) => {
-                    windowPreview.translationY = Math.min(0, state.totalMotionDelta.y);
+                onGestureStarted: () => {
+                    lane.currentValue = 0;
+                    smoothFollower.start();
                 },
+                onGestureProgress: (state) => {
+                    lane.target = Math.min(0, state.totalMotionDelta.y);
+                },
+                onGestureEnded: () => smoothFollower.stop(),
                 onGestureCompleted: state => {
                     if (state.finalMotionDirection?.direction === 'up') {
                         this._onCloseWindow(windowPreview);
@@ -92,6 +98,12 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
                 },
                 onGestureCanceled: _ => this._easeBackWindowPreview(windowPreview),
             });
+
+            const lane = new SmoothFollowerLane({
+                smoothTime: 0.02,
+                onUpdate: value => windowPreview.translationY = value,
+            });
+            const smoothFollower = new SmoothFollower([lane]);
         }
     }
 

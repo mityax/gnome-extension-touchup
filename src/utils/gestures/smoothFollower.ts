@@ -14,16 +14,21 @@ export class SmoothFollowerLane {
     /** The target value of this lane. This is what the `currentValue` is smoothly driven towards. */
     target: number | null;
 
+    /** Smooth time for the spring animation */
+    smoothTime: number;
+
     /** Callback to apply to new `currentValue` whenever it changed */
     onUpdate: (value: number) => void;
 
     constructor(props: {
         currentValue?: number,
         target?: number,
+        smoothTime?: number
         onUpdate: (value: number) => void,
     }) {
         this.currentValue = props.currentValue ?? null;
         this.target = props.target ?? null;
+        this.smoothTime = props.smoothTime ?? 0.05;
         this.onUpdate = props.onUpdate;
     }
 }
@@ -61,6 +66,7 @@ export class SmoothFollower extends IdleRunner {
                 lane.currentValue = this._criticallyDampedSpring(
                     lane.currentValue,
                     lane.target,
+                    lane.smoothTime,
                     dt,
                     internalState,
                 );
@@ -70,24 +76,23 @@ export class SmoothFollower extends IdleRunner {
         }
     }
 
-    static readonly smoothTime = 0.05;  // in seconds
-    static readonly omega = 2.0 / this.smoothTime;
-
     private _criticallyDampedSpring(
         current: number,
         target: number,
+        smoothTime: number,
         dt: number,
         state: typeof this._lanes[0]['internalState'],
     ): number {
         dt = dt / 1000 / 1000;  // convert to seconds
 
-        const x = SmoothFollower.omega * dt;
+        const omega = 2.0 / smoothTime;
+        const x = omega * dt;
         const exp = 1.0 / (1.0 + x + 0.48*x**2 + 0.235*x**3);
 
         const change = current - target;
-        const temp = (state.velocity + SmoothFollower.omega * change) * dt;
+        const temp = (state.velocity + omega * change) * dt;
 
-        state.velocity = (state.velocity - SmoothFollower.omega * temp) * exp;
+        state.velocity = (state.velocity - omega * temp) * exp;
         return target + (change + temp) * exp;
     }
 

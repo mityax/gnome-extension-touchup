@@ -180,8 +180,8 @@ export class GestureRecognizer extends EventEmitter<{
             if (this._state.isDuringGesture) {
                 this.emit('gesture-progress', this._state, event, rawEvent);
             } else {
-                this.emit(event.isCancelEvent ? 'gesture-canceled' : 'gesture-completed', this._state, event, rawEvent);
                 this.emit('gesture-ended', this._state, event, rawEvent);
+                this.emit(event.isCancelEvent ? 'gesture-canceled' : 'gesture-completed', this._state, event, rawEvent);
             }
         }
 
