@@ -8,60 +8,35 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";
 import {EdgeDragTransition, TransitionValues} from "$src/utils/ui/edgeDragTransition";
+import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
 
 
-class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
+export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
     private currentTransition: EdgeDragTransition | null = null;
     private currentMenu: PanelMenu.Button | null = null;
+    private recognizer: GestureRecognizer;
 
     constructor(pm: PatchManager) {
         super(pm);
 
-        // Find all `PanelMenu.Button` instances with an attached `BoxPointer` dropdown menu:
-        const menus = findAllActorsBy(
-            Main.panel,
-            actor => !!(
-                actor instanceof PanelMenu.Button
-                // @ts-ignore
-                && actor.menu._boxPointer
-            )
-        ) as PanelMenu.Button[];
+        // Collect all menus we support:
+        const menus = this._collectMenus();
 
-        // Disable "recognize_on_press" on the panel menu buttons to allow dragging:
-        menus.forEach(m => {
+        // Setup menu patches:
+        this._disableClickOnPress(menus);
+        this._suppressOpenStateChangedSignalDuringGesture();
 
-            // Notice:
-            // `PanelMenu.Button._clickGesture` is only available from Shell >= v50
-            // -> https://github.com/GNOME/gnome-shell/commit/80bc9d773cc550e9ca448741ac174b54c61073b6
-            // @ts-ignore
-            if (!m._clickGesture) return;
-
-            pm.setProperty(
-                // @ts-ignore
-                m._clickGesture as Clutter.ClickGesture,
-                'recognize_on_press',
-                false,
-            );
+        // Use a [SmoothFollower] for our gestures:
+        const lane = new SmoothFollowerLane({
+            smoothTime: 0.04,
+            onUpdate: (value: number) => {
+                this._applyValues(this.currentTransition!.interpolate(value));
+            }
         });
+        const smoothFollower = new SmoothFollower([lane]);
 
-        // Prevent emitting the "open-state-changed" event during the gesture to prevent grab. The
-        // event is manually emitted after the gesture is completed:
-        const self = this;
-        pm.patchMethod(
-            PopupMenu.prototype,
-            'emit',
-            function (this: PopupMenu, originalMethod, signalName, ...args) {
-                if (this === self.currentMenu?.menu
-                    && signalName === 'open-state-changed'
-                    && recognizer.currentState.isDuringGesture) {
-                    return;
-                }
-
-                originalMethod(signalName, ...args);
-            },
-        );
-
-        const recognizer = new GestureRecognizer({
+        // Setup the main [GestureRecognizer]:
+        this.recognizer = new GestureRecognizer({
             onGestureStarted: state => {
                 this.currentMenu = _findClosestMenu(menus, state.pressCoordinates.x);
                 this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
@@ -69,11 +44,13 @@ class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                     fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
                 });
                 this._applyValues(this.currentTransition!.initialValues);
+                lane.currentValue = 0;
+                smoothFollower.start();
             },
-            onGestureProgress: state => {
-                this._applyValues(this.currentTransition!.interpolate(state.totalMotionDelta.y));
-            },
-            onGestureCompleted: state => {
+            onGestureProgress: state => lane.target = state.totalMotionDelta.y,
+            onGestureEnded: state => {
+                smoothFollower.stop();
+
                 const duration = 150;
                 const animatableExtent = this.currentTransition!.fullExtent - this.currentTransition!.initialExtent;
                 const prog = Math.max(state.totalMotionDelta.y / animatableExtent, 0);
@@ -90,18 +67,75 @@ class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         const gesture = new Clutter.PanGesture({
             panAxis: Clutter.PanAxis.Y,
         });
-
-        gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
+        gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
         gesture.connect('end', () => {
-            recognizer.push(Clutter.get_current_event());
-            recognizer.ensureEnded();
+            this.recognizer.push(Clutter.get_current_event());
+            this.recognizer.ensureEnded();
         });
-        gesture.connect("cancel", () => recognizer.cancel());
+        gesture.connect("cancel", () => this.recognizer.cancel());
 
         this.pm.patch(() => {
             Main.panel.add_action_full('touchup-panel-menus-swipe-to-open', Clutter.EventPhase.CAPTURE, gesture);
             return () => Main.panel.remove_action(gesture);
         });
+    }
+
+    /**
+     * Find all `PanelMenu.Button` instances with an attached `BoxPointer` dropdown menu
+     */
+    private _collectMenus() {
+        return findAllActorsBy(
+            Main.panel,
+            actor => !!(
+                actor instanceof PanelMenu.Button
+                // @ts-ignore
+                && actor.menu._boxPointer
+            )
+        ) as PanelMenu.Button[];
+    }
+
+
+    /**
+     * Disable "recognize_on_press" on the panel menu buttons to allow dragging
+     */
+    private _disableClickOnPress(menus: PanelMenu.Button[]) {
+        menus.forEach(m => {
+
+            // Notice:
+            // `PanelMenu.Button._clickGesture` is only available from Shell >= v50
+            // -> https://github.com/GNOME/gnome-shell/commit/80bc9d773cc550e9ca448741ac174b54c61073b6
+            // @ts-ignore
+            if (!m._clickGesture) return;
+
+            this.pm.setProperty(
+                // @ts-ignore
+                m._clickGesture as Clutter.ClickGesture,
+                'recognize_on_press',
+                false,
+            );
+        });
+    }
+
+
+    /**
+     * Prevent emitting the "open-state-changed" event during the gesture to prevent grab. The
+     * event is manually emitted after the gesture is completed.
+     */
+    private _suppressOpenStateChangedSignalDuringGesture() {
+        const self = this;
+        this.pm.patchMethod(
+            PopupMenu.prototype,
+            'emit',
+            function (this: PopupMenu, originalMethod, signalName, ...args) {
+                if (this === self.currentMenu?.menu
+                    && signalName === 'open-state-changed'
+                    && self.recognizer.currentState.isDuringGesture) {
+                    return;
+                }
+
+                originalMethod(signalName, ...args);
+            },
+        );
     }
 
     private get currentBoxPointer(): BoxPointer.BoxPointer | null {
@@ -155,8 +189,6 @@ class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         this.currentBoxPointer!.bin.scaleY = targetValues.scale;
     }
 }
-
-export default PanelMenusSwipeToOpenFeature
 
 
 function _findClosestMenu<T extends Clutter.Actor>(menus: T[], x: number): T {

@@ -116,7 +116,7 @@ export default class TouchUpExtension extends Extension {
         'panel-menus-swipe-to-open',
         async pm => {
           const m = (await import('$src/features/panel/panelMenusSwipeToOpen'));
-          return new m.default(pm);
+          return new m.PanelMenusSwipeToOpenFeature(pm);
         },
         // TODO: add setting
     );
