@@ -15,6 +15,7 @@ import {findActorBy} from "$src/utils/utils";
 import * as Widgets from "$src/utils/ui/widgets";
 import ExtensionFeature from "$src/utils/extensionFeature";
 import {GestureRecognizer, GestureState} from "$src/utils/gestures/gestureRecognizer";
+import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
 import Ref = Widgets.Ref;
 
 
@@ -211,6 +212,8 @@ class SwipeGesturesHelper {
     private readonly scrollView?: St.ScrollView;
     private readonly gesture: Clutter.PanGesture;
     readonly recognizer: GestureRecognizer;
+    private readonly smoothFollowerLane: SmoothFollowerLane;
+    private readonly smoothFollower: SmoothFollower;
     private signalIds: number[];
 
     /**
@@ -249,15 +252,26 @@ class SwipeGesturesHelper {
         this.onCollapse = props.onCollapse;
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
+        this.smoothFollowerLane = new SmoothFollowerLane({
+            onUpdate: value => this.onMoveHorizontally?.(value),
+            smoothTime: 0.03,
+        });
+        this.smoothFollower = new SmoothFollower([this.smoothFollowerLane]);
+
         // Track and recognize touch events:
         this.recognizer = new GestureRecognizer({
-            onGestureProgress: state => this._onGestureProgress(state),
-            onGestureCompleted: () => {
-                this._executeFinishedGesture();
-                this.isScrollGesture = false;
+            onGestureStarted: () => {
+                this.smoothFollowerLane.currentValue = 0;
+                this.smoothFollower.start();
             },
-            onGestureCanceled: () => {
-                this.onEaseBackPosition?.();
+            onGestureProgress: state => this._onGestureProgress(state),
+            onGestureEnded: state => {
+                this.smoothFollower.stop();
+
+                state.hasGestureBeenCanceled
+                    ? this.onEaseBackPosition?.()
+                    : this._executeFinishedGesture();
+
                 this.isScrollGesture = false;
             },
         });
@@ -291,7 +305,7 @@ class SwipeGesturesHelper {
 
     private _onGestureProgress(state: GestureState) {
         if (state.firstMotionDirection?.axis === 'horizontal') {
-            this.onMoveHorizontally?.(state.totalMotionDelta.x);
+            this.smoothFollowerLane.target = state.totalMotionDelta.x;
         } else if (state.firstMotionDirection?.axis == 'vertical') {
             // Scroll the message list, if possible:
             const dy = state.currentMotionDelta.y;
