@@ -277,12 +277,9 @@ class SwipeGesturesHelper {
             },
         });
 
-        this.gesture = new Clutter.PanGesture({
-            max_n_points: 1
+        this.gesture = this.recognizer.createPanGesture({
+            maxNPoints: 1,
         });
-        this.gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
-        this.gesture.connect('end', () => this.recognizer.push(Clutter.get_current_event()));
-        this.gesture.connect('cancel', () => this.recognizer.cancel());
         props.actor.add_action(this.gesture);
 
         // Ensure the notification remains its "active" background color while dragged.

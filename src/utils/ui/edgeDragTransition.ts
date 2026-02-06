@@ -1,4 +1,5 @@
 import {clamp} from "../utils";
+import {assert} from "$src/utils/logging";
 
 
 export enum OvershootMode {
@@ -22,8 +23,11 @@ export class EdgeDragTransition {
         initialExtent?: number,
         overshootMode?: OvershootMode,
     }) {
+        assert(!props.initialExtent || props.initialExtent < props.fullExtent,
+            "Initial extent must be smaller than full extent");
+
         this.fullExtent = props.fullExtent;
-        this.initialExtent = props.initialExtent ?? props.fullExtent * 0.35;
+        this.initialExtent = props.initialExtent ?? props.fullExtent * 0.55;
         this.overshootMode = props.overshootMode ?? OvershootMode.scale;
     }
 
@@ -33,7 +37,8 @@ export class EdgeDragTransition {
         const prog = clamp(unboundedProg, 0, 1);
 
         let scale = prog * 0.3 + 0.7;
-        let opacity = Math.min((prog - initialProg) * 2, 1);
+
+        let opacity = Math.min((prog - initialProg) / (1 - initialProg), 1);
         let translation = Math.min(-this.fullExtent * scale * (1-prog), 0);
 
         const overshoot = Math.max(Math.log(unboundedProg), 0);

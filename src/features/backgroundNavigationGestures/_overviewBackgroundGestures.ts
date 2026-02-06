@@ -33,15 +33,7 @@ export class OverviewBackgroundGesturesFeature extends ExtensionFeature {
             onGestureCanceled: _ => this._navigationGestureController.gestureCancel(),
         });
 
-        this.pm.setProperty(Main.overview._overview._controls, 'reactive', true);
-
-        this.gesture = new Clutter.PanGesture();
-        this.gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
-        this.gesture.connect('end', () => {
-            recognizer.push(Clutter.get_current_event());
-            recognizer.ensureEnded();
-        });
-        this.gesture.connect('cancel', () => recognizer.cancel())
+        this.gesture = recognizer.createPanGesture();
 
         this.pm.patch(() => {
             Main.overview._overview._controls.add_action_full(
@@ -51,6 +43,7 @@ export class OverviewBackgroundGesturesFeature extends ExtensionFeature {
             );
             return () => Main.overview._overview._controls.remove_action(this.gesture);
         });
+        this.pm.setProperty(Main.overview._overview._controls, 'reactive', true);
     }
     
     canNotCancel(otherGesture: Clutter.PanGesture) {

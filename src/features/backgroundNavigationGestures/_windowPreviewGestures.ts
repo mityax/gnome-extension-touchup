@@ -63,22 +63,12 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
                 ?.getSubFeature(OverviewBackgroundGesturesFeature)
                 ?.canNotCancel(windowPreview._draggable._dndGesture);
 
-            // Construct our PanGesture:
-            const gesture = new Clutter.PanGesture({ max_n_points: 1, panAxis: Clutter.PanAxis.Y });
-            gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
-            gesture.connect('end', () => recognizer.push(Clutter.get_current_event()));
-            gesture.connect('cancel', () => recognizer.cancel());
-            gesture.connect('may-recognize', () => {
-                return (
-                    GestureRecognizerEvent.isTouch(gesture.get_point_event(0))  // only respond to touch gestures
-                    && gesture.get_accumulated_delta().get_y() <= 0);  // only respond to swipe-down gestures
-            });
-
-            this.pm.patch(() => {
-                windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
-                const ref = new Ref(windowPreview);  // use a ref to automatically unset once destroyed
-                return () => ref.current?.remove_action(gesture);
-            });
+            const smoothFollower = new SmoothFollower([
+                new SmoothFollowerLane({
+                    smoothTime: 0.02,
+                    onUpdate: value => windowPreview.translationY = value,
+                }),
+            ]);
 
             const recognizer = new GestureRecognizer({
                 onGestureStarted: () => {
@@ -100,12 +90,22 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
                 onGestureCanceled: _ => this._easeBackWindowPreview(windowPreview),
             });
 
-            const smoothFollower = new SmoothFollower([
-                new SmoothFollowerLane({
-                    smoothTime: 0.02,
-                    onUpdate: value => windowPreview.translationY = value,
-                }),
-            ]);
+            // Construct our PanGesture:
+            const gesture = recognizer.createPanGesture({
+                maxNPoints: 1,
+                panAxis: Clutter.PanAxis.Y,
+            });
+            gesture.connect('may-recognize', () => {
+                return (
+                    GestureRecognizerEvent.isTouch(gesture.get_point_event(0))  // only respond to touch gestures
+                    && gesture.get_accumulated_delta().get_y() <= 0);  // only respond to swipe-down gestures
+            });
+
+            this.pm.patch(() => {
+                windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
+                const ref = new Ref(windowPreview);  // use a ref to automatically unset once destroyed
+                return () => ref.current?.remove_action(gesture);
+            });
         }
     }
 

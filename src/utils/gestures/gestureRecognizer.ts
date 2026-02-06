@@ -229,6 +229,24 @@ export class GestureRecognizer extends EventEmitter<{
             }
         }
     }
+
+    /**
+     * Create a [Clutter.PanGesture] that forwards all events to this [GestureRecognizer].
+     */
+    createPanGesture(props?: Partial<Clutter.PanGesture.ConstructorProps>): Clutter.PanGesture {
+        const gesture = new Clutter.PanGesture(props);
+        gesture.connect('pan-update', () => {
+            this.push(Clutter.get_current_event());
+        });
+        gesture.connect('end', () => {
+            this.push(Clutter.get_current_event());
+            this.ensureEnded();
+        });
+        gesture.connect("cancel", () => {
+            this.cancel();
+        });
+        return gesture;
+    }
 }
 
 
@@ -719,26 +737,6 @@ function _distBetween([x1, y1]: [number, number], [x2, y2]: [number, number]): n
 // up = 0, right = 90, down = 180, left = 270
 function _angleBetween(dx: number, dy: number) {
     return (Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360;
-}
-
-/**
- * The shortest (signed) distance from a1 to a2, such that:
- *
- * ```
- * a1 + _angleDifference(a1, a2) == a2
- * ```
- */
-function _angleDifference(a1: number, a2: number): number {
-    // Make `a` the lesser of (a1, a2) and `b` the greater one:
-    const [a, b] = a1 > a2 ? [a2, a1] : [a1, a2];
-
-    let diff = b - a;
-    if (diff > 180) {
-        diff = 360 - diff;
-        return a1 > a2 ? diff : -diff;
-    } else {
-        return a1 > a2 ? -diff : diff;
-    }
 }
 
 
