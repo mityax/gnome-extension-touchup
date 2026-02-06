@@ -63,5 +63,17 @@ export class MiscPage extends Adw.PreferencesPage {
                 })
             ]
         }));
+
+        this.add(buildPreferencesGroup({
+            title: "Double Tap To Sleep",
+            description: "Double tap the panel or desktop background to gently lock and put your device to sleep.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable Double Tap To Sleep",
+                    subtitle: "Toggle to enable or disable the double tap to sleep feature",
+                    setting: settings.screenRotateUtils.floatingScreenRotateButtonEnabled
+                })
+            ]
+        }));
     }
 }

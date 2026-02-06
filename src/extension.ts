@@ -112,14 +112,15 @@ export default class TouchUpExtension extends Extension {
       },
     );
 
-    BETA: await this.defineFeature(
-        'panel-menus-swipe-to-open',
-        async pm => {
-          const m = (await import('$src/features/panel/panelMenusSwipeToOpen'));
-          return new m.PanelMenusSwipeToOpenFeature(pm);
-        },
-        // TODO: add setting
-    );
+    BETA:
+        await this.defineFeature(
+            'panel-menus-swipe-to-open',
+            async pm => {
+              const m = (await import('$src/features/panel/panelMenusSwipeToOpenFeature'));
+              return new m.PanelMenusSwipeToOpenFeature(pm);
+            },
+            // TODO: add setting
+        );
 
     await this.defineFeature(
       'floating-screen-rotate-button',
@@ -130,14 +131,24 @@ export default class TouchUpExtension extends Extension {
       settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
     );
 
-    BETA: await this.defineFeature(
-      'virtual-touchpad',
+    await this.defineFeature(
+      'double-tap-to-sleep',
       async pm => {
-        const m = (await import('$src/features/virtualTouchpad/virtualTouchpadFeature'));
-        return new m.VirtualTouchpadFeature(pm);
+        const m = (await import('$src/features/doubleTapToSleep/doubleTapToSleepFeature'));
+        return new m.DoubleTapToSleepFeature(pm);
       },
-      settings.virtualTouchpad.enabled,
+      settings.doubleTapToSleep.enabled
     );
+
+    BETA:
+        await this.defineFeature(
+          'virtual-touchpad',
+          async pm => {
+            const m = (await import('$src/features/virtualTouchpad/virtualTouchpadFeature'));
+            return new m.VirtualTouchpadFeature(pm);
+          },
+          settings.virtualTouchpad.enabled,
+        );
 
     await this.defineFeature(
       'donations',

@@ -167,6 +167,13 @@ export const settings = {
         floatingScreenRotateButtonEnabled: new BoolSetting('screen-rotate-utils-floating-screen-rotate-button-enabled', true),
     },
 
+    doubleTapToSleep: {
+        /**
+         * Whether to enable double-tap-to-sleep on panel and desktop background or not.
+         */
+        enabled: new BoolSetting('double-tap-to-sleep-enabled', true),
+    },
+
     notificationGestures: {
         /**
          * Whether to enable touchscreen gestures for notifications or not.

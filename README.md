@@ -59,22 +59,21 @@ very frequently – you can help speed up progress by [donating](#support).
    - [x] Hold and move to drag and drop windows
    - [x] Single-finger swipe up/down to open/close overview/app list
    - [ ] Move windows to another screen via dragging to the corner
- - [ ] Gesture-driven top menu pull down animations
+ - [ ] Gesture-driven top menu pull down animations \[WIP]
  - [ ] Touch-enabled volume controls
  - [ ] Voice input in onscreen keyboard
  - [ ] Option to display individual windows instead of workspaces when navigating
    using gesture navigation bar
  - [ ] Run arbitrary commands on touch-mode change
- - [ ] Double-tap top panel, lockscreen or desktop background to sleep
+ - [ ] Double-tap top panel, lockscreen or desktop background to sleep \[WIP]
  - [ ] Hide window close buttons in touch mode
 
 Each of these features can be enabled/disabled individually and most can be 
 further customized in the extension settings.
 
-In case you'd like to suggest a feature or work on one yourself, please
-don't hesitate
-to [create an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so we can
-discuss it!
+In case you'd like to suggest a feature or work on one yourself, please don't
+hesitate to [create an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) 
+so we can discuss it!
 
 ## A Note on Compatibility
 
