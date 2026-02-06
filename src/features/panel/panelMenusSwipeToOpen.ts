@@ -9,13 +9,13 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";
 import {EdgeDragTransition, TransitionValues} from "$src/utils/ui/edgeDragTransition";
 import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
-import {logger} from "$src/utils/logging";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
     private currentTransition: EdgeDragTransition | null = null;
     private currentMenu: PanelMenu.Button | null = null;
-    private recognizer: GestureRecognizer;
+    private smoothFollower: SmoothFollower<[SmoothFollowerLane]>;
+    private isDuringOpenGesture: boolean = false;
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -25,10 +25,10 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
 
         // Setup menu patches:
         this._disableClickOnPress(menus);
-        this._suppressOpenStateChangedSignalDuringGesture();
+        this._suppressOpenStateChangedSignalDuringOpenGesture();
 
         // Use a [SmoothFollower] for our gestures:
-        const smoothFollower = new SmoothFollower([
+        this.smoothFollower = new SmoothFollower([
             new SmoothFollowerLane({
                 smoothTime: 0.04,
                 onUpdate: (value: number) => {
@@ -37,24 +37,31 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             }),
         ]);
 
-        // Setup the main [GestureRecognizer]:
-        this.recognizer = new GestureRecognizer({
+        // Setup the gestures:
+        this._setupOpenGesture(menus);
+        this._setupCloseGestures(menus);
+    }
+
+    private _setupOpenGesture(menus: PanelMenu.Button[]) {
+        const recognizer = new GestureRecognizer({
             onGestureStarted: state => {
+                this.isDuringOpenGesture = true;
                 this.currentMenu = _findClosestMenu(menus, state.pressCoordinates.x);
                 this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
                 this.currentTransition = new EdgeDragTransition({
                     fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
                 });
                 this._applyValues(this.currentTransition!.initialValues);
-                smoothFollower.start(lane => lane.currentValue = 0);
+                this.smoothFollower.start(lane => lane.currentValue = 0);
             },
             onGestureProgress: state => {
-                smoothFollower.update(lane => {
+                this.smoothFollower.update(lane => {
                     lane.target = state.totalMotionDelta.y;
                 });
             },
             onGestureEnded: state => {
-                smoothFollower.stop();
+                this.smoothFollower.stop();
+                this.isDuringOpenGesture = false;
 
                 const duration = 150;
                 const animatableExtent = this.currentTransition!.fullExtent - this.currentTransition!.initialExtent;
@@ -63,25 +70,70 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                 if (state.lastMotionDirection?.direction === 'up' || state.hasGestureBeenCanceled) {
                     this._cancelOpeningMenu(duration * prog);
                 } else {
-                    this._finalizeOpeningMenu(duration * Math.abs(1-prog));
+                    this._finalizeOpeningMenu(duration * Math.abs(1 - prog));
                 }
             },
         });
 
         // Setup our `Clutter.PanGesture` instance:
-        const gesture = new Clutter.PanGesture({
+        const gesture = recognizer.createPanGesture({
             panAxis: Clutter.PanAxis.Y,
         });
-        gesture.connect('pan-update', () => this.recognizer.push(Clutter.get_current_event()));
-        gesture.connect('end', () => {
-            this.recognizer.push(Clutter.get_current_event());
-            this.recognizer.ensureEnded();
-        });
-        gesture.connect("cancel", () => this.recognizer.cancel());
 
         this.pm.patch(() => {
             Main.panel.add_action_full('touchup-panel-menus-swipe-to-open', Clutter.EventPhase.CAPTURE, gesture);
             return () => Main.panel.remove_action(gesture);
+        });
+    }
+
+
+    private _setupCloseGestures(menus: PanelMenu.Button[]) {
+        this.pm.patch(() => {
+            menus.forEach(m => {
+                const recognizer = new GestureRecognizer({
+                    onGestureStarted: () => {
+                        this.currentMenu = m;
+                        this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
+                        this.currentTransition = new EdgeDragTransition({
+                            fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
+                        });
+                        this.smoothFollower.start(lane => {
+                            lane.currentValue = this.currentTransition!.fullExtent;
+                        });
+                    },
+                    onGestureProgress: state => {
+                        this.smoothFollower.update(lane => {
+                            let prog = this.currentTransition!.fullExtent + state.totalMotionDelta.y;
+
+                            if (state.totalMotionDelta.y < 0) {  // this is to prevent jumps when swiping downward on fully opened menu
+                                prog -= this.currentTransition!.initialExtent;
+                            }
+
+                            lane.target = prog;
+                        });
+                    },
+                    onGestureEnded: state => {
+                        this.smoothFollower.stop();
+
+                        if (state.lastMotionDirection?.direction === 'down' || state.hasGestureBeenCanceled) {
+                            this._finalizeOpeningMenu();
+                        } else {
+                            this._cancelOpeningMenu();
+                        }
+                    },
+                });
+
+                const gesture = recognizer.createPanGesture({
+                    panAxis: Clutter.PanAxis.Y,
+                });
+
+                // @ts-ignore
+                m.menu._boxPointer.add_action_full('touchup-panel-menus-swipe-to-close', Clutter.EventPhase.BUBBLE, gesture);
+            });
+            return () => {
+                // @ts-ignore
+                menus.forEach(m => m.menu._boxPointer.remove_action_by_name('touchup-panel-menus-swipe-to-close'));
+            };
         });
     }
 
@@ -126,7 +178,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
      * Prevent emitting the "open-state-changed" event during the gesture to prevent grab. The
      * event is manually emitted after the gesture is completed.
      */
-    private _suppressOpenStateChangedSignalDuringGesture() {
+    private _suppressOpenStateChangedSignalDuringOpenGesture() {
         const self = this;
         this.pm.patchMethod(
             PopupMenu.prototype,
@@ -134,7 +186,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             function (this: PopupMenu, originalMethod, signalName, ...args) {
                 if (this === self.currentMenu?.menu
                     && signalName === 'open-state-changed'
-                    && self.recognizer.currentState.isDuringGesture) {
+                    && self.isDuringOpenGesture) {
                     return;
                 }
 
@@ -148,10 +200,10 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         return this.currentMenu?.menu._boxPointer ?? null;
     }
 
-    private _finalizeOpeningMenu(duration: number) {
+    private _finalizeOpeningMenu(duration?: number) {
         this._easeToValues({
             target: this.currentTransition!.finalValues,
-            duration,
+            duration: duration ?? 150,
             onStopped: () => {
                 this.currentMenu!.menu.
                     // @ts-ignore
@@ -160,10 +212,10 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         });
     }
 
-    private _cancelOpeningMenu(duration: number) {
+    private _cancelOpeningMenu(duration?: number) {
         this._easeToValues({
             target: this.currentTransition!.initialValues,
-            duration,
+            duration: duration ?? 150,
             onStopped: () => {
                 this.currentMenu!.menu.close(BoxPointer.PopupAnimation.NONE);
 
