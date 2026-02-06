@@ -31,7 +31,7 @@ zipFile="${zipFiles[0]}"
 
 # Remove any potential installed version:
 if [ -d "$finalExtensionInstallationDirectory" ]; then
-  log "Removing existing extension installation..."
+  log "Removing existing extension installation (at $finalExtensionInstallationDirectory)..."
   rm -r "$finalExtensionInstallationDirectory" || die "Removing the existing extension version failed"
 fi
 

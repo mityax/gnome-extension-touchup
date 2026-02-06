@@ -174,7 +174,9 @@ export default {
 
         IS_WATCH_MODE
             ? reloadSSENotifier({
-                  port: process.env.TOUCHUP_WATCH_PORT ? Number.parseInt(process.env.TOUCHUP_WATCH_PORT) : 35729
+                  port: process.env.TOUCHUP_WATCH_PORT
+                          ? Number.parseInt(process.env.TOUCHUP_WATCH_PORT)
+                          : 35729,
               })
             : null,
     ].filter(p => p != null),  // filter out `null` to allow conditionals in the list
