@@ -1,6 +1,6 @@
 import ExtensionFeature from "../../utils/extensionFeature";
 import {PatchManager} from "$src/utils/patchManager";
-import {GestureRecognizer} from "$src/utils/gestures/gestureRecognizer";
+import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import Clutter from "gi://Clutter";
 import * as Main from "resource:///org/gnome/shell/ui/main.js"
 import {findAllActorsBy} from "$src/utils/utils";
@@ -24,7 +24,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         const menus = this._collectMenus();
 
         // Setup menu patches:
-        this._disableClickOnPress(menus);
+        this._adjustClickGesturesForTouchEvents(menus);
         this._suppressOpenStateChangedSignalDuringOpenGesture();
 
         // Use a [SmoothFollower] for our gestures:
@@ -76,9 +76,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         });
 
         // Setup our `Clutter.PanGesture` instance:
-        const gesture = recognizer.createPanGesture({
-            panAxis: Clutter.PanAxis.Y,
-        });
+        const gesture = recognizer.createPanGesture({ panAxis: Clutter.PanAxis.Y });
 
         this.pm.patch(() => {
             Main.panel.add_action_full('touchup-panel-menus-swipe-to-open', Clutter.EventPhase.CAPTURE, gesture);
@@ -153,24 +151,38 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
 
 
     /**
-     * Disable "recognize_on_press" on the panel menu buttons to allow dragging
+     * Make all given [PanelMenu.Button]'s click gestures only react to pointer input, since these
+     * gestures are configured to recognize on press, which would cancel our PanGesture immediately
+     * on any interaction.
+     *
+     * As a second step, this function adds a new [Clutter.ClickGesture], that does not recognize
+     * on press, to each menu button - this is to re-enable the classic behavior when not dragging,
+     * but tapping the menu button via touch.
      */
-    private _disableClickOnPress(menus: PanelMenu.Button[]) {
-        menus.forEach(m => {
-
+    private _adjustClickGesturesForTouchEvents(menus: PanelMenu.Button[]) {
+        for (const m of menus) {
             // Notice:
             // `PanelMenu.Button._clickGesture` is only available from Shell >= v50
             // -> https://github.com/GNOME/gnome-shell/commit/80bc9d773cc550e9ca448741ac174b54c61073b6
             // @ts-ignore
-            if (!m._clickGesture) return;
+            if (!m._clickGesture) continue;
 
-            this.pm.setProperty(
+            // Step 01 - Make built-in click gesture (which recognizes on press) ignore touch input:
+            this.pm.connectTo(
                 // @ts-ignore
-                m._clickGesture as Clutter.ClickGesture,
-                'recognize_on_press',
-                false,
+                m._clickGesture,
+                "may-recognize",
+                () => GestureRecognizerEvent.isPointer(Clutter.get_current_event()),
             );
-        });
+
+            // Step 02 - Add another click gesture (that only recognizes on release) for touch interaction:
+            this.pm.patch(() => {
+                const gesture = new Clutter.ClickGesture();
+                gesture.connect("recognize", () => m.menu.open());
+                m.add_action_full("touchup-panel-menus-tap-gesture", Clutter.EventPhase.BUBBLE, gesture);
+                return () => m.remove_action(gesture);
+            });
+        }
     }
 
 
