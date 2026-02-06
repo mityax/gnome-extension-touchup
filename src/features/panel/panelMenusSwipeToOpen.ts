@@ -9,6 +9,7 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";
 import {EdgeDragTransition, TransitionValues} from "$src/utils/ui/edgeDragTransition";
 import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
+import {logger} from "$src/utils/logging";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
@@ -27,13 +28,14 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         this._suppressOpenStateChangedSignalDuringGesture();
 
         // Use a [SmoothFollower] for our gestures:
-        const lane = new SmoothFollowerLane({
-            smoothTime: 0.04,
-            onUpdate: (value: number) => {
-                this._applyValues(this.currentTransition!.interpolate(value));
-            }
-        });
-        const smoothFollower = new SmoothFollower([lane]);
+        const smoothFollower = new SmoothFollower([
+            new SmoothFollowerLane({
+                smoothTime: 0.04,
+                onUpdate: (value: number) => {
+                    this._applyValues(this.currentTransition!.interpolate(value));
+                }
+            }),
+        ]);
 
         // Setup the main [GestureRecognizer]:
         this.recognizer = new GestureRecognizer({
@@ -44,10 +46,13 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                     fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
                 });
                 this._applyValues(this.currentTransition!.initialValues);
-                lane.currentValue = 0;
-                smoothFollower.start();
+                smoothFollower.start(lane => lane.currentValue = 0);
             },
-            onGestureProgress: state => lane.target = state.totalMotionDelta.y,
+            onGestureProgress: state => {
+                smoothFollower.update(lane => {
+                    lane.target = state.totalMotionDelta.y;
+                });
+            },
             onGestureEnded: state => {
                 smoothFollower.stop();
 

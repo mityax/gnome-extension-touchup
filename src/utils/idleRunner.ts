@@ -1,19 +1,17 @@
 import GLib from "gi://GLib";
 
 export class IdleRunner {
-    private readonly callback: (stop: () => void, dt: number | null) => any;
+    private readonly callback: (stop: () => void) => any;
     private idleId: number | null = null;
     private readonly _priority: number;
-    private lastRun: number | null = null;
 
     /**
      * Constructs an IdleRunner using the given callback and idle priority.
      *
-     * @param callback A callback to call as often as possible, receives a `stop` function and the time since the last
-     *                 invocation (in microseconds).
+     * @param callback A callback to call as often as possible, receives a `stop` function handle.
      * @param priority The idle priority. One of the Glib.PRIORITY_* constants.
      */
-    constructor(callback: (stop: () => void, dt: number | null) => any, priority: number = GLib.PRIORITY_DEFAULT_IDLE) {
+    constructor(callback: (stop: () => void) => any, priority: number = GLib.PRIORITY_DEFAULT_IDLE) {
         this.callback = callback;
         this._priority = priority;
     }
@@ -39,11 +37,7 @@ export class IdleRunner {
 
         const iid = GLib.idle_add(this._priority,
             () => {
-                let now = GLib.get_monotonic_time();
-                let dt = this.lastRun != null ? now - this.lastRun : null;
-                this.lastRun = now;
-
-                this.callback(this.stop.bind(this), dt);
+                this.callback(this.stop.bind(this));
                 return this.idleId === iid ? GLib.SOURCE_CONTINUE : GLib.SOURCE_REMOVE;
             },
         );
@@ -57,7 +51,6 @@ export class IdleRunner {
         if (this.idleId !== null) {
             GLib.source_remove(this.idleId);
             this.idleId = null;
-            this.lastRun = null;
         }
     }
 }

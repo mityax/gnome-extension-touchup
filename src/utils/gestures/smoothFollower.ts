@@ -1,4 +1,5 @@
 import {IdleRunner} from "$src/utils/idleRunner";
+import GLib from "gi://GLib";
 
 /**
  * One “lane” of a smooth‑following animation.
@@ -41,34 +42,94 @@ export class SmoothFollowerLane {
  * exposes only the API inherited from `IdleRunner` (namely `start` and `stop` methods);
  * interaction is performed by mutating the lane objects.
  */
-export class SmoothFollower extends IdleRunner {
-    private readonly _lanes: {
-        lane: SmoothFollowerLane,
-        internalState: {
-            velocity: number,
-        }
+export class SmoothFollower<T extends SmoothFollowerLane[]> extends IdleRunner {
+    private readonly _lanes: T;
+    private readonly _internalState: {
+        velocity: number,
     }[] = [];
 
-    constructor(lanes: SmoothFollowerLane[]) {
-        super((_, dt) => this._update(dt));
+    // Lane updates will be skipped if the time since the last update was shorter than `1 / MAX_FPS`
+    // in order to not waste CPU time:
+    private maxFps = 60;
+    private lastRun: number | null = null;
 
-        this._lanes = lanes.map(lane => ({
-            lane,
-            internalState: {velocity: 0},
+
+    constructor(lanes: T) {
+        super((_) => this._update());
+
+        this._lanes = lanes;
+        this._internalState = lanes.map(lane => ({
+            velocity: 0,
         }));
     }
 
-    private _update(dt: number | null) {
-        dt ??= 1;
+    /**
+     * Start the SmoothFollower. This function receives a void callback as it's only argument which
+     * you can optionally use to set initial [SmoothFollowerLane] state.
+     *
+     * The callback will be called immediately and synchronously.
+     */
+    start(setupCb?: (...lanes: T) => void) {
+        setupCb?.(...this._lanes);
+        super.start();
 
-        for (let {lane, internalState} of this._lanes) {
+        // Update max fps based on the current stage views:
+        this.maxFps = Math.max(
+            ...global.stage.peek_stage_views().map(v => v.get_refresh_rate()),
+            60,
+        )
+    }
+
+    /**
+     * Call this function to emit updates to the state of any lane. It receives a void callback as
+     * it's only argument which you should use to mutate the [SmoothFollowerLane] state.
+     *
+     * The callback will be called immediately and synchronously, after which the SmoothFollower will
+     * immediately emit an update on all lanes.
+     */
+    update(updateCb: (...lanes: T) => void) {
+        updateCb(...this._lanes);
+        this._update();
+    }
+
+    /**
+     * Stop this SmoothFollower and reset all state. It is guaranteed that after calling this function
+     * no further lane updates will be emitted.
+     */
+    stop() {
+        super.stop();
+
+        this.lastRun = null;
+
+        for (const l of this._lanes) {
+            l.target = null;
+            l.currentValue = null;
+        }
+
+        for (const i of this._internalState) {
+            i.velocity = 0;
+        }
+    }
+
+    private _update() {
+        let now = GLib.get_monotonic_time();
+        let dt = this.lastRun != null ? now - this.lastRun : 0;
+
+        // Don't emit an update if the time since the last update exceeds MAX_FPS:
+        if (dt > 0 && dt / 1000 / 1000 < 1 / this.maxFps) return;
+
+        this.lastRun = now;
+
+        for (let i = 0; i < this._lanes.length; i++) {
+            const lane = this._lanes[i];
+
             if (lane.target !== null && lane.currentValue !== null) {
                 lane.currentValue = this._criticallyDampedSpring(
                     lane.currentValue,
                     lane.target,
                     lane.smoothTime,
                     dt,
-                    internalState,
+                    this._internalState[i],
                 );
 
                 lane.onUpdate(lane.currentValue);
@@ -81,7 +142,7 @@ export class SmoothFollower extends IdleRunner {
         target: number,
         smoothTime: number,
         dt: number,
-        state: typeof this._lanes[0]['internalState'],
+        state: typeof this._internalState[0],
     ): number {
         dt = dt / 1000 / 1000;  // convert to seconds
 
@@ -94,15 +155,5 @@ export class SmoothFollower extends IdleRunner {
 
         state.velocity = (state.velocity - omega * temp) * exp;
         return target + (change + temp) * exp;
-    }
-
-    stop() {
-        super.stop();
-
-        for (const l of this._lanes) {
-            l.lane.target = null;
-            l.lane.currentValue = null;
-            l.internalState.velocity = 0;
-        }
     }
 }

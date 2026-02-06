@@ -212,8 +212,7 @@ class SwipeGesturesHelper {
     private readonly scrollView?: St.ScrollView;
     private readonly gesture: Clutter.PanGesture;
     readonly recognizer: GestureRecognizer;
-    private readonly smoothFollowerLane: SmoothFollowerLane;
-    private readonly smoothFollower: SmoothFollower;
+    private readonly smoothFollower: SmoothFollower<[SmoothFollowerLane]>;
     private signalIds: number[];
 
     /**
@@ -252,17 +251,19 @@ class SwipeGesturesHelper {
         this.onCollapse = props.onCollapse;
         this.onEaseBackPosition = props.onEaseBackPosition || this._defaultOnEaseBackPosition;
 
-        this.smoothFollowerLane = new SmoothFollowerLane({
-            onUpdate: value => this.onMoveHorizontally?.(value),
-            smoothTime: 0.03,
-        });
-        this.smoothFollower = new SmoothFollower([this.smoothFollowerLane]);
+        this.smoothFollower = new SmoothFollower([
+            new SmoothFollowerLane({
+                onUpdate: value => this.onMoveHorizontally?.(value),
+                smoothTime: 0.03,
+            }),
+        ]);
 
         // Track and recognize touch events:
         this.recognizer = new GestureRecognizer({
             onGestureStarted: () => {
-                this.smoothFollowerLane.currentValue = 0;
-                this.smoothFollower.start();
+                this.smoothFollower.start(lane => {
+                    lane.currentValue = 0;
+                });
             },
             onGestureProgress: state => this._onGestureProgress(state),
             onGestureEnded: state => {
@@ -305,7 +306,9 @@ class SwipeGesturesHelper {
 
     private _onGestureProgress(state: GestureState) {
         if (state.firstMotionDirection?.axis === 'horizontal') {
-            this.smoothFollowerLane.target = state.totalMotionDelta.x;
+            this.smoothFollower.update(lane => {
+                lane.target = state.totalMotionDelta.x;
+            });
         } else if (state.firstMotionDirection?.axis == 'vertical') {
             // Scroll the message list, if possible:
             const dy = state.currentMotionDelta.y;

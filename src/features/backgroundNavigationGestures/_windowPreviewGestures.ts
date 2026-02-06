@@ -82,11 +82,12 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
 
             const recognizer = new GestureRecognizer({
                 onGestureStarted: () => {
-                    lane.currentValue = 0;
-                    smoothFollower.start();
+                    smoothFollower.start(lane => lane.currentValue = 0);
                 },
                 onGestureProgress: (state) => {
-                    lane.target = Math.min(0, state.totalMotionDelta.y);
+                    smoothFollower.update(lane => {
+                        lane.target = Math.min(0, state.totalMotionDelta.y);
+                    });
                 },
                 onGestureEnded: () => smoothFollower.stop(),
                 onGestureCompleted: state => {
@@ -99,11 +100,12 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
                 onGestureCanceled: _ => this._easeBackWindowPreview(windowPreview),
             });
 
-            const lane = new SmoothFollowerLane({
-                smoothTime: 0.02,
-                onUpdate: value => windowPreview.translationY = value,
-            });
-            const smoothFollower = new SmoothFollower([lane]);
+            const smoothFollower = new SmoothFollower([
+                new SmoothFollowerLane({
+                    smoothTime: 0.02,
+                    onUpdate: value => windowPreview.translationY = value,
+                }),
+            ]);
         }
     }
 
