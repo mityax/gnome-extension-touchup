@@ -12,6 +12,7 @@ import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
 import {initLogger, logger, uninitLogger} from "$src/utils/logging";
+import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 
 
 export default class TouchUpExtension extends Extension {
@@ -44,7 +45,7 @@ export default class TouchUpExtension extends Extension {
         this.pm.patch(() => {
             initSettings(this.getSettings());
             return () => uninitSettings();
-        }, 'init-settings')
+        }, 'init-settings');
 
         // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
         // features need to work):
@@ -62,6 +63,10 @@ export default class TouchUpExtension extends Extension {
         await this.defineFeature(
             'notification-service',
             async pm => new NotificationService(pm)
+        );
+        await this.defineFeature(
+            'disable-panel-drag-service',
+            async pm => new DisablePanelDragService(pm),
         );
     }
 
@@ -207,13 +212,7 @@ export default class TouchUpExtension extends Extension {
             }
 
             // Connect to setting changes:
-            this.pm!.connectTo(setting, 'changed', value => {
-                if (value) {
-                    p.enable();
-                } else {
-                    p.disable();
-                }
-            });
+            this.pm!.connectTo(setting, 'changed', isEnabled => p.setEnabled(isEnabled));
         } else {
             p.enable();
         }

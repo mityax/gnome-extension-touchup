@@ -9,6 +9,8 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";
 import {EdgeDragTransition, TransitionValues} from "$src/utils/ui/edgeDragTransition";
 import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
+import TouchUpExtension from "$src/extension";
+import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
@@ -40,6 +42,8 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         // Setup the gestures:
         this._setupOpenGesture(menus);
         this._setupCloseGestures(menus);
+
+        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
     }
 
     private _setupOpenGesture(menus: PanelMenu.Button[]) {
@@ -256,6 +260,11 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         this.currentBoxPointer!.translationY = targetValues.translation;
         this.currentBoxPointer!.opacity = targetValues.opacity;
         this.currentBoxPointer!.bin.scaleY = targetValues.scale;
+    }
+
+    destroy() {
+        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.uninhibitPanelDrag();
+        super.destroy();
     }
 }
 

@@ -5,6 +5,8 @@ import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import {GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import * as SystemActions from "resource:///org/gnome/shell/misc/systemActions.js";
+import TouchUpExtension from "$src/extension";
+import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 
 
 export class DoubleTapToSleepFeature extends ExtensionFeature {
@@ -35,6 +37,8 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
                 Main.layoutManager._backgroundGroup.remove_action(desktopBackgroundGesture);
             };
         });
+
+        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
     }
 
     private _sleep() {
@@ -42,6 +46,11 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
 
         // @ts-ignore
         systemActions.activateLockScreen();
+    }
+
+    destroy() {
+        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.uninhibitPanelDrag();
+        super.destroy();
     }
 }
 
