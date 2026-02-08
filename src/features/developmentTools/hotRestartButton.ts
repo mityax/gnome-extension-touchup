@@ -13,7 +13,7 @@ import {
     PROJECT_DIR
 } from "$src/features/developmentTools/developmentReloadUtils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 import {Ref} from "$src/utils/ui/widgets";
 
 

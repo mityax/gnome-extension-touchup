@@ -12,7 +12,7 @@ import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
 import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
 import Mtk from "gi://Mtk";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 import {settings} from "$src/settings";
 import GLib from "gi://GLib";
 import Cogl from "gi://Cogl";

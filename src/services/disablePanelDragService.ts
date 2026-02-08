@@ -1,5 +1,5 @@
-import ExtensionFeature from "../utils/extensionFeature";
-import {Patch, PatchManager} from "../utils/patchManager";
+import ExtensionFeature from "../core/extensionFeature";
+import {Patch, PatchManager} from "../core/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
 import {GestureRecognizerEvent} from "../utils/gestures/gestureRecognizer";

@@ -1,5 +1,5 @@
 import Gio from "gi://Gio";
-import {assert, logger} from "$src/utils/logging";
+import {assert, logger} from "$src/core/logging";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
 import {MessageDialogContent} from "resource:///org/gnome/shell/ui/dialog.js";
 import St from "gi://St";

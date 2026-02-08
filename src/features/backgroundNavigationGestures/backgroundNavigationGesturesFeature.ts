@@ -1,5 +1,5 @@
-import ExtensionFeature from "$src/utils/extensionFeature";
-import {PatchManager} from "$src/utils/patchManager";
+import ExtensionFeature from "$src/core/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
 import {
     OverviewBackgroundGesturesFeature
 } from "$src/features/backgroundNavigationGestures/_overviewBackgroundGestures";

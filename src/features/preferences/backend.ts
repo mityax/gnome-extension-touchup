@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
 import {clamp} from "$src/utils/utils";
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 
 let gioSettings: Gio.Settings | null = null;
 

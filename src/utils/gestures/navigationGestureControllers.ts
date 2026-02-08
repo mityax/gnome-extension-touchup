@@ -1,6 +1,6 @@
 import {clamp, UnknownClass} from "$src/utils/utils";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 
 
 class ControllerCoordinator<T extends GestureController<any>> {

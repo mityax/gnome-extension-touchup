@@ -1,4 +1,4 @@
-import {PatchManager} from "$src/utils/patchManager";
+import {PatchManager} from "$src/core/patchManager";
 import {Workspace} from "resource:///org/gnome/shell/ui/workspace.js";
 import type {WindowPreview} from "resource:///org/gnome/shell/ui/windowPreview.js";
 import Clutter from "gi://Clutter";
@@ -7,7 +7,7 @@ import {Ref} from "$src/utils/ui/widgets";
 import Graphene from "gi://Graphene";
 import {Delay} from "$src/utils/delay";
 import St from "gi://St";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import ExtensionFeature from "$src/core/extensionFeature";
 import {
     OverviewBackgroundGesturesFeature
 } from "$src/features/backgroundNavigationGestures/_overviewBackgroundGestures";

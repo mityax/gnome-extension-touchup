@@ -5,11 +5,11 @@ import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import Clutter from "gi://Clutter";
 import St from "gi://St";
 
-import {logger} from "$src/utils/logging";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import {logger} from "$src/core/logging";
+import ExtensionFeature from "$src/core/extensionFeature";
 import {settings} from "$src/settings";
 import {Delay} from "$src/utils/delay";
-import {PatchManager} from "$src/utils/patchManager";
+import {PatchManager} from "$src/core/patchManager";
 import {extractKeyPrototype} from "./_oskUtils";
 
 

@@ -1,4 +1,4 @@
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 
 type HandlerT<T> = (args: T) => void;
 

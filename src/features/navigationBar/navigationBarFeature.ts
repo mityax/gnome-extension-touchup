@@ -1,13 +1,13 @@
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
-import ExtensionFeature from "$src/utils/extensionFeature";
+import ExtensionFeature from "$src/core/extensionFeature";
 import BaseNavigationBar from "./widgets/baseNavigationBar";
 import GestureNavigationBar from "./widgets/gestureNavigationBar";
 import ButtonsNavigationBar from "./widgets/buttonsNavigationBar";
 import {settings} from "$src/settings";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import {Patch, PatchManager} from "$src/utils/patchManager";
+import {Patch, PatchManager} from "$src/core/patchManager";
 import TouchUpExtension from "$src/extension";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DisplayConfigState} from "$src/utils/monitorDBusUtils";

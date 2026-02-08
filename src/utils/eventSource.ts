@@ -1,7 +1,7 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Soup from "gi://Soup";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 
 type EventCallback = (data: string, event: string, id: string | null) => void;
 

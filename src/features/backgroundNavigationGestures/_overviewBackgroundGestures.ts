@@ -1,8 +1,8 @@
 import {GestureRecognizer} from "$src/utils/gestures/gestureRecognizer";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Clutter from "gi://Clutter";
-import {PatchManager} from "$src/utils/patchManager";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
+import ExtensionFeature from "$src/core/extensionFeature";
 import {SmoothNavigationGestureController} from "$src/utils/gestures/smoothNavigationGestureController";
 
 

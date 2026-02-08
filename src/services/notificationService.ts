@@ -3,9 +3,9 @@ import Gio from "gi://Gio";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
-import ExtensionFeature from "../utils/extensionFeature";
-import {PatchManager} from "../utils/patchManager";
-import {assert} from "$src/utils/logging";
+import ExtensionFeature from "../core/extensionFeature";
+import {PatchManager} from "../core/patchManager";
+import {assert} from "$src/core/logging";
 
 
 export class NotificationService extends ExtensionFeature {

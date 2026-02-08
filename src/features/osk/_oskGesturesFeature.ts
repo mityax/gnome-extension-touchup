@@ -3,8 +3,8 @@ import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 
-import ExtensionFeature from "../../utils/extensionFeature";
-import {PatchManager} from "$src/utils/patchManager";
+import ExtensionFeature from "../../core/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";

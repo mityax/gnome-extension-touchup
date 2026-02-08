@@ -12,13 +12,13 @@ import {HotRestartButton} from "$src/features/developmentTools/hotRestartButton"
 import GLib from "gi://GLib";
 import EventSource from "$src/utils/eventSource";
 import {_hotReloadExtension, BUILD_OUTPUT_DIR} from "$src/features/developmentTools/developmentReloadUtils";
-import ExtensionFeature from "$src/utils/extensionFeature";
-import {PatchManager} from "$src/utils/patchManager";
+import ExtensionFeature from "$src/core/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
 import {debounce} from "$src/utils/debounce";
 import Cogl from "gi://Cogl";
 import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
 import {TouchModeService} from "$src/services/touchModeService";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 import {Delay} from "$src/utils/delay";
 
 

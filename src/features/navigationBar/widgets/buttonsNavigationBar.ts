@@ -4,7 +4,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
 import {settings} from "$src/settings";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigationBarUtils";
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {SettingsType} from "$src/features/preferences/backend";

@@ -1,7 +1,7 @@
 import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import {assetPath} from "$src/config";
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 
 
 export class AssetIcon extends Gio.FileIcon {

@@ -1,4 +1,4 @@
-import {PatchManager} from "$src/utils/patchManager";
+import {PatchManager} from "$src/core/patchManager";
 import {BoolSetting} from "$src/features/preferences/backend";
 
 

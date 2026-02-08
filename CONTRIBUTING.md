@@ -118,7 +118,7 @@ class RotateStageFeature extends ExtensionFeature {
 }
 ```
 
-Each feature receives a dedicated [`PatchManager`](src/utils/patchManager.ts)
+Each feature receives a dedicated [`PatchManager`](src/core/patchManager.ts)
 instance upon initialization; use this whenever possible to automatically 
 clean up changes to the Shell when the feature is disabled. Just have a look 
 at the `PatchManager` source code and its various usages across the 

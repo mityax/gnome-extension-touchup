@@ -1,17 +1,17 @@
 import Gio from "gi://Gio";
 
-import {PatchManager} from "$src/utils/patchManager";
+import {PatchManager} from "$src/core/patchManager";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
 import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {Delay} from "$src/utils/delay";
 import {assetsGResourceFile, devMode} from "$src/config";
 import {settings} from "$src/settings";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import ExtensionFeature from "$src/core/extensionFeature";
 import {TouchModeService} from "$src/services/touchModeService";
 import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
-import {initLogger, logger, uninitLogger} from "$src/utils/logging";
+import {initLogger, logger, uninitLogger} from "$src/core/logging";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 
 

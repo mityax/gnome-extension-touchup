@@ -1,5 +1,5 @@
-import ExtensionFeature from "../../utils/extensionFeature";
-import {PatchManager} from "$src/utils/patchManager";
+import ExtensionFeature from "../../core/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
 import Gio from "gi://Gio";
 import {Delay} from "$src/utils/delay";
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
@@ -11,7 +11,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import {css} from "$src/utils/ui/css";
 import showToast from "$src/utils/ui/toast";
 import {NotificationService} from "$src/services/notificationService";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 
 
 type InstallationData = {

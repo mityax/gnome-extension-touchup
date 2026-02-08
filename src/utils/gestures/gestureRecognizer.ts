@@ -1,6 +1,6 @@
 import Clutter from "gi://Clutter";
 import EventEmitter from "$src/utils/eventEmitter";
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 import St from "gi://St";
 
 

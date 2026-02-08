@@ -2,7 +2,7 @@ import GObject from "gi://GObject";
 //@ts-ignore
 import {InjectionManager} from 'resource:///org/gnome/shell/extensions/extension.js';
 import {UnknownClass} from "$src/utils/utils";
-import {assert, logger, repr} from "$src/utils/logging";
+import {assert, logger, repr} from "$src/core/logging";
 import {Ref} from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {Setting} from "$src/features/preferences/backend";

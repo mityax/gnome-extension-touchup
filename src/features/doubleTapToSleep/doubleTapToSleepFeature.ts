@@ -1,5 +1,5 @@
-import ExtensionFeature from "$src/utils/extensionFeature";
-import {PatchManager} from "$src/utils/patchManager";
+import ExtensionFeature from "$src/core/extensionFeature";
+import {PatchManager} from "$src/core/patchManager";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";

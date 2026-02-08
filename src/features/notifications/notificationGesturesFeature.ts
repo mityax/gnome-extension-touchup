@@ -10,10 +10,10 @@ import {
 import {CalendarMessageList} from "resource:///org/gnome/shell/ui/calendar.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
-import {Patch, PatchManager} from "$src/utils/patchManager";
+import {Patch, PatchManager} from "$src/core/patchManager";
 import {findActorBy} from "$src/utils/utils";
 import * as Widgets from "$src/utils/ui/widgets";
-import ExtensionFeature from "$src/utils/extensionFeature";
+import ExtensionFeature from "$src/core/extensionFeature";
 import {GestureRecognizer, GestureState} from "$src/utils/gestures/gestureRecognizer";
 import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
 import Ref = Widgets.Ref;

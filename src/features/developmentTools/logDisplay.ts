@@ -4,7 +4,7 @@ import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {clamp, findActorBy} from "$src/utils/utils";
 import {css} from "$src/utils/ui/css";
-import {addLogCallback, LogCallback, LogCallbackArguments, removeLogCallback} from "$src/utils/logging";
+import {addLogCallback, LogCallback, LogCallbackArguments, removeLogCallback} from "$src/core/logging";
 import GObject from "gi://GObject";
 import {DevToolToggleButton} from "$src/features/developmentTools/developmentToolButton";
 import {Delay} from "$src/utils/delay";

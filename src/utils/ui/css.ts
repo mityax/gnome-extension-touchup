@@ -1,5 +1,5 @@
 import Cogl from "gi://Cogl";
-import {logger} from "$src/utils/logging";
+import {logger} from "$src/core/logging";
 
 
 export function css(v: any): string | undefined {

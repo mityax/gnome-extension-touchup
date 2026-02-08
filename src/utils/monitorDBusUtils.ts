@@ -1,6 +1,6 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 
 
 export const Methods = Object.freeze({

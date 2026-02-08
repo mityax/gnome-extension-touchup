@@ -1,5 +1,5 @@
 import {clamp} from "../utils";
-import {assert} from "$src/utils/logging";
+import {assert} from "$src/core/logging";
 
 
 export enum OvershootMode {
