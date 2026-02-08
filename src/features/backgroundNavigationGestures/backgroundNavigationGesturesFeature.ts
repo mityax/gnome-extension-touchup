@@ -1,10 +1,5 @@
 import ExtensionFeature from "$src/core/extensionFeature";
 import {PatchManager} from "$src/core/patchManager";
-import {
-    OverviewBackgroundGesturesFeature
-} from "$src/features/backgroundNavigationGestures/_overviewBackgroundGestures";
-import {WindowPreviewGestureFeature} from "$src/features/backgroundNavigationGestures/_windowPreviewGestures";
-import {DesktopBackgroundGesturesFeature} from "$src/features/backgroundNavigationGestures/_desktopBackgroundGestures";
 import {settings} from "$src/settings";
 
 
@@ -12,22 +7,31 @@ export class BackgroundNavigationGesturesFeature extends ExtensionFeature {
     constructor(pm: PatchManager) {
         super(pm);
 
-        this.addSubFeature(
-            'desktop-background-gestures',
-            pm => new DesktopBackgroundGesturesFeature(pm),
-            settings.backgroundNavigationGestures.desktopBackgroundGesturesEnabled,
-        );
+        this.defineSubFeature({
+            name: 'desktop-background-gestures',
+            create: async pm => {
+                const m = await import("$src/features/backgroundNavigationGestures/_desktopBackgroundGestures");
+                return new m.DesktopBackgroundGesturesFeature(pm);
+            },
+            setting: settings.backgroundNavigationGestures.desktopBackgroundGesturesEnabled,
+        });
 
-        this.addSubFeature(
-            'overview-background-gestures',
-            pm => new OverviewBackgroundGesturesFeature(pm),
-            settings.backgroundNavigationGestures.overviewBackgroundGesturesEnabled,
-        )
+        this.defineSubFeature({
+            name: 'overview-background-gestures',
+            create: async pm => {
+                const m = await import("$src/features/backgroundNavigationGestures/_overviewBackgroundGestures");
+                return new m.OverviewBackgroundGesturesFeature(pm);
+            },
+            setting: settings.backgroundNavigationGestures.overviewBackgroundGesturesEnabled,
+        });
 
-        this.addSubFeature(
-            'window-preview-gestures',
-            pm => new WindowPreviewGestureFeature(pm),
-            settings.backgroundNavigationGestures.windowPreviewGesturesEnabled,
-        )
+        this.defineSubFeature({
+            name: 'window-preview-gestures',
+            create: async pm => {
+                const m = await import("$src/features/backgroundNavigationGestures/_windowPreviewGestures");
+                return new m.WindowPreviewGestureFeature(pm);
+            },
+            setting: settings.backgroundNavigationGestures.windowPreviewGesturesEnabled,
+        });
     }
 }

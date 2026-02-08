@@ -13,7 +13,7 @@ import {PatchManager} from "$src/core/patchManager";
 import {extractKeyPrototype} from "./_oskUtils";
 
 
-export default class OSKKeyPopupFeature extends ExtensionFeature {
+export class OSKKeyPopupFeature extends ExtensionFeature {
     private boxPointers: Map<Clutter.Actor, BoxPointer.BoxPointer> = new Map();
     private _hasPatchedKeyProto: boolean = false;
 

@@ -15,7 +15,7 @@ import Graphene from "gi://Graphene";
 const KEY_PRESS_MAX_DISTANCE = 8;  // in logical pixels
 
 
-export default class OSKGesturesFeature extends ExtensionFeature {
+export class OSKGesturesFeature extends ExtensionFeature {
     constructor(pm: PatchManager, keyboard: Keyboard.Keyboard | null) {
         super(pm);
 

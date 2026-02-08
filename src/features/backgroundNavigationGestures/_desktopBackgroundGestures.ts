@@ -30,13 +30,7 @@ export class DesktopBackgroundGesturesFeature extends ExtensionFeature {
             onGestureCanceled: _ => this._navigationGestureController.gestureCancel(),
         });
 
-        const gesture = new Clutter.PanGesture();
-        gesture.connect('pan-update', () => recognizer.push(Clutter.get_current_event()));
-        gesture.connect('end', () => {
-            recognizer.push(Clutter.get_current_event());
-            recognizer.ensureEnded();
-        });
-        gesture.connect('cancel', () => recognizer.cancel())
+        const gesture = recognizer.createPanGesture();
 
         // @ts-ignore
         this.pm.setProperty(Main.layoutManager._backgroundGroup, 'reactive', true);

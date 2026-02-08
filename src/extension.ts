@@ -3,7 +3,7 @@ import Gio from "gi://Gio";
 import {PatchManager} from "$src/core/patchManager";
 import {DevelopmentTools} from "$src/features/developmentTools/developmentTools";
 import {Extension} from "resource:///org/gnome/shell/extensions/extension.js";
-import {BoolSetting, initSettings, uninitSettings} from "$src/features/preferences/backend";
+import {initSettings, uninitSettings} from "$src/features/preferences/backend";
 import {Delay} from "$src/utils/delay";
 import {assetsGResourceFile, devMode} from "$src/config";
 import {settings} from "$src/settings";
@@ -13,13 +13,14 @@ import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
 import {initLogger, logger, uninitLogger} from "$src/core/logging";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
+import {ExtensionFeatureManager, FeatureMeta} from "$src/core/extensionFeatureManager";
 
 
 export default class TouchUpExtension extends Extension {
     static instance?: TouchUpExtension;
 
-    pm?: PatchManager;
-    features: ExtensionFeature[] = [];
+    private pm?: PatchManager;
+    private featureManager?: ExtensionFeatureManager;
 
     async enable() {
         TouchUpExtension.instance = this;
@@ -47,6 +48,8 @@ export default class TouchUpExtension extends Extension {
             return () => uninitSettings();
         }, 'init-settings');
 
+        this.featureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
+
         // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
         // features need to work):
         await this.defineServices();
@@ -56,168 +59,114 @@ export default class TouchUpExtension extends Extension {
     }
 
     private async defineServices() {
-        await this.defineFeature(
-            'touch-mode-service',
-            async pm => new TouchModeService(pm)
-        );
-        await this.defineFeature(
-            'notification-service',
-            async pm => new NotificationService(pm)
-        );
-        await this.defineFeature(
-            'disable-panel-drag-service',
-            async pm => new DisablePanelDragService(pm),
-        );
+        await this.defineFeature({
+            name: 'touch-mode-service',
+            create: pm => new TouchModeService(pm)
+        });
+        await this.defineFeature({
+            name: 'notification-service',
+            create: async pm => new NotificationService(pm)
+        });
+        await this.defineFeature({
+            name: 'disable-panel-drag-service',
+            create: async pm => new DisablePanelDragService(pm),
+        });
     }
 
     private async defineFeatures() {
-        DEBUG: if (devMode) {
-            await this.defineFeature(
-                'development-tools',
-                async (pm) => new DevelopmentTools(pm),
-            );
-        }
+        DEBUG:
+            if (devMode) {
+                await this.defineFeature({
+                    name: 'development-tools',
+                    create: (pm) => new DevelopmentTools(pm),
+                });
+            }
 
         // Optional features (that can be toggled on or off via a setting) are imported dynamically, for two reasons:
         //  - make the extension as slim as possible (users only "pay" for what they use)
         //  - make the extension more compatible with modified shells (e.g. Ubuntu or Gnome Mobile): turned off
         //    features cannot cause errors
 
-        await this.defineFeature(
-            'navigation-bar',
-            async pm => {
+        await this.defineFeature({
+            name: 'navigation-bar',
+            create: async pm => {
                 const m = (await import('$src/features/navigationBar/navigationBarFeature'));
                 return new m.NavigationBarFeature(pm);
             },
-            settings.navigationBar.enabled,
-        );
+            setting: settings.navigationBar.enabled,
+        });
 
-        await this.defineFeature(
-            'background-gestures',
-            async pm => {
+        await this.defineFeature({
+            name: 'background-gestures',
+            create: async pm => {
                 const m = (await import('$src/features/backgroundNavigationGestures/backgroundNavigationGesturesFeature'));
                 return new m.BackgroundNavigationGesturesFeature(pm);
             },
-        )
+        })
 
-        await this.defineFeature(
-            'notification-gestures',
-            async pm => {
+        await this.defineFeature({
+            name: 'notification-gestures',
+            create: async pm => {
                 const m = (await import('$src/features/notifications/notificationGesturesFeature'));
                 return new m.NotificationGesturesFeature(pm);
             },
-            settings.notificationGestures.enabled,
-        );
+            setting: settings.notificationGestures.enabled,
+        });
 
-        await this.defineFeature(
-            'osk',
-            async pm => {
+        await this.defineFeature({
+            name: 'osk',
+            create: async pm => {
                 const m = (await import('$src/features/osk/oskFeature'));
                 return new m.OskFeature(pm);
             },
-        );
+        });
 
         BETA:
-            await this.defineFeature(
-                'panel-menus-swipe-to-open',
-                async pm => {
+            await this.defineFeature({
+                name: 'panel-menus-swipe-to-open',
+                create: async pm => {
                     const m = (await import('$src/features/panel/panelMenusSwipeToOpenFeature'));
                     return new m.PanelMenusSwipeToOpenFeature(pm);
                 },
                 // TODO: add setting
-            );
+            });
 
-        await this.defineFeature(
-            'floating-screen-rotate-button',
-            async pm => {
+        await this.defineFeature({
+            name: 'floating-screen-rotate-button',
+            create: async pm => {
                 const m = (await import('$src/features/screenRotateUtils/floatingScreenRotateButtonFeature'));
                 return new m.FloatingScreenRotateButtonFeature(pm);
             },
-            settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
-        );
+            setting: settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
+        });
 
-        await this.defineFeature(
-            'double-tap-to-sleep',
-            async pm => {
+        await this.defineFeature({
+            name: 'double-tap-to-sleep',
+            create: async pm => {
                 const m = (await import('$src/features/doubleTapToSleep/doubleTapToSleepFeature'));
                 return new m.DoubleTapToSleepFeature(pm);
             },
-            settings.doubleTapToSleep.enabled
-        );
+            setting: settings.doubleTapToSleep.enabled
+        });
 
         BETA:
-            await this.defineFeature(
-                'virtual-touchpad',
-                async pm => {
+            await this.defineFeature({
+                name: 'virtual-touchpad',
+                create: async pm => {
                     const m = (await import('$src/features/virtualTouchpad/virtualTouchpadFeature'));
                     return new m.VirtualTouchpadFeature(pm);
                 },
-                settings.virtualTouchpad.enabled,
-            );
+                setting: settings.virtualTouchpad.enabled,
+            });
 
-        await this.defineFeature(
-            'donations',
-            async pm => new DonationsFeature(pm),
-        );
+        await this.defineFeature({
+            name: 'donations',
+            create: pm => new DonationsFeature(pm),
+        });
     }
 
-    /**
-     * A utility method to define [ExtensionFeature]s that are optionally automatically enabled/disabled
-     * depending on the given [setting].
-     *
-     * All features are created in a patch and are therefore automatically disabled when the extension is
-     * disabled.
-     *
-     * For example usages see [defineFeatures] above.
-     */
-    private async defineFeature<T extends ExtensionFeature>(
-        featureName: string,
-        create: (pm: PatchManager) => Promise<T>,
-        setting?: BoolSetting,
-    ) {
-        let resolve: (..._: any) => void;
-        let promise = new Promise((r) => resolve = r);
-
-        let p = this.pm!.registerPatch(() => {
-            // Create the feature:
-            let feature: T | undefined;
-
-            create(this.pm!.fork(featureName))
-                .then(f => {
-                    feature = f;
-                    this.features.push(f);
-                })
-                .catch(e => {
-                    logger.error(`Error while activating feature "${featureName}":`, e);
-                    PROD: setting?.set(false);  // Disable the feature for future launches
-                    import('$src/utils/showFeatureInitializationErrorNotification')
-                        .then(m => m.showFeatureInitializationFailedNotification(featureName, e));
-                })
-                .then(_ => resolve());
-
-            return () => {
-                // Destroy the feature on unpatch:
-                this.features = this.features.filter(f => f !== feature);
-                feature?.destroy();
-            }
-        }, `enable-feature(${featureName})`);
-
-        if (setting) {
-            // Enable the feature initially if setting is set to true:
-            if (setting.get()) {
-                p.enable();
-            } else {
-                // @ts-ignore
-                resolve();  // if the setting is not enabled, just resolve without enabling the feature
-            }
-
-            // Connect to setting changes:
-            this.pm!.connectTo(setting, 'changed', isEnabled => p.setEnabled(isEnabled));
-        } else {
-            p.enable();
-        }
-
-        return promise;
+    private async defineFeature<T extends ExtensionFeature>(meta: FeatureMeta<T>) {
+        await this.featureManager!.defineFeature(meta);
     }
 
     disable() {
@@ -229,10 +178,9 @@ export default class TouchUpExtension extends Extension {
         this.pm?.destroy();
         this.pm = undefined;
 
-        // Destroy all features (this has been done already by the PatchManager, but is explicitly done here
-        // again to not make things unnecessarily complicated for reviewers):
-        this.features.forEach(f => f.destroy());
-        this.features = [];
+        // Destroy all features:
+        this.featureManager?.destroy();
+        this.featureManager = undefined;
 
         logger.debug("TouchUp extension successfully unloaded.");
 
@@ -242,6 +190,6 @@ export default class TouchUpExtension extends Extension {
     }
 
     getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {
-        return this.features.find(f => f instanceof type) as T ?? null;
+        return this.featureManager!.getFeature(type);
     }
 }
