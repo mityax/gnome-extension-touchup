@@ -36,4 +36,15 @@ export default abstract class ExtensionFeature {
         // here again to not make things unnecessarily complicated for reviewers):
         this.subFeatureManager.destroy();
     }
+
+    /**
+     * Called when the Shells session mode has changed, without the extension being disabled
+     * and re-enabled.
+     *
+     * Important: When overriding this method, make sure to call the super classes method to
+     * ensure that all subfeatures are properly notified too.
+     */
+    async notifySessionModeChanged() {
+        await this.subFeatureManager.notifySessionModeChanged();
+    }
 }

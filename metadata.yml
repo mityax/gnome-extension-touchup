@@ -37,6 +37,9 @@ release: &release
     - "49"
   gettext-domain: touchup
   settings-schema: org.gnome.shell.extensions.touchup
+  session-modes:
+    - user
+    - unlock-dialog
 
 # Final debug metadata configuration:
 debug:

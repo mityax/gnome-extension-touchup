@@ -13,7 +13,8 @@ import {DonationsFeature} from "$src/features/donations/donationsFeature";
 import {NotificationService} from "$src/services/notificationService";
 import {initLogger, logger, uninitLogger} from "$src/core/logging";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
-import {ExtensionFeatureManager, FeatureMeta} from "$src/core/extensionFeatureManager";
+import {ExtensionFeatureManager, FeatureMeta, SessionMode} from "$src/core/extensionFeatureManager";
+import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 
 export default class TouchUpExtension extends Extension {
@@ -48,6 +49,11 @@ export default class TouchUpExtension extends Extension {
             return () => uninitSettings();
         }, 'init-settings');
 
+        this.pm.connectTo(Main.sessionMode, 'updated', async () => {
+            logger.debug(`Session mode changed to ${Main.sessionMode.currentMode} (parent mode: ${Main.sessionMode.parentMode})`);
+            await this.featureManager!.notifySessionModeChanged();
+        });
+
         this.featureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
 
         // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
@@ -79,6 +85,7 @@ export default class TouchUpExtension extends Extension {
                 await this.defineFeature({
                     name: 'development-tools',
                     create: (pm) => new DevelopmentTools(pm),
+                    sessionModes: [SessionMode.user, SessionMode.unlockDialog],
                 });
             }
 
@@ -146,7 +153,8 @@ export default class TouchUpExtension extends Extension {
                 const m = (await import('$src/features/doubleTapToSleep/doubleTapToSleepFeature'));
                 return new m.DoubleTapToSleepFeature(pm);
             },
-            setting: settings.doubleTapToSleep.enabled
+            setting: settings.doubleTapToSleep.enabled,
+            sessionModes: [SessionMode.user, SessionMode.unlockDialog],
         });
 
         BETA:
@@ -165,6 +173,12 @@ export default class TouchUpExtension extends Extension {
         });
     }
 
+    /**
+     * A utility method to define [ExtensionFeature]s that are optionally automatically enabled/disabled
+     * depending on the given [setting] and [sessionModes].
+     *
+     * All features are automatically destroyed when this [FeatureManager] is destroyed.
+     */
     private async defineFeature<T extends ExtensionFeature>(meta: FeatureMeta<T>) {
         await this.featureManager!.defineFeature(meta);
     }
