@@ -71,11 +71,11 @@ export default class TouchUpExtension extends Extension {
         });
         await this.defineFeature({
             name: 'notification-service',
-            create: async pm => new NotificationService(pm)
+            create: pm => new NotificationService(pm)
         });
         await this.defineFeature({
             name: 'disable-panel-drag-service',
-            create: async pm => new DisablePanelDragService(pm),
+            create: pm => new DisablePanelDragService(pm),
         });
     }
 
@@ -84,8 +84,8 @@ export default class TouchUpExtension extends Extension {
             if (devMode) {
                 await this.defineFeature({
                     name: 'development-tools',
-                    create: (pm) => new DevelopmentTools(pm),
                     sessionModes: [SessionMode.user, SessionMode.unlockDialog],
+                    create: (pm) => new DevelopmentTools(pm),
                 });
             }
 
@@ -96,11 +96,11 @@ export default class TouchUpExtension extends Extension {
 
         await this.defineFeature({
             name: 'navigation-bar',
+            setting: settings.navigationBar.enabled,
             create: async pm => {
                 const m = (await import('$src/features/navigationBar/navigationBarFeature'));
                 return new m.NavigationBarFeature(pm);
             },
-            setting: settings.navigationBar.enabled,
         });
 
         await this.defineFeature({
@@ -113,11 +113,11 @@ export default class TouchUpExtension extends Extension {
 
         await this.defineFeature({
             name: 'notification-gestures',
+            setting: settings.notificationGestures.enabled,
             create: async pm => {
                 const m = (await import('$src/features/notifications/notificationGesturesFeature'));
                 return new m.NotificationGesturesFeature(pm);
             },
-            setting: settings.notificationGestures.enabled,
         });
 
         await this.defineFeature({
@@ -131,40 +131,40 @@ export default class TouchUpExtension extends Extension {
         BETA:
             await this.defineFeature({
                 name: 'panel-menus-swipe-to-open',
+                // TODO: add setting
                 create: async pm => {
                     const m = (await import('$src/features/panel/panelMenusSwipeToOpenFeature'));
                     return new m.PanelMenusSwipeToOpenFeature(pm);
                 },
-                // TODO: add setting
             });
 
         await this.defineFeature({
             name: 'floating-screen-rotate-button',
+            setting: settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
             create: async pm => {
                 const m = (await import('$src/features/screenRotateUtils/floatingScreenRotateButtonFeature'));
                 return new m.FloatingScreenRotateButtonFeature(pm);
             },
-            setting: settings.screenRotateUtils.floatingScreenRotateButtonEnabled,
         });
 
         await this.defineFeature({
             name: 'double-tap-to-sleep',
+            setting: settings.doubleTapToSleep.enabled,
+            sessionModes: [SessionMode.user, SessionMode.unlockDialog],
             create: async pm => {
                 const m = (await import('$src/features/doubleTapToSleep/doubleTapToSleepFeature'));
                 return new m.DoubleTapToSleepFeature(pm);
             },
-            setting: settings.doubleTapToSleep.enabled,
-            sessionModes: [SessionMode.user, SessionMode.unlockDialog],
         });
 
         BETA:
             await this.defineFeature({
                 name: 'virtual-touchpad',
+                setting: settings.virtualTouchpad.enabled,
                 create: async pm => {
                     const m = (await import('$src/features/virtualTouchpad/virtualTouchpadFeature'));
                     return new m.VirtualTouchpadFeature(pm);
                 },
-                setting: settings.virtualTouchpad.enabled,
             });
 
         await this.defineFeature({
