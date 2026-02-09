@@ -7,6 +7,7 @@ import {GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import * as SystemActions from "resource:///org/gnome/shell/misc/systemActions.js";
 import TouchUpExtension from "$src/extension";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
+import {SessionMode} from "$src/core/extensionFeatureManager";
 
 
 export class DoubleTapToSleepFeature extends ExtensionFeature {
@@ -17,6 +18,9 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
             onActivate: () => this._sleep(),
         });
         const desktopBackgroundGesture = createDoubleTapGesture({
+            onActivate: () => this._sleep(),
+        });
+        const screenShieldGesture = createDoubleTapGesture({
             onActivate: () => this._sleep(),
         });
 
@@ -31,21 +35,40 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
                 Clutter.EventPhase.BUBBLE,
                 desktopBackgroundGesture
             );
+            Main.layoutManager.screenShieldGroup.add_action_full(
+                "touchup-double-tab-to-sleep-screenshield",
+                Clutter.EventPhase.CAPTURE,  // `CAPTURE` allows us to get precedence over the built-in click gesture
+                screenShieldGesture,
+            )
 
             return () => {
                 Main.panel.remove_action(panelGesture);
                 Main.layoutManager._backgroundGroup.remove_action(desktopBackgroundGesture);
+                Main.layoutManager.screenShieldGroup.remove_action(desktopBackgroundGesture);
             };
         });
+
+        this.pm.setProperty(Main.layoutManager.screenShieldGroup, "reactive", true);
 
         TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
     }
 
     private _sleep() {
-        const systemActions = SystemActions.getDefault();
+        if (Main.sessionMode.currentMode !== SessionMode.unlockDialog) {
+            const systemActions = SystemActions.getDefault();
 
-        // @ts-ignore
-        systemActions.activateLockScreen();
+            // @ts-ignore
+            systemActions.activateLockScreen();
+        } else {
+            // Fade out the screen the same way the screenshield does automatically shortly after
+            // locking the screen:
+            Main.screenShield._lockScreenShown({
+                fadeToBlack: true,
+                animateFade: true,
+            });
+            // Main.screenShield._setLocked(true);
+        }
+
     }
 
     destroy() {

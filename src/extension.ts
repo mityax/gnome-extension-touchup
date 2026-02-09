@@ -177,10 +177,14 @@ export default class TouchUpExtension extends Extension {
      * A utility method to define [ExtensionFeature]s that are optionally automatically enabled/disabled
      * depending on the given [setting] and [sessionModes].
      *
-     * All features are automatically destroyed when this [FeatureManager] is destroyed.
+     * All features are automatically destroyed when the extension is disabled.
      */
     private async defineFeature<T extends ExtensionFeature>(meta: FeatureMeta<T>) {
         await this.featureManager!.defineFeature(meta);
+    }
+
+    getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {
+        return this.featureManager!.getFeature(type);
     }
 
     disable() {
@@ -201,9 +205,5 @@ export default class TouchUpExtension extends Extension {
         uninitLogger();
 
         TouchUpExtension.instance = undefined;
-    }
-
-    getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {
-        return this.featureManager!.getFeature(type);
     }
 }
