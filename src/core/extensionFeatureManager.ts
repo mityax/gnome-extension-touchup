@@ -4,10 +4,13 @@ import {BoolSetting} from "../features/preferences/backend";
 import {assert, logger} from "./logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
+
+/** Enum mapping to the Shell's session mode: */
 export enum SessionMode {
     user = 'user',
     unlockDialog = 'unlock-dialog',
 }
+
 
 export type FeatureMeta<T extends ExtensionFeature> = {
     name: string;
@@ -20,7 +23,7 @@ export type FeatureMeta<T extends ExtensionFeature> = {
 export class ExtensionFeatureManager {
     private pm: PatchManager;
     private registry: Map<string, FeatureMeta<any>> = new Map();
-    private features: Map<string, ExtensionFeature> = new Map();
+    private enabledFeatures: Map<string, ExtensionFeature> = new Map();
 
     constructor(pm: PatchManager) {
         this.pm = pm;
@@ -37,6 +40,7 @@ export class ExtensionFeatureManager {
 
         this.registry.set(meta.name, meta);
 
+        // Check whether the feature should be enabled initially:
         await this._syncFeatureEnabled(meta);
 
         // Connect to setting changes:
@@ -49,7 +53,7 @@ export class ExtensionFeatureManager {
      * Get a feature by its type, if enabled.
      */
     getFeature<T extends ExtensionFeature>(type: { new(...args: any[]): T }): T | null {
-        for (let feature of this.features.values()) {
+        for (let feature of this.enabledFeatures.values()) {
             if (feature instanceof type)
                 return feature;
         }
@@ -57,11 +61,19 @@ export class ExtensionFeatureManager {
         return null;
     }
 
+    /**
+     * Destroy all features that don't support the current session mode, and notify all other
+     * features that the session mode has changed.
+     */
     async notifySessionModeChanged() {
+        // Re-check for each feature whether it should be enabled:
         for (let meta of this.registry.values()) {
             await this._syncFeatureEnabled(meta);
         }
-        for (let feature of this.features.values()) {
+
+        // Notify all features that are still enabled of the changed session mode, so they
+        // might perform whatever action they need to:
+        for (let feature of this.enabledFeatures.values()) {
             await feature.notifySessionModeChanged();
         }
     }
@@ -75,7 +87,7 @@ export class ExtensionFeatureManager {
      *          initialize, and `null` if no change has been made.
      */
     private async _syncFeatureEnabled<T extends ExtensionFeature>(meta: FeatureMeta<T>): Promise<boolean | null> {
-        const isEnabled = this.features.has(meta.name);
+        const isEnabled = this.enabledFeatures.has(meta.name);
         let shouldBeEnabled = !meta.setting || meta.setting.get();
 
         // If `meta` has session modes set, but the current session mode is not listed there,
@@ -85,10 +97,12 @@ export class ExtensionFeatureManager {
             shouldBeEnabled = modes.includes(Main.sessionMode.currentMode) || modes.includes(Main.sessionMode.parentMode);
         }
 
-        if (shouldBeEnabled && !isEnabled) {  // enable the feature
+        if (shouldBeEnabled && !isEnabled) {
+            // Enable the feature:
             const feature = await this._tryInitializeFeature(meta);
             return feature != null;
-        } else if (!shouldBeEnabled && isEnabled) {  // disable the feature
+        } else if (!shouldBeEnabled && isEnabled) {
+            // Disable the feature:
             this._destroyFeature(meta);
             return false;
         }
@@ -96,13 +110,21 @@ export class ExtensionFeatureManager {
         return null;
     }
 
+    /**
+     * Initialize the given feature, and add it to [this.enabledFeatures]
+     *
+     * If an error occurs, the feature is disabled and a notification is shown.
+     *
+     * @return The initialized feature, or `null`, if initialization failed.
+     */
     private async _tryInitializeFeature<T extends ExtensionFeature>(meta: FeatureMeta<T>): Promise<T | null> {
         // Make sure no feature gets dropped without being properly destroyed:
         this._destroyFeature(meta);
 
         try {
+            // Create the feature instance, and pass it its dedicated child [PatchManager]:
             const feature = await meta.create(this.pm!.fork(meta.name));
-            this.features.set(meta.name, feature);
+            this.enabledFeatures.set(meta.name, feature);
             return feature;
         } catch (e) {
             logger.error(`Error while activating feature "${meta.name}":`, e);
@@ -118,18 +140,27 @@ export class ExtensionFeatureManager {
         return null;
     }
 
+    /**
+     * Destroy the feature identified by [meta.name] if it is currently initialized.
+     */
     private _destroyFeature<T extends ExtensionFeature>(meta: FeatureMeta<T>) {
-        this.features.get(meta.name)?.destroy();
-        this.features.delete(meta.name);
+        this.enabledFeatures.get(meta.name)?.destroy();
+        this.enabledFeatures.delete(meta.name);
     }
 
-    /** Destroy all features that are currently enabled */
+    /**
+     * Destroy all features.
+     */
     destroy(): void {
-        for (const [name, feature] of [...this.features].reverse()) {
+        // Destroy features in reverse order, to be consistent with [PatchManager]:
+        for (const feature of [...this.enabledFeatures.values()].reverse()) {
             feature.destroy();
         }
-        this.features.clear();
 
+        this.enabledFeatures.clear();
+        this.registry.clear();
+
+        // Destroy our [PatchManager], and with it all descendents:
         this.pm.destroy();
     }
 }

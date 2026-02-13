@@ -3,11 +3,9 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from "gi://Clutter";
 import {CancellablePromise, Delay} from "$src/utils/delay";
-import GObject from "gi://GObject";
 
 
 export default class WindowPositionTracker {
-    private _signalIds: Map<GObject.Object, number[]> = new Map();
     private _updateDelay?: CancellablePromise<boolean | void>;
     private readonly callback: (windows: Meta.Window[]) => void;
     private _updateLock = false;
@@ -15,46 +13,39 @@ export default class WindowPositionTracker {
     constructor(callback: (windows: Meta.Window[]) => void) {
         this.callback = callback;
 
-        this._signalIds.set(Main.overview, [
-            Main.overview.connect('showing', this._update.bind(this)),
-            Main.overview.connect('hiding',  this._update.bind(this)),
-            Main.overview.connect('shown',   this._update.bind(this)),
-            Main.overview.connect('hidden',  this._update.bind(this)),
-        ]);
+        Main.overview.connectObject('showing', this._update.bind(this), this);
+        Main.overview.connectObject('hiding', this._update.bind(this), this);
+        Main.overview.connectObject('shown', this._update.bind(this), this);
+        Main.overview.connectObject('hidden', this._update.bind(this), this);
 
-        this._signalIds.set(Main.sessionMode, [
-            Main.sessionMode.connect('updated', this._update.bind(this))
-        ]);
+        Main.sessionMode.connectObject('updated', this._update.bind(this), this);
 
         for (const metaWindowActor of global.get_window_actors()) {
             this._onWindowActorAdded(metaWindowActor.get_parent()!, metaWindowActor);
         }
 
-        this._signalIds.set(global.windowGroup as Meta.WindowGroup, [
-            global.windowGroup.connect('child-added', this._onWindowActorAdded.bind(this)),
-            global.windowGroup.connect('child-removed', this._onWindowActorRemoved.bind(this))
-        ]);
+        // @ts-ignore
+        global.windowGroup.connectObject('child-added', this._onWindowActorAdded.bind(this), this);
+        // @ts-ignore
+        global.windowGroup.connectObject('child-removed', this._onWindowActorRemoved.bind(this), this);
 
         // Use a delayed version of _update to let the shell catch up
-        this._signalIds.set(global.windowManager, [
-            global.windowManager.connect('switch-workspace', this._delayedUpdate.bind(this))
-        ]);
+        // @ts-ignore
+        global.windowManager.connectObject('switch-workspace', this._delayedUpdate.bind(this), this);
 
         this._update();
     }
 
     _onWindowActorAdded(container: Clutter.Actor, metaWindowActor: Meta.WindowActor) {
-        this._signalIds.set(metaWindowActor, [
-            metaWindowActor.connect('notify::allocation', () => this._update()),
-            metaWindowActor.connect('notify::visible', () => this._update())
-        ]);
+        // @ts-ignore
+        metaWindowActor.connectObject('notify::allocation', this._update.bind(this), this);
+        // @ts-ignore
+        metaWindowActor.connectObject('notify::visible', this._update.bind(this), this);
     }
 
     _onWindowActorRemoved(container: Clutter.Actor, metaWindowActor: Meta.WindowActor) {
-        for (const signalId of this._signalIds.get(metaWindowActor) ?? []) {
-            metaWindowActor.disconnect(signalId);
-        }
-        this._signalIds.delete(metaWindowActor);
+        // @ts-ignore
+        metaWindowActor.disconnectObject(this);
         this._update();
     }
 
@@ -93,12 +84,14 @@ export default class WindowPositionTracker {
     }
 
     destroy() {
-        for (const [actor, signalIds] of this._signalIds) {
-            for (const signalId of signalIds) {
-                actor.disconnect(signalId);
-            }
-        }
-        this._signalIds.clear();
+        Main.overview.disconnectObject(this);
+        Main.sessionMode.disconnectObject(this);
+        // @ts-ignore
+        global.windowGroup.disconnectObject(this);
+        // @ts-ignore
+        global.windowManager.disconnectObject(this);
+        // @ts-ignore
+        global.windowGroup.get_children().forEach(child => child.disconnectObject(this));
 
         this._updateDelay?.cancel();
     }

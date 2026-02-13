@@ -187,6 +187,11 @@ export default class TouchUpExtension extends Extension {
         return this.featureManager!.getFeature(type);
     }
 
+    /*
+     * Session Modes:
+     * This extension uses "unlock-dialog" session mode for some lockscreen features:
+     *  - DoubleClickToSleep: Double tap `ScreenShield` to suspend
+     */
     disable() {
         // Cancel any pending delays:
         logger.debug(`Cancelling ${Delay.getAllPendingDelays().length} pending delay(s)`);

@@ -14,15 +14,9 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
     constructor(pm: PatchManager) {
         super(pm);
 
-        const panelGesture = createDoubleTapGesture({
-            onActivate: () => this._sleep(),
-        });
-        const desktopBackgroundGesture = createDoubleTapGesture({
-            onActivate: () => this._sleep(),
-        });
-        const screenShieldGesture = createDoubleTapGesture({
-            onActivate: () => this._sleep(),
-        });
+        const panelGesture = createDoubleTapGesture({ onActivate: () => this._sleep() });
+        const desktopBackgroundGesture = createDoubleTapGesture({ onActivate: () => this._sleep() });
+        const screenShieldGesture = createDoubleTapGesture({ onActivate: () => this._sleep() });
 
         this.pm.patch(() => {
             Main.panel.add_action_full(
@@ -44,7 +38,7 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
             return () => {
                 Main.panel.remove_action(panelGesture);
                 Main.layoutManager._backgroundGroup.remove_action(desktopBackgroundGesture);
-                Main.layoutManager.screenShieldGroup.remove_action(desktopBackgroundGesture);
+                Main.layoutManager.screenShieldGroup.remove_action(screenShieldGesture);
             };
         });
 
@@ -86,7 +80,7 @@ function createDoubleTapGesture(props: {onActivate: () => void, timeout?: number
 
     gesture.connect("may-recognize", () => {
         return GestureRecognizerEvent.isTouch(Clutter.get_current_event());
-    })
+    });
 
     gesture.connect("recognize", () => {
         const now = GLib.get_monotonic_time() / 1000; // convert to ms
