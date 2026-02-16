@@ -19,7 +19,7 @@ export type NavbarMode = 'gestures' | 'buttons';
 
 
 export class NavigationBarFeature extends ExtensionFeature {
-    declare private _currentNavBar: BaseNavigationBar<any>;
+    private _currentNavBar?: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
     private _disableOskActionPatch: Patch | null = null;
     private readonly _debouncedPrimaryMonitorPatchSetActive: (props: {active: boolean, force?: boolean}) => void;
@@ -82,7 +82,7 @@ export class NavigationBarFeature extends ExtensionFeature {
         });
         this.pm.connectTo(settings.navigationBar.gesturesReserveSpace, 'changed', (value) => {
             if (this._mode === 'gestures') {
-                this._currentNavBar.setReserveSpace(value);
+                this._currentNavBar?.setReserveSpace(value);
             }
         });
         this.pm.connectTo(settings.navigationBar.gesturesInvisibleMode, 'changed', () =>
@@ -98,7 +98,7 @@ export class NavigationBarFeature extends ExtensionFeature {
 
         return this.pm.registerPatch(() => {
             originalMonitor ??= Main.layoutManager.primaryMonitor!;
-            void this._setPrimaryMonitor(this._currentNavBar.monitor);
+            void this._setPrimaryMonitor(this._currentNavBar!.monitor);
             return () => {
                 void this._setPrimaryMonitor(originalMonitor!);
                 originalMonitor = undefined;
@@ -180,6 +180,9 @@ export class NavigationBarFeature extends ExtensionFeature {
     private async _updateVisibility() {
         let monitorIndex = await this._getNavigationBarTargetMonitor();
 
+        // Feature might have been destroyed during async monitor selection operation above:
+        if (!this._currentNavBar) return;
+
         if (monitorIndex !== null) {
             // Update the navbar monitor:
             this._currentNavBar.setMonitor(monitorIndex);
@@ -251,8 +254,8 @@ export class NavigationBarFeature extends ExtensionFeature {
     private _updateGlobalStyleClasses() {
         const isInInvisibleMode = (settings.navigationBar.mode.get() === 'gestures' && this._invisibleMode);
 
-        const styleClasses: Record<string, boolean> = {
-            'touchup-navbar--visible': this._currentNavBar.isVisible && !isInInvisibleMode,
+        const styleClasses: Record<string, boolean | undefined> = {
+            'touchup-navbar--visible': this._currentNavBar?.isVisible && !isInInvisibleMode,
             'touchup-navbar--gestures': this.mode === 'gestures',
             'touchup-navbar--buttons': this.mode === 'buttons',
         };
@@ -312,6 +315,7 @@ export class NavigationBarFeature extends ExtensionFeature {
     destroy() {
         this._removeGlobalStyleClasses()
         this._currentNavBar?.destroy();
+        this._currentNavBar = undefined;
         super.destroy();
     }
 }

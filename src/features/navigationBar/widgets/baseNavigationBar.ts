@@ -112,6 +112,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
     protected onBeforeReallocate(): void {}
 
     private _createWindowPositionTracker() {
+        this.windowPositionTracker?.destroy();
         this.windowPositionTracker = new WindowPositionTracker(windows => {
             if (this.actor.realized) {
                 // Check if at least one window is near enough to the navigation bar:
