@@ -96,7 +96,7 @@ jobs:
             gnome-extensions install -f ${{ env.ZIPFILE_BASENAME }}
             
             ```
-          draft: false
+          draft: true
           prerelease: false
           files: |
             ${{ env.ZIPFILE }}
