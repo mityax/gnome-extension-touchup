@@ -29,7 +29,7 @@ export class SmoothFollowerLane {
     }) {
         this.currentValue = props.currentValue ?? null;
         this.target = props.target ?? null;
-        this.smoothTime = props.smoothTime ?? 0.05;
+        this.smoothTime = props.smoothTime ?? 0.055;
         this.onUpdate = props.onUpdate;
     }
 }

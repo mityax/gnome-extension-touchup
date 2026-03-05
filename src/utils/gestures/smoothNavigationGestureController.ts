@@ -31,9 +31,11 @@ export class SmoothNavigationGestureController {
             new SmoothFollowerLane({
                 onUpdate: value =>
                     this._overviewController.gestureProgress(value - this._overviewController.initialProgress),
+                smoothTime: 0.085,
             }),
             new SmoothFollowerLane({
                 onUpdate: value => this._wsController.gestureProgress(value - this._wsController.initialProgress),
+                smoothTime: 0.055,
             })
         ]);
     }
