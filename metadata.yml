@@ -1,6 +1,6 @@
 # Human-facing version names for release and debug builds:
-version: &version 1.4.1
-version-debug: &version-debug 1.4.1.debug
+version: &version 1.5.0
+version-debug: &version-debug 1.5.0.debug
 
 # The description that appears on EGO (extensions.gnome.org) and inside applications such
 # as "Extensions" or "Extension Manager":
@@ -11,7 +11,7 @@ description: &description |-
     - Navigation bar (gestures and buttons mode), as known from Android
     - Touch gestures for notifications (dismiss, collapse, expand)
     - Make the notification area touch-scrollable
-    - Onscreen Keyboard: key popups, extended keys, swipe to close.
+    - Onscreen Keyboard: key popups, extended keys, swipe to close, quick paste button
     - Manually open the keyboard by swiping up the bottom left navigation bar edge
     - Floating rotate button when auto-rotation is off, as known from Android
     - Overview and desktop background gestures (switch workspaces, open/close overview)
