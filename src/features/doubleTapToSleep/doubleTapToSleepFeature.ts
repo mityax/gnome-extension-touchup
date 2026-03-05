@@ -8,6 +8,7 @@ import * as SystemActions from "resource:///org/gnome/shell/misc/systemActions.j
 import TouchUpExtension from "$src/extension";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 import {SessionMode} from "$src/core/extensionFeatureManager";
+import {Delay} from "$src/utils/delay";
 
 
 export class DoubleTapToSleepFeature extends ExtensionFeature {
@@ -60,7 +61,12 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
                 fadeToBlack: true,
                 animateFade: true,
             });
-            // Main.screenShield._setLocked(true);
+
+            Delay.ms(600).then(() => {
+                // Ensure the screen is turned off entirely, not just black:
+                Main.screenShield._setActive(false);
+                Main.screenShield._setActive(true);
+            });
         }
 
     }
