@@ -55,6 +55,19 @@ export class OskPage extends Adw.PreferencesPage {
                     setting: settings.osk.gestures.extendKeys.enabled,
                 }),
             ]
-        }))
+        }));
+
+        this.add(buildPreferencesGroup({
+            title: "Quick Paste Action",
+            description: "Show a quick paste action button in the OSK suggestion bar when having copied " +
+                "something to the clipboard recently.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable OSK Quick Paste Action",
+                    subtitle: "Whether to enable the OSK quick paste action button or not",
+                    setting: settings.osk.quickPasteAction.enabled,
+                }),
+            ]
+        }));
     }
 }

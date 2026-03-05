@@ -154,6 +154,14 @@ export const settings = {
                  */
                 enabled: new BoolSetting('osk-gestures-extend-keys-enabled', true),
             }
+        },
+
+        quickPasteAction: {
+            /**
+             * Whether to show a quick paste button in the OSK's suggestion bar when having copied
+             * something to the clipboard recently.
+             */
+            enabled: new BoolSetting('osk-quick-paste-action-enabled', true),
         }
     },
 
