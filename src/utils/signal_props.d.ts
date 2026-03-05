@@ -25,7 +25,15 @@ export type SignalPropsFromSignatures<TSignatures> = {
     [K in keyof TSignatures as TransformSignalName<K & string>]?: TSignatures[K];
 };
 
+// Maps a class with `$signals` to a props object with transformed signal names
 export type SignalPropsFromClass<T> =
-    T extends { $signals: infer S }
-        ? { [K in keyof S as TransformSignalName<K & string>]?: S[K] }
-        : never;
+    T extends { $signals: infer S } // Extract `$signals` type from the class
+        ? {
+              // Iterate over all signal keys and rename them
+              [K in keyof S as TransformSignalName<K & string>]?:
+                  S[K] extends (...args: infer A) => infer R
+                      // Rebuild function signature with `instance: T` as first arg
+                      ? (instance: T, ...args: A) => R
+                      : never;
+          }
+        : never; // If `$signals` does not exist

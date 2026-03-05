@@ -177,7 +177,7 @@ function initWidget<T extends St.Widget>(widget: T, props: UiProps<T>) {
     const onCreatedRes = props.onCreated?.(widget);
 
     // Optionally, `onCreated` may return a function to be called when the widget is destroyed:
-    if (onCreatedRes) widget.connect('destroy', onCreatedRes);
+    if (typeof onCreatedRes === 'function') widget.connect('destroy', onCreatedRes);
 }
 
 export class Button extends St.Button {
@@ -256,7 +256,7 @@ export class Row extends St.BoxLayout {
     }) {
         super({
             ...filterConfig(config),
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
         });
         initWidget(this, config);
         config.children?.forEach(c => this.add_child(c));
@@ -274,7 +274,7 @@ export class Column extends St.BoxLayout {
     }) {
         super({
             ...filterConfig(config),
-            vertical: true,
+            orientation: Clutter.Orientation.VERTICAL,
         });
         initWidget(this, config);
         config.children?.forEach(c => this.add_child(c));
