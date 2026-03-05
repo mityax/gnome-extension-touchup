@@ -47,7 +47,7 @@ export class OSKQuickPasteAction extends ExtensionFeature {
     }
 
     onNewKeyboard(keyboard: Keyboard.Keyboard | null) {
-        const keyboardRef = new Widgets.Ref(keyboard as Clutter.Actor);  // use a ref to only clean up if the keyboard hasn't been destroyed
+        const keyboardRef = new Widgets.Ref(keyboard as Keyboard.Keyboard & Clutter.Actor);  // use a ref to only clean up if the keyboard hasn't been destroyed
 
         // Setup our new top bar:
         const pasteButton = new Widgets.Ref<Widgets.Button>();
