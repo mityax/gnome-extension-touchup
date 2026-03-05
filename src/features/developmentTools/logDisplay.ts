@@ -10,6 +10,7 @@ import {DevToolToggleButton} from "$src/features/developmentTools/developmentToo
 import {Delay} from "$src/utils/delay";
 import Pango from "gi://Pango";
 import Cogl from "gi://Cogl";
+import {showActorInfoPopup} from "$src/features/developmentTools/actorInfoPopup";
 import Stage = Clutter.Stage;
 import PolicyType = St.PolicyType;
 import Ref = Widgets.Ref;
@@ -257,6 +258,18 @@ class LogDisplay extends Widgets.Column {
                         l.clutterText.selectionColor = Cogl.Color.from_string('rgba(255,255,255,0.3)')[1];
                     },
                 }),
+                ...msg.rawArguments
+                    .filter(arg => arg instanceof Clutter.Actor)
+                    .map(actor => new Widgets.Button({
+                        iconName: 'preferences-system-details-symbolic',
+                        style: css({
+                            width: "15px",
+                            height: "15px",
+                            color: "skyblue",
+                            marginRight: "5px",
+                        }),
+                        onClicked: () => showActorInfoPopup(actor),
+                    })),
                 new Widgets.Label({
                     text: '1',
                     styleClass: 'log-item__duplicates-counter',

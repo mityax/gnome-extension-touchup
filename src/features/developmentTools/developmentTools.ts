@@ -15,11 +15,11 @@ import {_hotReloadExtension, BUILD_OUTPUT_DIR} from "$src/features/developmentTo
 import ExtensionFeature from "$src/core/extensionFeature";
 import {PatchManager} from "$src/core/patchManager";
 import {debounce} from "$src/utils/debounce";
-import Cogl from "gi://Cogl";
 import {SendTestNotificationsButton} from "$src/features/developmentTools/sendTestNotificationsButton";
 import {TouchModeService} from "$src/services/touchModeService";
 import {logger} from "$src/core/logging";
 import {Delay} from "$src/utils/delay";
+import {ActorPickerButton} from "$src/features/developmentTools/actorPickerButton";
 
 
 const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
@@ -32,7 +32,7 @@ type _PersistedState = {
 
 
 export class DevelopmentTools extends ExtensionFeature {
-    declare private logDisplay: Ref<DevelopmentLogDisplayButton>;
+    private readonly actorPickerButton = new Ref<ActorPickerButton>();
 
     // Note: This is intentionally not a patch; this is state that needs to be persisted through hot-reloads.
     // Since the DevelopmentTools code will not be included in release builds this is not a problem for code review.
@@ -50,6 +50,7 @@ export class DevelopmentTools extends ExtensionFeature {
         super(pm);
         this._setupDevToolBar();
         this._setupLiveReload();
+        this._setupKeyboardShortcuts();
 
         // Set the [enforceTouchMode] from the persisted state:
         TouchUpExtension.instance!.getFeature(TouchModeService)!.enforceTouchMode =
@@ -64,7 +65,6 @@ export class DevelopmentTools extends ExtensionFeature {
             }),
             new Widgets.Bin({width: 25}),
             new DevelopmentLogDisplayButton({
-                ref: this.logDisplay,
                 initialValue: this._persistedState.showLogDisplays,
                 onPressed: (v) => this._persistedState.showLogDisplays = v,
             }),
@@ -78,17 +78,19 @@ export class DevelopmentTools extends ExtensionFeature {
                     TouchUpExtension.instance!.getFeature(TouchModeService)!.enforceTouchMode = v;
                 }
             }),
-            new Widgets.Bin({width: 15}),
+            new Widgets.Bin({width: 10}),
+            new SendTestNotificationsButton(),
+            new Widgets.Bin({width: 10}),
+            new ActorPickerButton({
+                ref: this.actorPickerButton,
+            }),
+            new Widgets.Bin({width: 2, style: css({backgroundColor: 'lightgray', margin: "3px 10px"})}),  // visual divider
             new RestartButton(),
             new Widgets.Bin({width: 10}),
             new HotRestartButton({
                 extensionUuid: TouchUpExtension.instance!.metadata.uuid,
                 ref: this._hotRestartButton,
             }),
-            new Widgets.Bin({width: 10}),
-            new Widgets.Bin({width: 1, backgroundColor: Cogl.Color.from_string('grey')[1]}),
-            new Widgets.Bin({width: 10}),
-            new SendTestNotificationsButton(),
         ];
     }
 
@@ -161,6 +163,20 @@ export class DevelopmentTools extends ExtensionFeature {
 
             return () => source.close();
         });
+    }
+
+    private _setupKeyboardShortcuts() {
+        // TODO: Add keybinding:
+        //this.pm.patch(() => {
+        //    Main.wm.addKeybinding(
+        //        'touchup-actor-picker',
+        //        new Gio.Settings({schema_id: WindowManager.SHELL_KEYBINDINGS_SCHEMA}),
+        //        Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+        //        Shell.ActionMode.ALL,
+        //        () => this.actorPickerButton.current?.trigger(),
+        //    );
+        //    return () => Main.wm.removeKeybinding('touchup-actor-picker');
+        //})
     }
 }
 
