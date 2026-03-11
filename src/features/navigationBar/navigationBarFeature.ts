@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import ExtensionFeature from "$src/core/extensionFeature";

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * The [Widgets] module provides subclasses for most St.Widgets, that offer an easier, briefer and more elegant
  * way to create complex user interfaces - in a nested declarative way:

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Cogl from "gi://Cogl";
 import {logger} from "$src/core/logging";
 

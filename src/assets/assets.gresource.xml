@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
+SPDX-FileCopyrightText: 2026 mityax, 2026
+
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
+<!--
 All arbitrary assets for this extension need to be defined in this file in order to be bundled
 with the extension. They can be loaded anywhere in the extension using the utilities provided
 by Gio, e.g.:

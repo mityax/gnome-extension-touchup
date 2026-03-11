@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import ExtensionFeature from "../core/extensionFeature";
 import {Patch, PatchManager} from "../core/patchManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";

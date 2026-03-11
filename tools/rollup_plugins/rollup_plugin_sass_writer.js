@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import {mkdirSync, writeFileSync} from 'fs';
 import {dirname} from "path";
 import {compileAsync} from "sass-embedded";

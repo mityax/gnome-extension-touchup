@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 // rollup-plugin-write-json.js
 import fs from 'fs';
 import path from 'path';

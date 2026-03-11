@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 mityax, 2026
+
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="build" type="js.build_tools.npm" nameIsGenerated="true">
     <package-json value="$PROJECT_DIR$/package.json" />

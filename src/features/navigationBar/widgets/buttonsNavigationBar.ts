@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import BaseNavigationBar from "./baseNavigationBar";
 import St from "gi://St";
 import * as Widgets from "$src/utils/ui/widgets";
