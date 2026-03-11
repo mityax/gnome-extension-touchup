@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Meta from "gi://Meta";
 import Clutter from "gi://Clutter";

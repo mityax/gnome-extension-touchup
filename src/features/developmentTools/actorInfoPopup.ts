@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Clutter from "gi://Clutter";
 import {ModalDialog} from "resource:///org/gnome/shell/ui/modalDialog.js";
 import * as Widgets from "$src/utils/ui/widgets";

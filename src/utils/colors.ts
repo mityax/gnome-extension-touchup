@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 /**
  * Calculate relative luminance in range 0..1. The color values r, g and b must be within the 0..255 range.
   */

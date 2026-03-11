@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: 2026 mityax, 2026
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
 set -euo pipefail
 
 die() { echo "$@" >&2; exit 1; }

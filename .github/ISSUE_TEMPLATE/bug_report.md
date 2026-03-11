@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 mityax, 2026
+
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 ---
 name: Bug report
 about: Report a problem with Touchup, that can be reproduced on vanilla 

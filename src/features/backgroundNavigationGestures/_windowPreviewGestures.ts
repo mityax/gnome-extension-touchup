@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import {PatchManager} from "$src/core/patchManager";
 import {Workspace} from "resource:///org/gnome/shell/ui/workspace.js";
 import type {WindowPreview} from "resource:///org/gnome/shell/ui/windowPreview.js";

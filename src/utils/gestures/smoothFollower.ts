@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import {IdleRunner} from "$src/utils/idleRunner";
 import GLib from "gi://GLib";
 

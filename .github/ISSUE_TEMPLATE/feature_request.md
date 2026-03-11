@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 mityax, 2026
+
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 ---
 name: Feature request
 about: Suggest an idea for TouchUp

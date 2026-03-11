@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Adw from "gi://Adw";
 import Gtk from "gi://Gtk";
 import {Setting} from "$src/features/preferences/backend";

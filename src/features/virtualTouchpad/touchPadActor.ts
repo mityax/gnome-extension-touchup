@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import * as Widgets from "$src/utils/ui/widgets";
 import GObject from "gi://GObject";
 import Clutter from "gi://Clutter";

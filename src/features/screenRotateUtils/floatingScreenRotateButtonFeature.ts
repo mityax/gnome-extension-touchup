@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Meta from "gi://Meta";
 import Gio from "gi://Gio";
 import ExtensionFeature from "$src/core/extensionFeature";

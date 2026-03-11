@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 mityax, 2026
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
 # Override variables in here using project top-level `.env` or `.env.local` respectively.
 
 export EXTENSION_ID="touchup@mityax"

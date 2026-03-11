@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 mityax, 2026
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
 import ExtensionFeature from "$src/core/extensionFeature";
 import {PatchManager} from "$src/core/patchManager";
 import {settings} from "$src/settings";
