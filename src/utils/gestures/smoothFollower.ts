@@ -116,7 +116,7 @@ export class SmoothFollower<T extends SmoothFollowerLane[]> extends IdleRunner {
         let dt = this.lastRun != null ? now - this.lastRun : 0;
 
         // Don't emit an update if the time since the last update exceeds MAX_FPS:
-        if (dt > 0 && dt / 1000 / 1000 < 1 / this.maxFps) return;
+        if (dt > 0 && dt / GLib.USEC_PER_SEC < 1 / this.maxFps) return;
 
         this.lastRun = now;
 
@@ -144,7 +144,7 @@ export class SmoothFollower<T extends SmoothFollowerLane[]> extends IdleRunner {
         dt: number,
         state: typeof this._internalState[0],
     ): number {
-        dt = dt / 1000 / 1000;  // convert to seconds
+        dt = dt / GLib.USEC_PER_SEC;  // convert to seconds
 
         const omega = 2.0 / smoothTime;
         const x = omega * dt;
