@@ -26,11 +26,13 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         super(pm);
 
         // Listen to clipboard changes:
+        const start = GLib.get_monotonic_time();
         const selection = Shell.Global.get().get_display().get_selection();
         this.pm.connectTo(selection, "owner-changed", (_, selectionType, sourceMemory) => {
-            const isUserCaused = sourceMemory.constructor.name.includes("Wayland");
+            // const isUserCaused = sourceMemory?.constructor.name.includes("Wayland");  // does not work if copying something from an St.Entry
+            const isAutomaticStartupChange = (GLib.get_monotonic_time() - start) / GLib.USEC_PER_SEC < 1;
 
-            if (selectionType === Meta.SelectionType.SELECTION_CLIPBOARD && isUserCaused) {
+            if (selectionType === Meta.SelectionType.SELECTION_CLIPBOARD && !isAutomaticStartupChange) {
                 this._lastClipboardChange = GLib.get_real_time();
             }
         });
@@ -101,7 +103,7 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         });
 
         this.pm.connectTo(keyboard as Clutter.Actor, "visibility-changed", async () => {
-            const lastClipboardChange = (GLib.get_real_time() - this._lastClipboardChange) / 1000 / 1000;
+            const lastClipboardChange = (GLib.get_real_time() - this._lastClipboardChange) / GLib.USEC_PER_SEC;
 
             if (Main.keyboard.visible && lastClipboardChange <= BUTTON_VISIBILITY_DURATION_AFTER_CLIPBOARD_CHANGE) {
                 // Check whether clipboard content is marked as secret:
@@ -125,19 +127,19 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         const time = Clutter.get_current_event_time();
 
         if (Main.inputMethod.contentPurpose === Clutter.InputContentPurpose.TERMINAL) {
-            // Emit `Ctrl + Shift + Insert`
+            // Emit `Ctrl + Shift + v`
             this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
             this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Insert, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Insert, Clutter.KeyState.RELEASED);
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_v, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_v, Clutter.KeyState.RELEASED);
             this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
             this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
         } else {
-            // Emit `Shift + Insert`
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Shift_L, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Insert, Clutter.KeyState.PRESSED);
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Insert, Clutter.KeyState.RELEASED);
-            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Shift_L, Clutter.KeyState.RELEASED);
+            // Emit `Ctrl + v`
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Control_L, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_v, Clutter.KeyState.PRESSED);
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_v, Clutter.KeyState.RELEASED);
+            this._virtualKeyboard.notify_keyval(time, Clutter.KEY_Control_L, Clutter.KeyState.RELEASED);
         }
     }
 
