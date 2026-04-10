@@ -1,0 +1,80 @@
+
+from: base
+
+
+assets:
+  frb_script: |
+    gsettings set org.gnome.settings-daemon.peripherals.touchscreen orientation-lock true
+    gsettings set org.gnome.desktop.interface enable-animations false
+    
+    # This script acts as a fake accelerometer that can be controlled using key presses:
+    wget ${ASSETS_SERVER_ADDR}/assets/fake_input_accelerometer.py
+    python fake_input_accelerometer.py
+
+
+steps:
+  - invoke_key: meta_l
+  - wait:
+      for: overview_ws1
+  - type_text: terminal
+  - sleep: 300ms
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+
+  - type_text: run_asset frb_script  # the `run_asset` helper is created in test "base"
+    speed: 300%
+  - invoke_key: ret
+
+  # Initially, the script causes a rotation event, thus the FRB must appear immediately:
+  - wait:
+      for: floating_rotate_button/btn_bottom_right
+      regions: 91.5% 86.6% 6.7% 10.6%  # area surrounding bottom right FRB
+      timeout: 10s
+
+  # Check bottom left FRB:
+  - sleep: 5s
+  - invoke_key: r
+  - wait:
+      for: floating_rotate_button/btn_bottom_left
+      regions: 1.4% 86.8% 7.6% 11%  # area surrounding bottom left FRB
+      timeout: 15s
+
+  # Check FRB disappears when changing accelerometer orientation back to the current screen orientation:
+  - invoke_key: u
+  - wait:
+      for: terminal_opened
+      regions: 1.4% 86.8% 7.6% 11%  # area surrounding bottom left FRB
+      timeout: 1s
+
+  # Check top right FRB:
+  - sleep: 1s
+  - invoke_key: l
+  - wait:
+      for: floating_rotate_button/btn_top_right
+      regions: 87.5% 4.1% 11.9% 16.0%  # area surrounding top right FRB
+      timeout: 15s
+
+  # Check top left FRB:
+  - sleep: 1s
+  - invoke_key: d
+  - wait:
+      for: floating_rotate_button/btn_top_left
+      regions: 0.9% 4.5% 10.4% 9.8%  # area surrounding top left FRB
+      timeout: 15s
+
+  # Invoke top left FRB:
+  - touch: 5.5% 8.2%
+  - wait:
+      for: floating_rotate_button/upside_down
+      diff: 0.5%
+      regions:
+        # Match based on top bar position, since the text in the terminal is not quite deterministic:
+        - 0% 0% 100% 8% # where the top bar would be, if the screen wasn't rotated
+
+  # Ensure the FRB is gone by checking exact image similarity in that region:
+  - wait:
+      for: floating_rotate_button/upside_down
+      regions: 87.3% 82.6% 11.7% 13.1%
+      diff: 0
+

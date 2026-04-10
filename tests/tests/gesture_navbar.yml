@@ -1,0 +1,147 @@
+
+from: base
+
+
+env: 
+  NAVBAR_PILL_REGION: 35.9% 96% 28.1% 4%
+
+
+
+steps:
+  # Enable "ignore touch mode" (since we can't emulate touch mode properly):
+  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
+    sequential: false
+  - wait:
+      for:
+        find:
+          text: Run a Command
+          location_hint: center
+  - type_text: >-
+      dconf write /org/gnome/shell/extensions/touchup/navigation-bar-ignore-touch-mode true
+  - invoke_key: ret
+
+  # Check that the navigation bar appeared:
+  - wait:
+      for: gesture_navbar/desktop_with_navbar
+      regions:
+        - $NAVBAR_PILL_REGION
+
+  # Drag up for overview:
+  - touch:
+    - 50% -2px
+    - 50% -5%
+    - 50% -10%
+    - 50% -15%
+    - 50% -20%
+    speed: slow
+  - wait:
+      for: gesture_navbar/overview_ws1
+      regions:
+        - 0% 0% 100% 70%  # region such that we ignore the lower third of the screen, since the dock has inconsistent size
+        - $NAVBAR_PILL_REGION
+      diff: 10%  # more tolerance because of inconsistent dock size
+      timeout: 10s
+
+  - sleep: 1s
+
+  # Still in the overview, drag the navbar to the left:
+  - touch:
+    - 50% -10px
+    - 45% -10px
+    - 40% -10px
+    - 35% -10px
+    - 30% -10px
+    speed: slow
+  - wait:
+      for: gesture_navbar/overview_ws2
+      regions:
+        - 0% 0% 100% 70%  # region such that we ignore the lower third of the screen, since the dock has inconsistent size
+        - $NAVBAR_PILL_REGION
+      diff: 16%  # more tolerance because of inconsistent dock size
+      timeout: 10s
+
+  # Drag up again to open app list:
+  - touch:
+    - 50% -2px
+    - 50% -5%
+    - 50% -10%
+    - 50% -15%
+    - 50% -20%
+    speed: slow
+  - wait:
+      for: gesture_navbar/app_grid_ws2
+      regions:
+        - 0% 0% 100% 80%  # region such that we ignore the lower 20% of the screen, since the dock has inconsistent size
+        - $NAVBAR_PILL_REGION
+      diff: 5%
+      timeout: 10s
+
+  # Leave the overview:
+  - invoke_key: meta_l
+  - wait:
+      for: gesture_navbar/desktop_with_navbar
+
+  # Drag the nav bar up and slightly to the right, to check two dimensional gesture functionality:
+  - touch_press: 50% -2px
+  - touch_move: 55% -10%
+  - touch_move: 60% -20%
+  - touch_move: 65% -30%
+  - touch_move: 70% -35%
+  - wait:
+      for: gesture_navbar/mid_gesture_up_right
+      diff: 10%
+      regions: 0% 0% 100% 80%  # ignore lower 20% of the screen (app icons, dock)
+
+  - touch_release: 70% -40%
+  # Check that the above gesture correctly resulted in overview (ws1):
+  - wait:
+      for: gesture_navbar/overview_ws1
+      regions:
+        - 0% 0% 100% 70%  # region such that we ignore the lower third of the screen, since the dock has inconsistent size
+        - $NAVBAR_PILL_REGION
+      diff: 16%  # more tolerance because of inconsistent dock size
+      timeout: 10s
+      
+  # Leave the overview:
+  - invoke_key: meta_l
+
+  # Enable the OSK (since we can't emulate touch mode properly):
+  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
+    sequential: false
+  - wait:
+      for:
+        find:
+          text: Run a Command
+          location_hint: center
+  - type_text: >-
+      gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true
+  - invoke_key: ret
+  - wait:
+      for: gesture_navbar/desktop_with_navbar
+      timeout: 10s
+
+  # Open the OSK by dragging up the left nav bar edge:
+  - touch:
+    - 25px -2px
+    - 25px -5%
+    - 25px -10%
+    - 25px -15%
+    - 25px -20%
+    speed: slow
+  - wait:
+      for: gesture_navbar/osk_opened
+      timeout: 10s
+
+  # With the OSK open, drag the navbar to the left to check OSK auto-close 
+  # functionality:
+  - touch:
+    - 50% -10px
+    - 45% -10px
+    - 40% -10px
+    - 35% -10px
+    - 30% -10px
+    speed: slow
+  - wait:
+      for: gesture_navbar/desktop_with_navbar
+      timeout: 10s
+

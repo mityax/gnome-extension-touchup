@@ -1,0 +1,159 @@
+
+from: base
+
+
+env:
+  NOTIFICATION_BANNER_REGION: 25% 5% 49% 15%
+  TRAY_NOTIFICATION_REGION: 14.4% 4.5% 42.5% 20.4% # contains the notification in the message tray, in expanded state
+  
+  NOTIFY_SEND_COMMAND: notify-send "Test" "This is a long notification body so the notification can be expanded."
+
+
+defs:
+  send_test_notification:
+    # This custom step depends on the banner appearing on the desktop, don't use in other contexts (!)
+    - invoke_keys: ["alt", "f2"]
+      sequential: false
+    - wait:
+        for: 
+          find:
+            text: Run a Command
+    - type_text: $NOTIFY_SEND_COMMAND
+      speed: fast
+    - invoke_key: ret
+    - wait:
+        for: notification_gestures/banner_appeared
+        regions: $NOTIFICATION_BANNER_REGION
+
+
+steps:
+  # Send a test notification:
+  - send_test_notification:
+
+  # Drag the banner to the right, check mid-gesture and cancel the gesture by dragging to the left:
+  - touch_press:   50% 12%
+  - sleep: 0.05s
+  - touch_move:    54% 12%
+  - sleep: 0.05s
+  - touch_move:    58% 12%
+  - sleep: 0.05s
+  - touch_move:    62% 12%
+  - sleep: 0.05s
+  - touch_move:    66% 12%
+  - wait:
+      for: notification_gestures/mid_gesture
+  - touch_move:    66% 12%
+  - sleep: 0.05s
+  - touch_move:    62% 12%
+  - sleep: 0.05s
+  - touch_move:    58% 12%
+  - sleep: 0.05s
+  - touch_release: 54% 12%
+  - wait:
+      for: notification_gestures/banner_appeared
+
+  # Send a new test notification (the old notification banner is reliably being dismissed during this already):
+  - send_test_notification:
+
+  # Drag the banner to the right to dismiss:
+  - touch_press:   50% 12%
+  - sleep: 0.05s
+  - touch_move:    54% 12%
+  - sleep: 0.05s
+  - touch_move:    58% 12%
+  - sleep: 0.05s
+  - touch_move:    62% 12%
+  - sleep: 0.05s
+  - touch_move:    66% 12%
+  - wait:  # FIXME: This sometimes times out since the notification disappears, causing the gesture to drag the desktop bg instead!
+      for: notification_gestures/mid_gesture
+  - touch_release: 62% 12%
+  - wait:
+      for: desktop
+      timeout: 1s
+
+  # Open the message tray:
+  - touch: 50% 5px
+  - wait:
+      for: notification_gestures/tray_notification
+      regions: $TRAY_NOTIFICATION_REGION
+      
+  # Drag the notification to the right, check mid-gesture, drag back left to cancel gesture:
+  - touch_press:   36% 14%
+  - sleep: 0.05s
+  - touch_move:    40% 14%
+  - sleep: 0.05s
+  - touch_move:    44% 14%
+  - sleep: 0.05s
+  - touch_move:    48% 14%
+  - wait:
+      for: notification_gestures/tray_mid_gesture
+      regions: $TRAY_NOTIFICATION_REGION
+  - touch_move:    44% 14%
+  - sleep: 0.05s
+  - touch_release: 40% 14%
+  - wait:
+      for: notification_gestures/tray_notification
+      regions: $TRAY_NOTIFICATION_REGION
+
+  # Drag notification down to expand:
+  - touch:
+      - 36% 14%
+      - 36% 16%
+      - 36% 18%
+      - 36% 22%
+    speed: slow
+  - wait:
+      for: notification_gestures/tray_notification_expanded
+      regions: $TRAY_NOTIFICATION_REGION
+
+  # Drag to the right, then up and check that it was collapsed (not dismissed):
+  - touch:
+      - 36% 14%
+      - 40% 14%
+      - 44% 14%
+      - 48% 14%
+      - 48% 12%
+      - 48% 10%
+      - 48% 8%
+      - 48% 6%
+      - 48% 4%
+    speed: slow
+  - wait:
+      for: notification_gestures/tray_notification
+      regions: $TRAY_NOTIFICATION_REGION
+
+  # Drag to the left to dismiss:
+  - touch:
+      - 36% 14%
+      - 32% 14%
+      - 28% 14%
+      - 24% 14%
+    speed: slow
+  - wait:
+      for: notification_gestures/tray_empty
+      regions: $TRAY_NOTIFICATION_REGION
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

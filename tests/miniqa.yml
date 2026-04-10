@@ -1,0 +1,27 @@
+image: img/gnome_os_disk_nightly.img
+
+headless: true
+use_ovmf: true
+qemu_args: [
+  # Add our devices:
+  "-device", "virtio-multitouch-pci,id=multitouch",
+
+  # Configure Graphics:
+  "-device", "VGA,edid=on,xres=1080,yres=720"  # allows setting a fixed display size
+]
+
+serve_assets:
+  - ./assets
+
+cache_directory: ./miniqa-cache
+
+ignore_regions:
+  - 40.4% 0.6% 19.2% 3.5%  # top panel time display
+
+env:
+  EXTENSION_ID: "touchup@mityax"
+  EXTENSION_FILENAME: "$(ls -t ./assets/dist/*.zip 2>/dev/null | head -n1 | xargs -r basename)"  # most recently modified .zip
+  VM_USER_NAME: "user"
+  VM_USER_PASSWORD: "password"
+  DESKTOP_BG_COLOR: "#0045da"     # GNOME OS default background image blue
+  GTK_WINDOW_BG_COLOR: "#fafafb"  # GTK window background in light mode

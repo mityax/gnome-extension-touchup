@@ -1,0 +1,38 @@
+
+from: base
+
+
+steps:
+  # Double tap desktop background:
+  - touch: 50% 50%
+  - touch: 50% 50%
+  - wait:
+      for:
+        dominant_color: black
+  
+  # Wake up again:
+  - touch: 50% 50%
+  
+  # Unlock:
+  - type_text: $VM_USER_PASSWORD
+  - invoke_key: ret
+  - wait:
+      for: desktop
+
+  # Double tap top panel:
+  - touch: 62% 5px
+  - touch: 62% 5px
+  - wait:
+      for:
+        dominant_color: black
+
+  # Wake up again:
+  - touch: 50% 50%
+  
+  # Double tap lockscreen:
+  - touch: 50% 50%
+  - touch: 50% 50%
+  - wait:
+      for:
+        dominant_color: black
+

@@ -1,6 +1,10 @@
 /dist/
+
+/node_modules
+
 /tools/.gnome-shell
 
-.vagrant
-node_modules
-/.lib/
+/tests/assets/dist/*
+/tests/img/*
+
+!.gitkeep

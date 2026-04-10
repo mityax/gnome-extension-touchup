@@ -1,0 +1,124 @@
+
+from: base
+
+
+steps:
+  
+  # Open a terminal as dummy window:
+  - invoke_key: meta_l
+  - wait:
+      for: overview_ws1
+  - type_text: terminal
+  - sleep: 300ms
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+
+  # Open the overview:
+  - invoke_key: meta_l
+  - wait:  # wait for the overview to appear
+      for:
+        find:
+          text: Type to search
+
+  # Drag the window preview up, check mid-gesture, drag it down again to cancel the gesture:
+  - touch_press: 50% 50%
+  - sleep: 70ms
+  - touch_move:  50% 40%
+  - sleep: 70ms
+  - touch_move:  50% 30%
+  - sleep: 70ms
+  - touch_move:  50% 20%
+  - sleep: 70ms
+  - touch_move:  50% 10%
+  - sleep: 70ms
+  - wait:  
+      for: window_preview_gestures/mid_gesture
+      # doing a full image match mid-gesture is quite unreliable here because of timing 
+      # invariances; thus we only match siginificant parts:
+      regions:
+        - 11.6% 20.5% 76.7% 5.0%  # a horizontal strip over the dragged-up window's upper portion to ensure the window is present at the upper half of the desktop preview
+        - 11.9% 75.9% 75.8% 4.2%  # a horizontal strip at the bottom of the desktop preview to ensure the window is not present there
+      diff: 2%
+      timeout: 10s
+  - touch_move: 50% 20%
+  - touch_release: 50% 30%
+  - wait:
+      for: window_preview_gestures/overview_ws1_with_terminal
+
+  # FIXME: These two doesn't work yet:
+  #
+  ## Drag the window preview down to close the overview (i.e. ensure the window preview gesture is not activated 
+  ## and instead hands over to the overview background gestures):
+  #- touch:
+  #  - 50% 50%
+  #  - 50% 55%
+  #  - 50% 60%
+  #  - 50% 65%
+  #  - 50% 70%
+  #  speed: normal
+  #- wait:
+  #    for: desktop
+  #    timeout: 10s
+  #
+  ## Drag the window preview to the left to check that it doesn't interfere with workspace switching:
+  #- touch:
+  #  - 50% 50%
+  #  - 45% 50%
+  #  - 40% 50%
+  #  - 35% 50%
+  #  - 30% 50%
+  #  speed: 80%
+  #- wait:
+  #    for: overview_ws2
+  #    timeout: 10s
+
+  # Create a second terminal window (to move one to ws2 without ws1 being auto-removed so we can observe a difference):
+  - invoke_key: esc
+  - wait:
+      for: terminal_opened
+  - invoke_keys: ["ctrl", "shift", "n"]
+    sequential: false
+  - invoke_key: meta_l
+  - wait:
+      for:
+        find:
+          text: Type to search
+
+  # Touch and hold the right window preview to drag it, check mid-gesture and drop it on ws2:
+  - touch_press: 60% 50%
+  - sleep: 500ms
+  - touch_move:  65% 50%
+  - touch_move:  70% 50%
+  - touch_move:  75% 50%
+  - touch_move:  80% 50%
+  - wait:
+      for: window_preview_gestures/mid_drag_gesture
+      regions: 
+        - 56.6% 18.0% 42.9% 61.9% # an area around the dragged window preview
+      timeout: 10s
+  - touch_move:    90%   50%
+  - touch_move:    95%   50%
+  - touch_release: 99px  50%  # drop on ws2
+  - wait:
+      for: window_preview_gestures/dropped_on_ws2
+
+  # Swip-up and close the terminal on the current workspace (ws1):
+  - touch:
+      - 50% 50%
+      - 50% 45%
+      - 50% 40%
+      - 50% 35%
+      - 50% 30%
+  - wait:
+      for:
+        dominant_color: $DESKTOP_BG_COLOR
+      regions:
+        - 22.8% 23.9% 56.5% 55.8%  # central area in the desktop preview -> assert the terminal is gone
+
+
+
+
+
+
+

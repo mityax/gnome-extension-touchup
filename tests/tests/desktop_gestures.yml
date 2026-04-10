@@ -1,0 +1,42 @@
+
+from: base
+
+
+steps:
+  # Drag the desktop background up for overview:
+  - touch:
+    - 50% 50%
+    - 50% 48%
+    - 50% 46%
+    - 50% 44%
+    - 50% 42%
+    speed: slow
+  - wait:
+      for: overview_ws1
+      regions:
+        - 0% 0% 100% 70%  # region such that we ignore the lower third of the screen, since the dock has inconsistent size
+      diff: 10%  # more tolerance because of inconsistent dock size
+      timeout: 10s
+
+  # Close the overview:
+  - invoke_key: esc
+  - wait:
+      for: desktop
+
+  # Drag the desktop background to the left and slightly up, check mid-gesture and final result:
+  - touch_press:   50% 50%
+  - touch_move:    45% 48%
+  - touch_move:    40% 46%
+  - touch_move:    35% 44%
+  - touch_move:    30% 42%
+  - wait:
+      for: desktop_gestures/mid_gesture
+      diff: 2%
+      timeout: 10s
+  - touch_move:    25% 42%
+  - touch_release: 20% 42%
+  - wait:
+      for: desktop_gestures/desktop_ws2
+      regions: 
+        - 0% 0% 7% 4.5%  # the workspace indicator in the upper-left corner
+      timeout: 10s

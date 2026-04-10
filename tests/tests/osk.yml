@@ -1,0 +1,239 @@
+
+from: base
+
+
+env:
+  OSK_REGION:                0%    67%   100%  33%    # contains the entire OSK in fully opened state
+  KEY_Y_SURROUNDING_REGION:  43.9% 67.4% 10.6% 15.0%  # region around the "y" key, including key popup
+  KEY_Y_POPUP_REGION:        46.4% 66.8% 5.4%  6.9%   # region containing only the key popup for "y"
+  QUICK_PASTE_ACTION_REGION: 17.5% 66.8% 33.5% 6.7%   # left half of the OSK's suggestion area
+  TEXT_EDITOR_INNER_REGION:  18.3% 23.4% 63.2% 41.7%  # the central area of the text editors text area, above the OSK
+  
+  QUICK_PASTE_ACTION_TEXT:   "I copied this!"
+
+
+steps:
+  # === Preparation ===
+
+  # Enable the OSK (since we can't emulate touch mode properly):
+  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
+    sequential: false
+  - wait:
+      for:
+        find:
+          text: Run a Command
+  - type_text: >-
+      gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true
+  - invoke_key: ret
+  - wait:
+      for: desktop
+
+  # Open a terminal as text input for OSK testing (since any normal text editor would 
+  # have unpredictable auto-complete):
+  - invoke_key: meta_l
+  - wait:
+      for: overview_ws1
+  - type_text: terminal
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+
+  # Open osk (by tapping the terminal):
+  - touch: 50% 50%
+  - wait:
+      for: osk/osk_opened
+      regions: $OSK_REGION
+
+
+  # === Tests: OSK Gestures ===
+  
+  # Drag the OSK down a little to check mid-gesture appearance:
+  - touch_press:   50% 75%
+  - touch_move:    50% 76%
+  - touch_move:    50% 77%
+  - touch_move:    50% 78%
+  - touch_move:    50% 79%
+  - wait:
+      for: osk/mid_gesture
+      regions: $OSK_REGION
+
+  # Complete the gesture and check if OSK is gone:
+  - touch_release: 50% 80%
+  - wait:
+      for: terminal_opened
+
+  # Tap the editor to reopen OSK:
+  - touch: 50% 50%
+  - wait:
+      for: osk/osk_opened
+      regions: $OSK_REGION
+
+  - sleep: 2s
+
+  # Drag the OSK down a little again, check mid-gesture appearance:
+  - touch_press:   50% 75%
+  - touch_move:    50% 76%
+  - touch_move:    50% 77%
+  - touch_move:    50% 78%
+  - touch_move:    50% 79%
+  - wait:
+      for: osk/mid_gesture
+      regions: $OSK_REGION
+
+  # Cancel the gesture by moving up again, check if OSK is fully opened:
+  - touch_move:    50% 78%
+  - touch_move:    50% 77%
+  - touch_release: 50% 76%
+  - wait:
+      for: osk/osk_opened
+      regions: $OSK_REGION
+
+
+  # === Tests: OSK Key Popups ===
+  
+  # Press a key, check that key popup appears, release the key, check if it disappears 
+  # immediately:
+  - touch_press:   50% 75%  # open the OSK Key popup for key "y"
+  - wait:
+      for: osk/osk_key_popup_y
+      regions: 
+        - $KEY_Y_POPUP_REGION
+  - touch_release: 50% 75%
+  - wait:
+      for: osk/osk_opened
+      regions:
+        - $KEY_Y_POPUP_REGION
+      timeout: 1s
+
+  - sleep: 2s
+  
+  # Check that the key popup closes after some time even while still pressing the key:
+  - touch_press:   50% 75%  # open the OSK Key popup for key "y"
+  - wait:
+      for: osk/osk_key_popup_y
+      regions: 
+        - $KEY_Y_POPUP_REGION
+  - wait:
+      for: osk/osk_opened
+      regions: 
+        - $KEY_Y_POPUP_REGION
+  - touch_release: 50% 75%
+
+  - sleep: 2s
+
+  # Press a key, check that key popup appears, drag downwards, check if the popup disappears:
+  - touch_press:   50% 75%  # open the OSK Key popup for key "y"
+  - wait:
+      for: osk/osk_key_popup_y
+      regions: 
+        - $KEY_Y_POPUP_REGION
+  - touch_move:    50% 76%
+  - touch_move:    50% 77%
+  - touch_move:    50% 78%
+  - touch_move:    50% 79%
+  - wait:
+      for: osk/mid_gesture
+      regions:
+        - 46.1% 71.4% 6.1% 7%  # surrounds the "y" key popup in OSK's mid-gesture state
+      timeout: 1s
+  - touch_move:    50% 79%
+  - touch_move:    50% 78%
+  - touch_move:    50% 77%
+  - touch_move:    50% 76%
+  - touch_release: 50% 75%
+
+  - sleep: 2s
+
+
+  # === Tests: OSK Extended Keys ===
+
+  # Touch between the "t" and "y" key, check if popup appears:
+  - touch_press: 47.95% 77%
+  - wait:
+      for: osk/osk_key_popup_y
+      regions:
+        - $KEY_Y_POPUP_REGION
+  - touch_release: 47.95% 77%
+
+  
+  # === Overall Typing Result Check ===
+  - wait:
+      for: osk/typing_result_yyy
+      regions: 37.9% 20.5% 8.1% 5.4%  # region around the "$ yyy" which should by now be written in the terminal
+      timeout: 10s
+
+  # === Tests: Quick Paste Action ===
+  
+  # Open command input popup, type some text and copy it:
+  - invoke_keys: ["alt", "f2"]
+    sequential: false
+  - wait:
+      for:
+        find:
+          text: Run a Command
+  - type_text: $QUICK_PASTE_ACTION_TEXT
+  - invoke_keys: ["ctrl", "a"]  # select all
+    sequential: false
+  - invoke_keys: ["ctrl", "c"]  # copy
+    sequential: false
+  - invoke_key: esc
+  - wait:
+      for: terminal_opened
+      
+  # Open the OSK, check that quick paste action appears:
+  - touch: center
+  - wait:
+      for: osk/quick_paste_action
+      regions: $QUICK_PASTE_ACTION_REGION
+      diff: 0  # ensure the quick paste action looks exactly as it should
+
+  # Invoke the quick paste action and check if text is properly pasted into the terminal:
+  - touch:
+      find:
+        text: $QUICK_PASTE_ACTION_TEXT
+  - wait:
+      for:
+        find:
+          text: $QUICK_PASTE_ACTION_TEXT
+      regions: 41.4% 20.1% 14.6% 6.3%  # the region in the terminal in which the pasted text should occur
+
+  # Now try the same with a normal application (text editor) to also check CTRL+V (vs CTRL+SHIFT+V):
+  - invoke_key: meta_l
+  - wait:  # wait for overview
+      for:
+        find:
+          text: Type to search
+  - type_text: text editor
+  - sleep: 300ms
+  - invoke_key: ret
+  - wait:
+      for: 
+        dominant_color: white
+      regions: $TEXT_EDITOR_INNER_REGION
+  - touch: center
+  - wait:
+      for:
+        find:
+          text: $QUICK_PASTE_ACTION_TEXT
+      regions: $QUICK_PASTE_ACTION_REGION
+      timeout: 10s
+  - touch: 
+      find:
+        text: $QUICK_PASTE_ACTION_TEXT
+        location_hint: 33.7% 70.3%
+  - wait:
+      for: 
+        find:
+          text: $QUICK_PASTE_ACTION_TEXT
+      regions: $TEXT_EDITOR_INNER_REGION
+      timeout: 10s
+
+  # Check that the quick paste button has disappeared after pasting:
+  - wait:
+      for: osk/osk_opened
+      regions: $QUICK_PASTE_ACTION_REGION
+
+
+
+
+

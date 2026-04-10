@@ -1,0 +1,56 @@
+
+from: base
+
+
+steps:
+  # Open the overview:
+  - invoke_key: meta_l
+  - wait:
+      for: overview_ws1
+
+  # Drag the overview background up to open the app list:
+  - touch:
+    - 50% 50%
+    - 50% 48%
+    - 50% 46%
+    - 50% 44%
+    - 50% 42%
+    speed: slow
+  - wait:
+      for: app_list_ws1
+      regions:
+        - 0% 0% 100% 32%  # upper third, to ignore the actual app icons since they're subject to change
+      timeout: 10s
+
+  # Drag the overview background down (this time at the left screen edge, not the desktop preview/center to ensure 
+  # this works too) to close the app list again:
+  - touch:
+    - 10px 50%
+    - 10px 52%
+    - 10px 54%
+    - 10px 56%
+    - 10px 58%
+    speed: slow
+  - wait:
+      for: overview_ws1
+      diff: 5%  # allow a tad more tolerance since the desktop previews are not always consistently sized
+      timeout: 10s
+
+  # Drag the overview background to the left and slightly up, check mid-gesture:
+  - touch_press: 50% 50%
+  - touch_move: 45% 48%
+  - touch_move: 40% 46%
+  - touch_move: 35% 44%
+  - touch_move: 30% 42%
+  - wait:
+      for: overview_gestures/mid_gesture
+      regions:
+        - 0% 0% 100% 70%  # region such that we ignore the lower third of the screen, since the dock has inconsistent size
+      diff: 2%
+      timeout: 10s
+  - touch_move: 25% 42%
+  - touch_release: 20% 42%
+  - wait:
+      for: overview_ws2
+      diff: 5%  # allow a tad more tolerance since the desktop previews are not always consistently sized
+      timeout: 10s

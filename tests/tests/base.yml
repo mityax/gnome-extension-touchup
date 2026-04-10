@@ -1,0 +1,230 @@
+
+# This is the preparation pipeline for all tests. It works through the GNOME OS setup
+# steps, installs and enables the extension, and ensures that it is in "ACTIVE" state.
+
+assets:
+  base_setup: |
+    set -eou pipefail
+
+    # Change the desktop background color to a solid blue for more resilient image matching in
+    # all tests:
+    gsettings set org.gnome.desktop.background picture-uri ''
+    gsettings set org.gnome.desktop.background picture-uri-dark ''
+    gsettings set org.gnome.desktop.background color-shading-type solid
+    gsettings set org.gnome.desktop.background primary-color '$DESKTOP_BG_COLOR'
+    echo "Blue background color set."
+
+    # Create asset script helper (for script invocation with less typing downstream):
+    mkdir ~/.local/bin
+    echo 'f=$$(mktemp) && curl "${ASSETS_SERVER_ADDR}/$$1" > $$f && bash $$f' > ~/.local/bin/run_asset
+    chmod +x ~/.local/bin/run_asset
+    echo "Helper script \"run_asset <asset_name>\" installed."
+
+    # Download and install the extension:
+    echo "Downloading and installing extension from: ${ASSETS_SERVER_ADDR}/assets/dist/$EXTENSION_FILENAME"
+    wget -q "${ASSETS_SERVER_ADDR}/assets/dist/$EXTENSION_FILENAME"
+    gnome-extensions install "$EXTENSION_FILENAME"
+    echo "Success."
+  base_enable_ext: |
+    set -eou pipefail
+    
+    gnome-extensions enable "$EXTENSION_ID"
+    watch -n 0.5 'gnome-extensions info "$EXTENSION_ID" | tail -n 3'
+
+
+defs: 
+  setup_wizard_go_to_next_page:
+    - wait:  # wait until the 'Next' button is not disabled anymore
+        for: 
+          dominant_color: "#3584e4"
+        diff: 6%  # the color varies slightly even in enabled state (focus, etc.)
+        regions:
+          - 93.3% 5.3% 6.0% 4.8%  # the 'Next' button (very tight region)
+    - touch: 96% 7%
+
+
+steps:
+  # === Boot ===
+
+  # Attempt to skip the 3s wait until boot starts:
+  - sleep: 1s
+  - invoke_key: ret
+
+  # Wait for boot completion:
+  - wait:
+      for: base/desktop_defaultbg
+      timeout: 120s
+      regions: 0% 5% 100% 95%  # ignore the top bar, since its different before system setup
+  
+  # === GNOME OS Setup Wizard ====
+  
+  # Wait for GNOME OS setup wizard to show up:
+  - wait:
+      for: 
+        dominant_color: $GTK_WINDOW_BG_COLOR
+      timeout: 60s
+
+  # Go to "Typing":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: Typing
+          location_hint: top-center
+
+  # Go to "Privacy":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: Privacy
+          location_hint: top-center
+
+  # Go to "Time Zone":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: Time Zone
+          location_hint: top-center
+  - type_text: Berlin
+  - sleep: 1s
+  - invoke_keys: ["down", "ret"]  # select first dropdown item
+  
+  # Go to "About You":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: About You
+          location_hint: top-center
+
+  # Type in username:
+  - type_text: $VM_USER_NAME
+
+  # Go to "Password":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: Password
+          location_hint: top-center
+
+  # Type in & confirm password:
+  - type_text: $VM_USER_PASSWORD
+  - invoke_keys:
+    - tab
+    - ret  # while we're at it anyways, enable "show password" for debugging
+    - tab
+  - sleep: 150ms
+  - type_text: $VM_USER_PASSWORD
+
+  # Go to "Setup Complete":
+  - setup_wizard_go_to_next_page:
+  - wait:
+      for:
+        find:
+          text: All Done!
+          location_hint: center
+
+  # Close Setup Wizard:
+  - touch:
+      - position:
+          find:
+            text: Start Using GNOME OS
+            location_hint: center
+
+
+  # === GNOME OS Post-Install Popups ====
+
+  # Wait for, then close, the "Welcome to GNOME OS Nightly" popup:
+  - wait:
+      for: base/gnomeos_tour_popup
+      regions: 30.4% 15.9% 39.6% 68.5%  # only the popup, ignore background
+  - touch:
+      - position:
+          find:
+            text: Skip
+
+  # Wait for, then close, the GNOME OS installer window:
+  - wait:
+      for:
+        find: 
+          text: Welcome to GNOME OS!
+          background_color: $GTK_WINDOW_BG_COLOR
+          location_hint: center
+      timeout: 120s  # we give it a full two minutes to be safe
+  - touch:
+      - position:
+          find:
+            text: Try GNOME OS
+            location_hint: center
+  - wait:
+      for: base/desktop_defaultbg
+
+
+  # === Setup script, install & enable extension ====
+
+  # Open the terminal (via overview):
+  - invoke_key: meta_l
+  - wait:
+  - type_text: terminal
+  - sleep: 1s
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+      regions: 
+        - 16.2% 15.6% 67.8% 73.3%  # just the terminal (disregard outside), since the solid desktop bg is not yet set
+
+  # Run the setup script:
+  - type_text: curl ${ASSETS_SERVER_ADDR}/base_setup | bash
+    speed: fast
+  - invoke_key: ret
+  - wait:
+      for:
+        find:
+          text: "Success."
+          location_hint: 24.7% 37.2%  # position in the terminal where the text should appear
+
+  # Log out:
+  - type_text: gnome-session-quit --force
+    speed: fast
+  - invoke_key: ret
+  - wait:
+      for: base/logged_out
+
+  # Log back in:
+  - touch:
+      find:
+        text: $VM_USER_NAME
+  - wait:
+  - type_text: $VM_USER_PASSWORD
+  - invoke_key: ret
+  - wait:
+      for: overview_ws1
+
+  # Open the terminal (we're in overview already):
+  - type_text: terminal
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+
+  # Enable extension & check status:
+  - type_text: run_asset base_enable_ext
+    speed: fast
+  - invoke_key: ret
+  - wait:
+      for:
+        find:
+          text: "State: ACTIVE"
+          location_hint: 23.7% 34.5%
+  - invoke_keys: ["ctrl", "c"]  # cancel "watch" command
+    sequential: false
+  - invoke_keys: ["ctrl", "d"]  # close terminal
+    sequential: false
+  - wait:
+      for: desktop
+
+  # Finally, create the "base" snapshot for use by all other tests:
+  - snapshot: base
+
