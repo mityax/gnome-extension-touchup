@@ -272,7 +272,7 @@ documentation in the source code for each utility.
     await Delay.ms(500).then(() => logger.debug("Delay is over!"));
     ```
  - **Intervals** – the `IntervalRunner` class provides a very friendly
-   and easy interface to have functions ran repeatedly, at a dynamic
+   and easy interface to have functions run repeatedly, at a dynamic
    interval and to stop or pause when needed. Also check out `IdleRunner`
    which does the same but calls the function as often as possible when
    the shell is idle.
@@ -298,3 +298,10 @@ documentation in the source code for each utility.
  - **Others** – there are many more utils in `src/utils` (especially 
    in `utils.ts`), which may be helpful for you.
 
+### Tests
+
+After writing your modifications, please do run the [test suite](tests) to 
+check if everything still works. When contributing new code, please make sure
+to write a test case for it that reliably covers the new functionality.
+
+You can read more about how TouchUp's test suite works in its [readme](tests).
