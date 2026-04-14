@@ -16,6 +16,9 @@ To open miniQA's webui for adding or updating existing tests, do
 ./run.sh editor
 ```
 
+The `run.sh` script assumes that an extension build is present and just grabs the 
+latest zip file from `../dist` to run the tests.
+
 ## Architecture
 
 ### The base test
