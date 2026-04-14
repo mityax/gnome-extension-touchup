@@ -28,8 +28,8 @@ the machine for all other tests.
 
 This entails:
 
- - stepping through the GNOME OS Setup wizard
- - closing any welcome popups that GNOME OS presents to us
+ - stepping through the GNOME OS setup wizard
+ - closing any welcome popups the OS presents to us
  - disabling factors that might interfere with testing (e.g. uncontrollable 
    notifications or the desktop background image)
  - installing the TouchUp extension zip (served as asset via miniQA), and enabling it
