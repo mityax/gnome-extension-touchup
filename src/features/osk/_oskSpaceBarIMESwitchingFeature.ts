@@ -46,6 +46,12 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
         this.pm.connectTo(settings.osk.spaceBarIMESwitching.indicatorMode, 'changed', () => {
             this.onNewKeyboard(this.keyboard);
         });
+
+        // Recreate our patches whenever the keyboard is rebuilt:
+        const self = this;
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_updateKeys', function (this: Keyboard.Keyboard) {
+            self.onNewKeyboard(this);
+        });
     }
 
     onNewKeyboard(keyboard: Keyboard.Keyboard) {
@@ -155,6 +161,5 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
 
     private _activateInputSource(source: InputSource) {
         source.activate(true);
-        this._patchKeyboard();
     }
 }
