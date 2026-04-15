@@ -15,6 +15,7 @@ import createZip from "./tools/rollup_plugins/rollup_plugin_create_zip.js";
 import reloadSSENotifier from "./tools/rollup_plugins/rollup_plugin_reload_sse_notifier.js";
 import writeJsonPlugin from "./tools/rollup_plugins/rollup_plugin_write_json.js";
 import yaml from "js-yaml";
+import copy from "rollup-plugin-copy";
 
 dotenv.config();
 
@@ -166,6 +167,14 @@ export default {
         writeJsonPlugin({
             fileName: 'metadata.json',
             content: metadata
+        }),
+
+        // Add LICENSE.md
+        copy({
+            targets: [{
+                src: 'LICENSE.md',
+                dest: outDir,
+            }],
         }),
 
         createZip({
