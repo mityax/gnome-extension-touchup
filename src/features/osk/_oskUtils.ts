@@ -6,7 +6,7 @@ import {findActorBy} from "../../utils/utils";
 
 /**
  * Extracts the prototype of [Keyboard.Key] from the given [Keyboard.Keyboard] instance
- * since it is not exported.
+ * since it is not exported by the Shell.
  */
 export function extractKeyPrototype(keyboard: Keyboard.Keyboard) {
     if (_keyProtoCache != null) return _keyProtoCache;

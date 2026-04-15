@@ -110,10 +110,10 @@ type UiProps<T extends St.Widget> = {
      * somewhere in a widget tree without needing to create/maintain a [Ref].
      *
      * You can optionally return another callback from this callback which will then be called when the widget
-     * is destroyed. This is basically equivalent to passing an [onDestroy] callback but you can use state from
+     * is destroyed. This is basically equivalent to passing an [onDestroy] callback, but you can use state from
      * within the [onCreated] callback.
      */
-    onCreated?: (widget: T) => ((() => void) | void),
+    onCreated?: (widget: T) => ((() => void) | any),
     /**
      * Set multiple constraints on the widget.
      */

@@ -9,10 +9,17 @@ export default abstract class ExtensionFeature {
     protected readonly pm: PatchManager;
     private readonly subFeatureManager: ExtensionFeatureManager;
 
-    protected constructor(patchManager: PatchManager) {
+    constructor(patchManager: PatchManager) {
         this.pm = patchManager;
         this.subFeatureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
     }
+
+    /**
+     * Subclasses can overwrite this to perform initialization requiring async code. This will be called
+     * by the [FeatureManager] immediately after the constructor has been invoked, and will be awaited
+     * by the enclosing context before continuing.
+     */
+    async initialize(): Promise<void> {}
 
     /**
      * Adds a sub-feature to this extension feature and optionally binds (= automatically creates and destroys) it

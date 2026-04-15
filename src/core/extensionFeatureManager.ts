@@ -124,6 +124,7 @@ export class ExtensionFeatureManager {
         try {
             // Create the feature instance, and pass it its dedicated child [PatchManager]:
             const feature = await meta.create(this.pm!.fork(meta.name));
+            await feature.initialize();
             this.enabledFeatures.set(meta.name, feature);
             return feature;
         } catch (e) {

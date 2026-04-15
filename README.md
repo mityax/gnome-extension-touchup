@@ -43,11 +43,11 @@ very frequently – you can help speed up progress by [donating](#support).
  - [x] Onscreen Keyboard (OSK)
    - [x] Key popups
    - [x] "Extended" keys (make padding between keys reactive)
-   - [ ] Compatibility with the "GJS OSK" extension (?)
    - [x] Swipe-close keyboard
-   - [ ] Single-tap locale button or swipe space bar to switch input methods
+   - [x] Swipe space bar to switch input methods
    - [x] Show a quick paste action in suggestion bar when having copied 
      something to the clipboard recently
+   - [ ] Compatibility with the "GJS OSK" extension (?)
  - [ ] Virtual Touchpad (use device as touchpad when connected to a
    second monitor) \[WIP]
  - [x] Floating temporary screen rotation button when auto-rotation

@@ -162,6 +162,18 @@ export const settings = {
              * something to the clipboard recently.
              */
             enabled: new BoolSetting('osk-quick-paste-action-enabled', true),
+        },
+
+        spaceBarIMESwitching: {
+            /**
+             * Whether to allow swiping on the OSK space bar to switch IMEs/languages.
+             */
+            enabled: new BoolSetting('osk-space-bar-ime-switching-enabled', true),
+
+            /**
+             * How to indicate the IMEs/languages in the space bar:
+             */
+            indicatorMode: new EnumSetting<'all' | 'current' | 'none'>('osk-space-bar-ime-switching-indicator-mode', 'current')
         }
     },
 

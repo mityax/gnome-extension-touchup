@@ -2,7 +2,12 @@ import Adw from "gi://Adw";
 import GObject from "gi://GObject";
 import {settings} from "$src/settings";
 import Gtk from "gi://Gtk";
-import {buildPreferencesGroup, buildSpinRow, buildSwitchRow} from "$src/features/preferences/uiUtils";
+import {
+    buildPreferencesGroup,
+    buildSpinRow,
+    buildSwitchRow,
+    buildToggleButtonRow
+} from "$src/features/preferences/uiUtils";
 
 export class OskPage extends Adw.PreferencesPage {
     static {
@@ -66,6 +71,28 @@ export class OskPage extends Adw.PreferencesPage {
                     title: "Enable OSK Quick Paste Action",
                     subtitle: "Whether to enable the OSK quick paste action button or not",
                     setting: settings.osk.quickPasteAction.enabled,
+                }),
+            ]
+        }));
+
+        this.add(buildPreferencesGroup({
+            title: "Space Bar IME Switching",
+            description: "Switch keyboard layouts by swiping the space bar.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable Space Bar IME Switching",
+                    subtitle: "Whether to enable the space bar IME switching gesture or not",
+                    setting: settings.osk.spaceBarIMESwitching.enabled,
+                }),
+                buildToggleButtonRow({
+                    title: "Space Bar IME Indicator Mode",
+                    subtitle: "Choose which layouts to show in the space bar",
+                    items: [
+                        { label: 'All',     value: 'all' },
+                        { label: 'Current', value: 'current' },
+                        { label: 'None',    value: 'none' },
+                    ],
+                    setting: settings.osk.spaceBarIMESwitching.indicatorMode,
                 }),
             ]
         }));

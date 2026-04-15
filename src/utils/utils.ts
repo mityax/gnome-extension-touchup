@@ -94,3 +94,23 @@ export function oneOf<T, E>(v: any, filter: T[], orElse?: E): E | undefined {
     }
     return orElse;
 }
+
+
+/**
+ * Helper to make typescript statically check whether a switch is exhaustive or not.
+ *
+ * Use like:
+ *
+ * ```js
+ * switch(value) {
+ *     case A:
+ *         break;
+ *     case B:
+ *         break;
+ *     default:
+ *         DEBUG: assertExhaustive(value);
+ * }
+ * ```
+ */
+export function assertExhaustive(p: never) {}
+
