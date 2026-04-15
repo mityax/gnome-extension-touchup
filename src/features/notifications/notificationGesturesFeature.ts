@@ -127,8 +127,10 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                         duration: 200,
                     })
                 },
-                // @ts-ignore
-                onActivate: () => message.notification.activate(),
+                onActivate: () => {
+                    // @ts-ignore
+                    message.notification.activate();
+                },
                 onExpand: () => {
                     if (!message.expanded) {
                         message.expand(true);
@@ -140,7 +142,6 @@ export class NotificationGesturesFeature extends ExtensionFeature {
                             y: -message.height,
                             duration: 100,
                             mode: Clutter.AnimationMode.EASE_OUT,
-                            // @ts-ignore
                             onStopped: () => Main.messageTray._hideNotification(false),
                         });
                         return { easeBackPosition: false };

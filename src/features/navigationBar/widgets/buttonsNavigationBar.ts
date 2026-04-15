@@ -9,6 +9,7 @@ import {moveToWorkspace, navigateBack} from "$src/features/navigationBar/navigat
 import {AssetIcon} from "$src/utils/ui/assetIcon";
 import {SettingsType} from "$src/features/preferences/backend";
 import GLib from "gi://GLib";
+import {assertExhaustive} from "$src/utils/utils";
 import ActorAlign = Clutter.ActorAlign;
 
 
@@ -150,20 +151,9 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
             case "spacer":
                 return new Widgets.Bin({ width: 20 });
             default:
-                DEBUG: {
-                    // If typescript complains here, that means a button is missing above:
-                    assertExhaustive(buttonType);
-                }
-
+                DEBUG: assertExhaustive(buttonType);
                 logger.warn(`Unknown button for ButtonNavigationBar: ${buttonType}`);
-
                 return new St.Bin({});  // fallback to not crash on invalid settings
         }
     }
 }
-
-
-/**
- * Helper to make typescript statically check whether a switch is exhaustive or not.
- */
-function assertExhaustive(p: never) {}

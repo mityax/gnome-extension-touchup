@@ -38,7 +38,6 @@ export class DevToolButton extends Widgets.Bin {
             yExpand: false,
             trackHover: true,
             onButtonReleaseEvent: props.onPressed,
-            // @ts-ignore
             onTouchEvent: (_: any, e: Clutter.Event) => {
                 if (e.type() === Clutter.EventType.TOUCH_END) {
                     props.onPressed();

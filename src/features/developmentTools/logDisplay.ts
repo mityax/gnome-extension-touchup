@@ -156,6 +156,7 @@ class LogDisplay extends Widgets.Column {
                             width: 30 * sf,
                             style: css({ padding: '5px' }),
                             onClicked: () => scrollView.apply((sv) => {
+                                // @ts-ignore
                                 sv.vadjustment.ease(sv.vadjustment.upper, {
                                     duration: 200,
                                 })

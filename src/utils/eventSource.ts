@@ -42,6 +42,7 @@ export default class EventSource {
 
         this.message = new Soup.Message({
             method: 'GET',
+            // @ts-ignore
             uri: this.uri,
         });
 

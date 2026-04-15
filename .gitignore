@@ -1,6 +1,6 @@
 /dist/
 
-/node_modules
+/node_modules/
 
 /tools/.gnome-shell
 
@@ -8,3 +8,5 @@
 /tests/img/*
 
 !.gitkeep
+
+/.idea/

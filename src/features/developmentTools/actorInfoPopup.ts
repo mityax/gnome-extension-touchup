@@ -174,7 +174,7 @@ function _buildActorInfo(actor: Clutter.Actor) {
     // Important props:
     WIDGET_SPECIFIC_TREE_INFO.forEach(([class_, prop]) => {
         try {
-            if ((!class_ || actor instanceof class_) && actor[prop as keyof typeof actor]) {
+            if ((!class_ || actor instanceof class_) && typeof actor[prop as keyof typeof actor] !== 'undefined') {
                 res.push(new Widgets.Label({
                     text: `${prop}: ${repr(actor[prop as keyof typeof actor])}`,
                     style: css({
@@ -194,6 +194,27 @@ function _buildActorInfo(actor: Clutter.Actor) {
             }
         } catch (e) {}
     });
+
+    Object.keys(actor).forEach((prop) => {
+        try {
+            res.push(new Widgets.Label({
+                text: `${prop}: ${repr(actor[prop as keyof typeof actor])}`,
+                style: css({
+                    fontSize: "smaller",
+                }),
+                onCreated: (lbl) => {
+                    try {
+                        // @ts-ignore
+                        actor.connectObject(
+                            `notify::${prop}`,
+                            () => lbl.text = `${prop}: ${repr(actor[prop as keyof typeof actor])}`,
+                            lbl,
+                        )
+                    } catch {}
+                }
+            }));
+        } catch (e) {}
+    })
 
     return res;
 }

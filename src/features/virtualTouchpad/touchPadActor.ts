@@ -140,7 +140,8 @@ export class _TouchPadActor extends Widgets.Column {
 
                 const d = state.currentMotionDelta;
                 this._virtualInputDevice.notify_scroll_continuous(
-                    state.events.at(-1)!.timeUS, -d.x, -d.y, Clutter.ScrollSource.FINGER, null
+                    state.events.at(-1)!.timeUS, -d.x, -d.y,
+                    Clutter.ScrollSource.FINGER, Clutter.ScrollFinishFlags.NONE
                 );
             } else if (state.totalFingerCount === 3) {
                 const d = state.totalMotionDelta;
