@@ -7,13 +7,13 @@ This folder contains TouchUp's automated UI regression tests, which are based on
 To run, just do
 
 ```bash
-./run.sh
+npm run tests
 ```
 
 To open miniQA's webui for adding or updating existing tests, do
 
 ```bash
-./run.sh editor
+npm run tests:editor
 ```
 
 The `run.sh` script assumes that an extension build is present and just grabs the 
