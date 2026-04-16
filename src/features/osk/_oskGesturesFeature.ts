@@ -12,7 +12,7 @@ import Graphene from "gi://Graphene";
 
 
 /** Maximum distance around a key that's still pressable */
-const KEY_PRESS_MAX_DISTANCE = 8;  // in logical pixels
+const KEY_PRESS_MAX_DISTANCE = 75;  // in logical pixels
 
 
 export class OSKGesturesFeature extends ExtensionFeature {
@@ -128,12 +128,16 @@ export class OSKGesturesFeature extends ExtensionFeature {
 
         if (hitKey) return hitKey;
 
-        const nearestKey = visibleKeys.find(
-            key => key
-                .get_transformed_extents()
-                .inset(-maxDist, -maxDist)  // enlarge ("outset") the rectangle by [maxDist] in all directions
-                .contains_point(graphenePoint),
-        );
+        const nearestKey = visibleKeys.reduce((a, b) => {
+            const distA = a.get_transformed_extents().get_center().distance(graphenePoint)[0];
+            const distB = b.get_transformed_extents().get_center().distance(graphenePoint)[0];
+
+            return distA < distB ? a : b;
+        });
+
+        if (nearestKey.get_transformed_extents().get_center().distance(graphenePoint)[0] > maxDist) {
+            return null;
+        }
 
         return nearestKey ?? null;
     }
