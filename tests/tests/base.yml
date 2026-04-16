@@ -217,7 +217,7 @@ steps:
       for:
         find:
           text: "State: ACTIVE"
-          location_hint: 23.7% 34.5%
+      regions: 16.8% 25.5% 28.2% 12.9%  # box around the "State: ACTIVE" in the terminal
   - invoke_keys: ["ctrl", "c"]  # cancel "watch" command
     sequential: false
   - invoke_keys: ["ctrl", "d"]  # close terminal
