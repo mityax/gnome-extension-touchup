@@ -16,6 +16,7 @@ import reloadSSENotifier from "./tools/rollup_plugins/rollup_plugin_reload_sse_n
 import writeJsonPlugin from "./tools/rollup_plugins/rollup_plugin_write_json.js";
 import yaml from "js-yaml";
 import copy from "rollup-plugin-copy";
+import {oxcTransform} from "rollup-plugin-oxc-transform";
 
 dotenv.config();
 
@@ -89,10 +90,18 @@ export default {
         preserveModules: PRESERVE_MODULES,
     },
     plugins: [
-        typescript({
-            tsconfig: 'tsconfig.json',
-            check: !DISABLE_CHECK,
-        }),
+        DISABLE_CHECK
+            ? oxcTransform({
+                  resolveOptions: {
+                      tsconfig: 'tsconfig.json',
+                      alias: {
+                          "$src/*": [`${rootDir}/src/*`]
+                      },
+                  }
+              })
+            : typescript({
+                  tsconfig: 'tsconfig.json',
+              }),
 
         // Strip out debug-only/release-only code depending on build mode:
         strip({
