@@ -2,6 +2,7 @@
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
 import {findActorBy} from "../../utils/utils";
+import Clutter from "gi://Clutter";
 
 
 /**
@@ -23,3 +24,13 @@ export function extractKeyPrototype(keyboard: Keyboard.Keyboard) {
     return _keyProtoCache;
 }
 let _keyProtoCache: any = null;
+
+/**
+ * Check whether the given actor is an OSK Key (an instance of [Keyboard.Key]) – this utility
+ * is needed because the class is not exported by the Shell.
+ */
+export function isKeyboardKey(value: Clutter.Actor) {
+    if (_keyProtoCache == null)
+        return value.constructor.name === 'Key';
+    return _keyProtoCache.isPrototypeOf(value);
+}

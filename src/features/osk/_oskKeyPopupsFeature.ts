@@ -52,7 +52,7 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
         });
 
         // Hide the key popup a few ms after a key has been released:
-        this.pm.appendToMethod(keyProto, '_release', function (this: Clutter.Actor, button, commitString) {
+        this.pm.appendToMethod(keyProto, '_release', function (this: Keyboard.Key & Clutter.Actor, button, commitString) {
             Delay.ms(settings.osk.keyPopups.duration.get()).then(() => {
                 self._keyPopupsCache.get(this)?.close();
             })

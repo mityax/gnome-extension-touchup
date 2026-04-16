@@ -9,6 +9,7 @@ import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/ges
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
 import Graphene from "gi://Graphene";
+import {isKeyboardKey} from "$src/features/osk/_oskUtils";
 
 
 /** Maximum distance around a key that's still pressable */
@@ -28,25 +29,25 @@ export class OSKGesturesFeature extends ExtensionFeature {
         const recognizer = new GestureRecognizer({
             onGestureProgress: state => {
                 if (
-                    state.hasStrongMovement
+                    settings.osk.gestures.swipeToClose.enabled.get()
+                    && state.hasStrongMovement
                     && state.firstMotionDirection?.direction === 'down'
-                    && settings.osk.gestures.swipeToClose.enabled.get()
                 ) {
                     keyboard.gestureProgress(keyboard.height - state.totalMotionDelta.y);
                 }
             },
             onGestureEnded: state => {
                 if (
-                    state.hasStrongMovement
+                    settings.osk.gestures.swipeToClose.enabled.get()
+                    && state.hasStrongMovement
                     && state.firstMotionDirection?.direction === 'down'
                     && state.lastMotionDirection?.direction === 'down'
-                    && settings.osk.gestures.swipeToClose.enabled.get())
-                {
+                ) {
                     keyboard.gestureCancel();
                 } else if (
-                    keyboard._gestureInProgress
-                    && settings.osk.gestures.swipeToClose.enabled.get())
-                {
+                    settings.osk.gestures.swipeToClose.enabled.get()
+                    && keyboard._gestureInProgress
+                ) {
                     // The following line is a required hack to make the keyboard animate back up; since the
                     // keyboard's gesture functionality is only intended for opening the keyboard, not for closing,
                     // let alone canceling closing it. Thus, when the swipe-to-close gesture is cancelled, we tell the
@@ -64,12 +65,15 @@ export class OSKGesturesFeature extends ExtensionFeature {
         const onEvent = (evt: Clutter.Event) => {
             const state = recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
 
-            if (state.hasGestureJustStarted) {
-                currentKey = this._selectKey(keyboard, state.pressCoordinates);
+            if (state.hasGestureJustStarted && settings.osk.gestures.extendKeys.enabled.get()) {
+                const actor = this._selectReactiveChild(keyboard, state.pressCoordinates);
+
+                if (actor?.get_parent() && isKeyboardKey(actor.get_parent()!)) {
+                    currentKey = actor.get_parent();
+                }
 
                 if (
                     currentKey
-                    && settings.osk.gestures.extendKeys.enabled.get()
                     && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
                 ) {
                     // @ts-ignore
@@ -81,13 +85,11 @@ export class OSKGesturesFeature extends ExtensionFeature {
                     // @ts-ignore
                     currentKey._pressed = false;  // this prevents the key from being activated
                     currentKey.cancel();  // this is used by the shell when swiping the emoji pager to cancel keypress; basically exactly what we want here
-
                     currentKey = null;
                 }
             } else if (state.hasGestureJustEnded) {
                 if (
                     currentKey
-                    && settings.osk.gestures.extendKeys.enabled.get()
                     && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
                 ) {
                     currentKey?.keyButton.emit("touch-event", evt);
@@ -97,6 +99,8 @@ export class OSKGesturesFeature extends ExtensionFeature {
             }
         }
 
+        // We have to capture events since the OSK keys listen raw touch events instead of using Clutters new
+        // gesture system:
         this.pm.connectTo(keyboard, 'captured-event', (_, evt: Clutter.Event) => {
             if (!GestureRecognizerEvent.isTouch(evt)) {
                 return Clutter.EVENT_PROPAGATE;
@@ -108,37 +112,37 @@ export class OSKGesturesFeature extends ExtensionFeature {
     }
 
     /**
-     * Returns the key on the keyboard closest to the given position, unless the position is more than
-     * [KEY_PRESS_MAX_DISTANCE] off the key.
+     * Returns the reactive actor on the keyboard that is closest to the given position, unless the position
+     * is more than [KEY_PRESS_MAX_DISTANCE] off the key.
      */
-    private _selectKey(keyboard: Keyboard.Keyboard, point: { x: number; y: number }): Clutter.Actor | null {
+    private _selectReactiveChild(keyboard: Keyboard.Keyboard & Clutter.Actor, point: { x: number; y: number }): Clutter.Actor | null {
         const maxDist = KEY_PRESS_MAX_DISTANCE * St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         const graphenePoint = new Graphene.Point(point);
 
-        const visibleKeys = findAllActorsBy(
+        const candidates = findAllActorsBy(
             keyboard,
-            (k) => k.mapped && k.constructor.name === 'Key',  // the 'Key' class is not exported, so we have to resort to this
+            (a) => a.mapped && a.reactive,
         );
 
-        const hitKey = visibleKeys.find(
+        const hitActor = candidates.find(
             key => key
                 .get_transformed_extents()
                 .contains_point(graphenePoint),
         );
 
-        if (hitKey) return hitKey;
+        if (hitActor) return hitActor;
 
-        const nearestKey = visibleKeys.reduce((a, b) => {
+        const nearest = candidates.reduce((a, b) => {
             const distA = a.get_transformed_extents().get_center().distance(graphenePoint)[0];
             const distB = b.get_transformed_extents().get_center().distance(graphenePoint)[0];
 
             return distA < distB ? a : b;
         });
 
-        if (nearestKey.get_transformed_extents().get_center().distance(graphenePoint)[0] > maxDist) {
+        if (nearest.get_transformed_extents().get_center().distance(graphenePoint)[0] > maxDist) {
             return null;
         }
 
-        return nearestKey ?? null;
+        return nearest ?? null;
     }
 }
