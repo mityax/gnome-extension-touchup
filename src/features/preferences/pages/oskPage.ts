@@ -30,6 +30,15 @@ export class OskPage extends Adw.PreferencesPage {
                     subtitle: "Toggle to enable or disable the OSK key popup feature",
                     setting: settings.osk.keyPopups.enabled
                 }),
+                buildToggleButtonRow({
+                    title: "Popup Style",
+                    subtitle: "Specify how prominent key popups should be",
+                    items: [
+                        { label: "Accent", value: "accent" },
+                        { label: "Subtle", value: "subtle" },
+                    ],
+                    setting: settings.osk.keyPopups.style,
+                }),
                 buildSpinRow({
                     title: "Popup Duration",
                     subtitle: "Set how long (in milliseconds) to show the OSK key popups",

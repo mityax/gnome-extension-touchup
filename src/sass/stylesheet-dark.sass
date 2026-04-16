@@ -85,6 +85,19 @@ StButton.message.touchup-notification--touched
     background-color: #66666d // active (= while button pressed) notification background color
 
 
+.touchup-osk-key-popup
+    &--accent
+        //noinspection CssInvalidPropertyValue
+        background: -st-accent-color
+        //noinspection CssInvalidPropertyValue
+        color: -st-accent-fg-color
+    &--subtle
+        background: color.adjust($dark-theme-color, $whiteness: 70%)
+
+    StLabel
+        padding: 16px 0
+
+
 .touchup-quick-paste-button
     font-size: 90%
     border-radius: 10px
@@ -94,8 +107,8 @@ StButton.message.touchup-notification--touched
         height: 1em
         margin-right: 12px
 
+
 .touchup-osk-ime-indicator
     font-weight: normal
     font-size: 75%
     color: color.adjust($light-theme-color, $alpha: -0.25)
-

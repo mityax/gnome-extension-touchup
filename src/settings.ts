@@ -134,9 +134,14 @@ export const settings = {
             enabled: new BoolSetting('osk-key-popups-enabled', true),
 
             /**
+             * Which style OSK key popups should follow.
+             */
+            style: new EnumSetting<'accent' | 'subtle'>('osk-key-popups-style', 'accent'),
+
+            /**
              * How long to show the OSK key popups for (in milliseconds).
              */
-            duration: new IntSetting('osk-key-popups-duration', 35, 15, 250),
+            duration: new IntSetting('osk-key-popups-duration', 35, 15, 80),
         },
 
         gestures: {
