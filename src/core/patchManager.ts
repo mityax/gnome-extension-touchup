@@ -375,14 +375,14 @@ export class Patch {
 
     disable(force: boolean = false) {
         if (!force && !this.isEnabled) return;
-        logger.debug(` - Disabling patch ${this.debugName}`);
+        // logger.debug(` - Disabling patch ${this.debugName}`);
         this._disableCallback?.call(this);
         this._isEnabled = false;
     }
 
     enable(force: boolean = false) {
         if (!force && this.isEnabled) return;
-        logger.debug(` - Enabling patch ${this.debugName}`);
+        // logger.debug(` - Enabling patch ${this.debugName}`);
         this._disableCallback = this._enableCallback();
         this._isEnabled = true;
     }

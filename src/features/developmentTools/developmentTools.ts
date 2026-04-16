@@ -20,6 +20,7 @@ import {TouchModeService} from "$src/services/touchModeService";
 import {logger} from "$src/core/logging";
 import {Delay} from "$src/utils/delay";
 import {ActorPickerButton} from "$src/features/developmentTools/actorPickerButton";
+import St from "gi://St";
 
 
 const watchEventUrl = GLib.getenv("TOUCHUP_WATCH_EVENT_URL")?.replace(/\/$/, ""); // remove trailing slash
@@ -76,6 +77,16 @@ export class DevelopmentTools extends ExtensionFeature {
                 onPressed: (v) => {
                     this._persistedState.enforceTouchMode = v;
                     TouchUpExtension.instance!.getFeature(TouchModeService)!.enforceTouchMode = v;
+                }
+            }),
+            new Widgets.Bin({width: 10}),
+            new DevToolToggleButton({
+                label: 'Switch Shell Theme',
+                icon: 'display-brightness-symbolic',
+                initialValue: Main.sessionMode.colorScheme === 'prefer-light',
+                onPressed: (v) => {
+                    Main.sessionMode.colorScheme = v ? 'prefer-light' : 'prefer-dark';
+                    St.Settings.get().notify('color-scheme');
                 }
             }),
             new Widgets.Bin({width: 10}),
