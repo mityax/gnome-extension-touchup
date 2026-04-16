@@ -172,7 +172,7 @@ steps:
   - touch_move:    50% 77%
   - touch_move:    50% 76%
   - touch_release: 50% 75%
-
+  
   - sleep: 2s
 
   # === Tests: OSK Extended Keys ===
@@ -185,17 +185,35 @@ steps:
         - $KEY_Y_POPUP_REGION
   - touch_release: 47.95% 77%
 
+  - sleep: 2s
   
+  # Check subtle key popup style:
+  - open_run_command_popup:
+  - type_text: >-
+      dconf write /org/gnome/shell/extensions/touchup/osk-key-popups-style '"subtle"'
+  - invoke_key: ret
+  - wait:
+      for: terminal_opened
+  - touch: center  # osk has been closed by the `dconf` command above; open again
+  - wait:
+      for: osk/osk_opened
+  - touch_press:   50% 75%  # open the OSK Key popup for key "y"
+  - wait:
+      for: osk/osk_key_popup_y_subtle
+      regions: 
+        - $KEY_Y_POPUP_REGION
+  - touch_release: 50% 75%
+
   # === Overall Typing Result Check ===
   - wait:
-      for: osk/typing_result_yyy
-      regions: 37.9% 20.5% 8.1% 5.4%  # region around the "$ yyy" which should by now be written in the terminal
-      timeout: 10s
+      for: osk/typing_result_yyyy
+      regions: 37.9% 20.5% 8.1% 5.4%  # region around the "$ yyyy" which should by now be written in the terminal
+      timeout: 5s
 
   # === Tests: Quick Paste Action ===
   
   - copy_quick_paste_action_text:
-      
+
   # Open the OSK, check that quick paste action appears:
   - touch: center
   - wait:
@@ -309,6 +327,6 @@ steps:
       for: osk/space_bar_ime_switching_hint_mode_all
       regions: 44% 95% 10% 4%
       timeout: 10s
-  
+
 
 
