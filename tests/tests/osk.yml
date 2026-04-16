@@ -4,7 +4,7 @@ from: base
 
 env:
   OSK_REGION:                0%    67%   100%  33%    # contains the entire OSK in fully opened state
-  KEY_Y_SURROUNDING_REGION:  43.9% 67.4% 10.6% 15.0%  # region around the "y" key, including key popup
+  KEY_Y_SURROUNDING_REGION:  43.9% 67.4% 10.6% 15%    # region around the "y" key, including key popup
   KEY_Y_POPUP_REGION:        46.4% 66.8% 5.4%  6.9%   # region containing only the key popup for "y"
   QUICK_PASTE_ACTION_REGION: 17.5% 66.8% 33.5% 6.7%   # left half of the OSK's suggestion area
   TEXT_EDITOR_INNER_REGION:  18.3% 23.4% 63.2% 41.7%  # the central area of the text editors text area, above the OSK
@@ -12,24 +12,46 @@ env:
   QUICK_PASTE_ACTION_TEXT:   "I copied this!"
 
 
+assets:
+  osk_setup: |
+    set -eou pipefail
+    
+    gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true
+    gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('xkb', 'de')]"
+    
+    echo "Success"
+
+
+defs:
+  wait_for_editor:
+    - wait:
+        for: 
+          dominant_color: white
+        regions: $TEXT_EDITOR_INNER_REGION
+  open_run_command_popup:
+    - invoke_keys: ["alt", "f2"]
+      sequential: false
+    - wait:
+        for:
+          find:
+            text: Run a Command
+    - invoke_key: left  # a fix for the first character getting lost somehow in the command popup (most likely a Shell issue)
+  copy_quick_paste_action_text:
+    - open_run_command_popup:
+    - type_text: $QUICK_PASTE_ACTION_TEXT
+    - invoke_keys: ["ctrl", "a"]  # select all
+      sequential: false
+    - invoke_keys: ["ctrl", "c"]  # copy
+      sequential: false
+    - invoke_key: esc
+    - wait:
+
+
 steps:
   # === Preparation ===
 
-  # Enable the OSK (since we can't emulate touch mode properly):
-  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
-    sequential: false
-  - wait:
-      for:
-        find:
-          text: Run a Command
-  - type_text: >-
-      gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true
-  - invoke_key: ret
-  - wait:
-      for: desktop
-
-  # Open a terminal as text input for OSK testing (since any normal text editor would 
-  # have unpredictable auto-complete):
+  # Open a terminal as text input for OSK testing (since a normal text editor would 
+  # have unpredictable OSK suggestions):
   - invoke_key: meta_l
   - wait:
       for: overview_ws1
@@ -38,8 +60,20 @@ steps:
   - wait:
       for: terminal_opened
 
+  # Enable the OSK (since we can't emulate touch mode properly):
+  - type_text: >-
+      curl ${ASSETS_SERVER_ADDR}/osk_setup | sh
+  - invoke_key: ret
+  - wait:
+      for:
+        find:
+          text: Success
+          location_hint: 30.8% 47.2%
+  - type_text: clear
+  - invoke_key: ret
+
   # Open osk (by tapping the terminal):
-  - touch: 50% 50%
+  - touch: center
   - wait:
       for: osk/osk_opened
       regions: $OSK_REGION
@@ -104,8 +138,6 @@ steps:
       regions:
         - $KEY_Y_POPUP_REGION
       timeout: 1s
-
-  - sleep: 2s
   
   # Check that the key popup closes after some time even while still pressing the key:
   - touch_press:   50% 75%  # open the OSK Key popup for key "y"
@@ -144,7 +176,6 @@ steps:
 
   - sleep: 2s
 
-
   # === Tests: OSK Extended Keys ===
 
   # Touch between the "t" and "y" key, check if popup appears:
@@ -164,21 +195,7 @@ steps:
 
   # === Tests: Quick Paste Action ===
   
-  # Open command input popup, type some text and copy it:
-  - invoke_keys: ["alt", "f2"]
-    sequential: false
-  - wait:
-      for:
-        find:
-          text: Run a Command
-  - type_text: $QUICK_PASTE_ACTION_TEXT
-  - invoke_keys: ["ctrl", "a"]  # select all
-    sequential: false
-  - invoke_keys: ["ctrl", "c"]  # copy
-    sequential: false
-  - invoke_key: esc
-  - wait:
-      for: terminal_opened
+  - copy_quick_paste_action_text:
       
   # Open the OSK, check that quick paste action appears:
   - touch: center
@@ -206,10 +223,10 @@ steps:
   - type_text: text editor
   - sleep: 300ms
   - invoke_key: ret
-  - wait:
-      for: 
-        dominant_color: white
-      regions: $TEXT_EDITOR_INNER_REGION
+  - wait_for_editor:
+  
+  - copy_quick_paste_action_text:
+  
   - touch: center
   - wait:
       for:
@@ -234,6 +251,65 @@ steps:
       regions: $QUICK_PASTE_ACTION_REGION
 
 
+  # === Tests: Space Bar IME Switching ===
 
+  # Check that IME hint is present (OSK is still open):
+  - assert:
+      that:
+        find:
+          text: "English (US)"
+          location_hint: bottom
+          
+  # Swipe to the right, check that hint and layout changes:
+  - touch:
+      - 42% 95%
+      - 45% 95%
+      - 48% 95%
+      - 51% 95%
+      - 55% 95%
+  - wait:
+      for:
+        find:
+          text: "German"
+          location_hint: bottom
+  - assert:  # check that the "y" key is now where "z" is in the english layout (they're swapped in German keyboards)
+      that:
+        find:
+          text: "y"
+      regions: 29.4% 87.2% 3.6% 5.6%  # region of the "z" key in the English (US) OSK layout
+
+  # Swipe to the left again and check everything is back in its original state:
+  - touch:
+      - 55% 95%
+      - 51% 95%
+      - 48% 95%
+      - 45% 95%
+      - 42% 95%
+  - wait:
+      for:
+        find:
+          text: "English (US)"
+          location_hint: bottom
+  - assert:  # check that the "y" key is now again in its original position
+      that:
+        find:
+          text: "y"
+      regions: 47.1% 73.7% 3.9% 6.3%  # region of the "y" key in the English (US) OSK layout
+
+  # Change indicator mode:
+  - open_run_command_popup:
+  - type_text: >-
+      dconf write /org/gnome/shell/extensions/touchup/osk-space-bar-ime-switching-indicator-mode '"all"'
+  - invoke_key: ret
+  - wait:
+      for:
+        dominant_color: white
+      regions: $TEXT_EDITOR_INNER_REGION
+  - touch: center  # open the OSK again (it's closed on settings change)
+  - wait:
+      for: osk/space_bar_ime_switching_hint_mode_all
+      regions: 44% 95% 10% 4%
+      timeout: 10s
+  
 
 

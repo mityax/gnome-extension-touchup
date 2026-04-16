@@ -20,6 +20,7 @@ defs:
             text: Run a Command
     - type_text: $NOTIFY_SEND_COMMAND
       speed: fast
+    - sleep: 100ms
     - invoke_key: ret
     - wait:
         for: notification_gestures/banner_appeared

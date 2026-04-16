@@ -31,7 +31,6 @@ export default function sassWriter({ input, output }) {
 
                 // Write the result
                 writeFileSync(output, result.css);
-                console.log(`[sass-writer] Compiled ${input} → ${output}`);
             } catch (error) {
                 console.error(`[sass-writer] Error compiling ${input}:`, error.message);
                 this.error(error);
