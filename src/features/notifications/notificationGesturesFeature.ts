@@ -170,7 +170,7 @@ export class NotificationGesturesFeature extends ExtensionFeature {
 
             const undo = () => {
                 // Undo all the changes:
-                messageRef.apply(m => {
+                messageRef.applyAndDispose(m => {
                     m.translationX = 0;
                 });
                 gestureHelper.destroy();
@@ -322,7 +322,7 @@ class SwipeGesturesHelper {
     }
 
     destroy() {
-        this.actor.apply(actor => {
+        this.actor.applyAndDispose(actor => {
             this.signalIds.forEach((id) => actor.disconnect(id));
             actor.remove_action(this.gesture);
             actor.remove_style_class_name("touchup-notification--touched");

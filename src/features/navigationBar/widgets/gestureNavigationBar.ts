@@ -46,8 +46,6 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             edgeThreshold: this.computeHeight(),
         });
 
-        this.actor.connect('notify::mapped', () => this.gestureManager.setEnabled(this.actor.mapped));
-
         this.setInvisibleMode(props.invisibleMode);
 
         this.connect('notify::visible', _ => this._updateStyleClassIntervalEnabled());
@@ -65,7 +63,13 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             trackHover: true,
             canFocus: true,
             layoutManager: new Clutter.BinLayout(),
-            onRealize: () => this.styleClassUpdateInterval.scheduleOnce(),
+            notifyMapped: () => {
+                this.gestureManager.setEnabled(this.actor.mapped);
+
+                if (this.actor.mapped) {
+                    this.styleClassUpdateInterval.scheduleOnce();
+                }
+            },
             child: this.pill = new Widgets.Bin({  // the navigation bars pill:
                 name: 'touchup-navbar__pill',
                 styleClass: 'touchup-navbar__pill',
@@ -149,7 +153,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             // Example: While the screen is being rotated by the Shell, this can cause Shell crashes (e.g. because
             // it could result in capturing a screenshot outside the screens dimensions). In JS, we don't have
             // precise enough control over what runs when to ensure this in another way.
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            // @ts-ignore
+            GLib.idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 if (!this.styleClassUpdateInterval.enabled)
                     return GLib.SOURCE_REMOVE;
 
@@ -215,6 +220,7 @@ class NavigationBarGestureManager {
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
     private _edgeThreshold: number;
+    private readonly _gestureSignalId: number;  // notice: only for shexli
 
     constructor(props: {monitor?: Monitor, edgeThreshold: number}) {
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
@@ -233,7 +239,7 @@ class NavigationBarGestureManager {
         // Action that listens to appropriate events on the stage:
         this._gesture = this._recognizer.createPanGesture();
 
-        this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
+        this._gestureSignalId = this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
             this._shouldHandleSequence(e));
 
         global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
@@ -352,6 +358,7 @@ class NavigationBarGestureManager {
 
     destroy() {
         global.stage.remove_action(this._gesture);
+        this._gesture.disconnect(this._gestureSignalId);  // notice: only for shexli, disconnect is not needed (no class-external references to gesture, gesture is removed from the stage on disabling)
         this._navigationGestureController.destroy();
     }
 }

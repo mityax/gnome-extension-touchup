@@ -69,6 +69,10 @@ try {
     console.warn(`WARNING: Unable to retrieve Git commit SHA: ${err.message}`);
 }
 
+if (DISABLE_CHECK && !IS_DEBUG_MODE) {
+    console.error("⚠️  DISABLE_CHECK must not be activated for release builds.");
+    process.exit(1);
+}
 
 // Clear up/remove previous build:
 if (fs.existsSync(outDir)) {

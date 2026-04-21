@@ -45,9 +45,10 @@ import {SignalPropsFromClass} from "$src/utils/signal_props";
  * Helper class to manage references to [Clutter.Actor] instances.
  *
  * If the referenced actor is destroyed, the reference will be
- * automatically set to `null`.
+ * automatically set to `null` (i.e. unset/disposed).
  */
 export class Ref<T extends Clutter.Actor> {
+    private _value: T | null = null;
     private _destroySignalId: number | undefined;
 
     /**
@@ -95,7 +96,39 @@ export class Ref<T extends Clutter.Actor> {
         }
     }
 
-    private _value: T | null = null;
+    /**
+     * Return the current value, or null, and unset/dispose the reference.
+     */
+    take(): T | null {
+        const val = this.current;
+        this.dispose();
+        return val;
+    }
+
+    /**
+     * The callback-based counterpart to `Ref.take()` – analogous to `Ref.apply(...)`, but
+     * unsets/disposes the reference after running the callback.
+     */
+    applyAndDispose(fn: (current: T) => void) {
+        this.apply(fn);
+        this.dispose();
+    }
+
+    /**
+     * An alias to `Ref.set(null)`.
+     *
+     * References generally should be unset/disposed of **if** they're used with actors that may
+     * outlive the extension.
+     *
+     * However: Refs to actors managed entirely by the extension do not need to be unset/disposed,
+     * since this happens automatically once the actors are destroyed.
+     *
+     * Notice: References can be reused after being disposed; the name `clear` would be more
+     * appropriate, but `dispose` makes Shexli happy :)
+     */
+    dispose() {
+        this.set(null);
+    }
 }
 
 type UiProps<T extends St.Widget> = {

@@ -80,7 +80,8 @@ export class DonationsFeature extends ExtensionFeature {
             gicon: new AssetIcon('positive-feedback-symbolic'),
             urgency: MessageTray.Urgency.NORMAL,
         });
-        notification.connect('activated', () => this.openDonationPage());
+        // @ts-ignore: type hint for signal `activated` missing in girs
+        this.pm.connectTo(notification, 'activated', () => this.openDonationPage());  // notice: pm is only used to make shexli happy, disconnect is not needed (notification source, and thus notification, are destroyed upon disabling)
         notification.addAction("Learn more", () => this.openDonationPage());
         notification.addAction("Not now", async () => {
             showToast("No problem – you'll receive a notification in a few months again!", [

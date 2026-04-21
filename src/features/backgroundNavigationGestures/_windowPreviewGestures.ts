@@ -95,16 +95,17 @@ export class WindowPreviewGestureFeature extends ExtensionFeature {
                 maxNPoints: 1,
                 panAxis: Clutter.PanAxis.Y,
             });
-            gesture.connect('may-recognize', () => {
+            this.pm.connectTo(gesture, 'may-recognize', () => {  // notice: pm is only used to make shexli happy, disconnect is not needed (no class-external references to `gesture`, gesture is removed from window preview)
                 return (
                     GestureRecognizerEvent.isTouch(gesture.get_point_event(0))  // only respond to touch gestures
-                    && gesture.get_accumulated_delta().get_y() <= 0);  // only respond to swipe-down gestures
+                    && gesture.get_accumulated_delta().get_y() <= 0  // only respond to swipe-down gestures
+                );
             });
 
             this.pm.patch(() => {
                 windowPreview.add_action_full('touchup-window-preview-gesture', Clutter.EventPhase.CAPTURE, gesture);
                 const ref = new Ref(windowPreview);  // use a ref to automatically unset once destroyed
-                return () => ref.current?.remove_action(gesture);
+                return () => ref.take()?.remove_action(gesture);
             });
         }
     }

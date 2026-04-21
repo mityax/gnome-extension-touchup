@@ -11,7 +11,10 @@ import {Setting} from "$src/features/preferences/backend";
 type PatchFunc = () => (() => any);
 
 type AnyFunc = (...args: any[]) => any;
-type Connectable<A extends any[], R> = {connect: (s: string, h: (...args: A) => R) => any, disconnect: (id: number) => any};
+type Connectable<A extends any[], R, S extends string> = {
+    connect: (s: S, h: (...args: A) => R) => any,
+    disconnect: (id: number) => any
+};
 
 
 
@@ -66,7 +69,7 @@ export class PatchManager {
 
         this.patch(() => {
             let ref = new Ref(instance);
-            return () => ref.current?.destroy();
+            return () => ref.take()?.destroy();
         }, debugName ?? `autoDestroy:${instance.constructor.name}`);
         return instance;
     }
@@ -75,7 +78,7 @@ export class PatchManager {
      * Connect to a signal from any GObject/widget and automatically disconnect when the [PatchManager]
      * is disabled or destroyed.
      */
-    connectTo<A extends any[], R>(instance: Connectable<A, R>, signal: string, handler: AnyFunc, debugName?: string): Patch {
+    connectTo<A extends any[], R, S extends string>(instance: Connectable<A, R, S>, signal: S, handler: AnyFunc, debugName?: string): Patch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
 
         const patch = this.patch(() => {

@@ -68,7 +68,7 @@ export class DesktopBackgroundGesturesFeature extends ExtensionFeature {
         // Once a gesture is finished, make sure to translate the opacity set above back to the
         // actor's `visible` boolean – such that we only apply the opacity trick during the gesture
         // and always have a clean, non-hacky state after the gesture has finished.
-        recognizer.connect('gesture-ended', _ => {
+        this.pm.connectTo(recognizer, 'gesture-ended', _ => {  // notice: pm is only used to make shexli happy, disconnect is not needed (no class-external references to `recognizer`)
             global.window_group.visible = global.window_group.opacity !== 0;
             global.window_group.opacity = 255;
         });

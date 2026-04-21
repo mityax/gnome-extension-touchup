@@ -49,8 +49,6 @@ export class OSKQuickPasteAction extends ExtensionFeature {
     }
 
     onNewKeyboard(keyboard: Keyboard.Keyboard | null) {
-        const keyboardRef = new Widgets.Ref(keyboard as Keyboard.Keyboard & Clutter.Actor);  // use a ref to only clean up if the keyboard hasn't been destroyed
-
         // Setup our new top bar:
         const pasteButton = new Widgets.Ref<Widgets.Button>();
         const pasteButtonLabel = new Widgets.Ref<Widgets.Label>();
@@ -92,9 +90,11 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         const showButtonPatch = this.pm.registerPatch(() => {
             keyboard._suggestions.clear();
             keyboard._suggestions.insert_child_at_index(topBar, 0);
+
+            const keyboardRef = new Widgets.Ref(keyboard as Keyboard.Keyboard & Clutter.Actor);  // use a ref to only clean up if the keyboard hasn't been destroyed
             return () => {
                 if (topBar.get_parent())
-                    keyboardRef.current?._suggestions.remove_child(topBar);
+                    keyboardRef.take()?._suggestions.remove_child(topBar);
             };
         });
 

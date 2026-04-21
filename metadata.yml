@@ -20,6 +20,9 @@ description: &description |-
 
   A lot more is planned; take a look at the roadmap for that: https://github.com/mityax/gnome-extension-touchup
 
+  Notice: If you enable the OSK quick paste action feature, TouchUp will access your clipboard – clipboard
+  content, however, never leaves your devices' memory (it's not written to a file, or sent via network).
+
   If you find this extension valuable, please donate to make sure the work can go on! :)
 
 # Final release metadata configuration – this is converted into the extensions
@@ -35,6 +38,7 @@ release: &release
     github: mityax
   uuid: touchup@mityax
   shell-version:
+    - "49"
     - "50"
   gettext-domain: touchup
   settings-schema: org.gnome.shell.extensions.touchup
