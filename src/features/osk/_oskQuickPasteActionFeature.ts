@@ -30,7 +30,7 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         const selection = Shell.Global.get().get_display().get_selection();
         this.pm.connectTo(selection, "owner-changed", (_, selectionType, sourceMemory) => {
             // const isUserCaused = sourceMemory?.constructor.name.includes("Wayland");  // does not work if copying something from an St.Entry
-            const isAutomaticStartupChange = (GLib.get_monotonic_time() - start) / GLib.USEC_PER_SEC < 1;
+            const isAutomaticStartupChange = (GLib.get_monotonic_time() - start) / GLib.USEC_PER_SEC < 3;
 
             if (selectionType === Meta.SelectionType.SELECTION_CLIPBOARD && !isAutomaticStartupChange) {
                 this._lastClipboardChange = GLib.get_real_time();
@@ -103,6 +103,8 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         });
 
         this.pm.connectTo(keyboard as Clutter.Actor, "visibility-changed", async () => {
+            if (this._lastClipboardChange == -1) return;
+
             const lastClipboardChange = (GLib.get_real_time() - this._lastClipboardChange) / GLib.USEC_PER_SEC;
 
             if (Main.keyboard.visible && lastClipboardChange <= BUTTON_VISIBILITY_DURATION_AFTER_CLIPBOARD_CHANGE) {
