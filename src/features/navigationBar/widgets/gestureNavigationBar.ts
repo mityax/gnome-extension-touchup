@@ -17,6 +17,7 @@ import {settings} from "$src/settings";
 import GLib from "gi://GLib";
 import Cogl from "gi://Cogl";
 import {SmoothNavigationGestureController} from "$src/utils/gestures/smoothNavigationGestureController";
+import {IdleRunner} from "$src/utils/idleRunner";
 
 
 /**
@@ -153,10 +154,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             // Example: While the screen is being rotated by the Shell, this can cause Shell crashes (e.g. because
             // it could result in capturing a screenshot outside the screens dimensions). In JS, we don't have
             // precise enough control over what runs when to ensure this in another way.
-            // @ts-ignore
-            GLib.idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            IdleRunner.once(() => {
                 if (!this.styleClassUpdateInterval.enabled)
-                    return GLib.SOURCE_REMOVE;
+                    return;
 
                 let rect = this.pill.get_transformed_extents();
 
@@ -169,8 +169,6 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
                         const luminance = calculateLuminance(color.red, color.green, color.blue);
                         resolve(luminance > 0.5 ? 'dark' : 'light');
                     });
-
-                return GLib.SOURCE_REMOVE;
             });
         });
     }
