@@ -3,19 +3,24 @@ from: base
 
 
 env: 
-  NAVBAR_PILL_REGION: 35.9% 96% 28.1% 4%
+  NAVBAR_PILL_REGION:  35.9% 96% 28.1% 4%  # encapsulates the pill with a bit of margin
+  NAVBAR_LOOSE_REGION: 0% 95% 100% 5%      # encapsulates the entire navbar, with a bit of margin above
 
+
+defs:
+  open_run_command_popup:
+    - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
+      sequential: false
+    - wait:
+        for:
+          find:
+            text: Run a Command
+            location_hint: center
 
 
 steps:
   # Enable "ignore touch mode" (since we can't emulate touch mode properly):
-  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
-    sequential: false
-  - wait:
-      for:
-        find:
-          text: Run a Command
-          location_hint: center
+  - open_run_command_popup:
   - type_text: >-
       dconf write /org/gnome/shell/extensions/touchup/navigation-bar-ignore-touch-mode true
   - invoke_key: ret
@@ -26,6 +31,9 @@ steps:
       regions:
         - $NAVBAR_PILL_REGION
 
+
+  # === Tests: Gesture Functionality ===
+  
   # Drag up for overview:
   - touch:
     - 50% -2px
@@ -104,15 +112,12 @@ steps:
       
   # Leave the overview:
   - invoke_key: meta_l
+  
+
+  # === Tests: OSK Integration ===
 
   # Enable the OSK (since we can't emulate touch mode properly):
-  - invoke_keys: ["alt", "f2"]  # open "Run Command" popup
-    sequential: false
-  - wait:
-      for:
-        find:
-          text: Run a Command
-          location_hint: center
+  - open_run_command_popup:
   - type_text: >-
       gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true
   - invoke_key: ret
@@ -144,4 +149,40 @@ steps:
   - wait:
       for: gesture_navbar/desktop_with_navbar
       timeout: 10s
+  
+
+  # === Tests: Navbar Colors ===
+  
+  # Open a text editor for texting:
+  - invoke_key: meta_l
+  - wait:
+      for:
+        find:
+          text: "Type to search"
+  - type_text: "text editor"
+  - sleep: 300ms
+  - invoke_key: ret
+  
+  # Open a text editor and maximize the window:
+  - wait:
+      for:
+        dominant_color: white
+  - invoke_keys: ["meta_l", "up"]
+    sequential: false
+  - wait:
+      for: gesture_navbar/editor_with_navbar_reserved_space
+      regions: $NAVBAR_LOOSE_REGION
+
+  # Disable "Reserve Space":
+  - open_run_command_popup:
+  - type_text: >-
+      dconf write /org/gnome/shell/extensions/touchup/navigation-bar-gestures-reserve-space false
+  - invoke_key: ret
+  - wait:
+      for: gesture_navbar/editor_with_navbar
+      regions: $NAVBAR_LOOSE_REGION
+
+
+
+
 
