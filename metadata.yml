@@ -21,7 +21,7 @@ description: &description |-
   A lot more is planned; take a look at the roadmap for that: https://github.com/mityax/gnome-extension-touchup
 
   Notice: If you enable the OSK quick paste action feature, TouchUp will access your clipboard – clipboard
-  content, however, never leaves your devices' memory (it's not written to a file, or sent via network).
+  content, however, never leaves your devices memory (i.e. is not written to a file, or sent via network).
 
   If you find this extension valuable, please donate to make sure the work can go on! :)
 
