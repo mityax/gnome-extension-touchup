@@ -11,6 +11,7 @@ import {EdgeDragTransition, TransitionValues} from "$src/utils/ui/edgeDragTransi
 import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFollower";
 import TouchUpExtension from "$src/extension";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
+import {Ref} from "$src/utils/ui/widgets";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
@@ -129,12 +130,13 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                     panAxis: Clutter.PanAxis.Y,
                 });
 
-                // @ts-ignore
+                // @ts-ignore: type hint for `_boxPointer` is missing in girs
                 m.menu._boxPointer.add_action_full('touchup-panel-menus-swipe-to-close', Clutter.EventPhase.BUBBLE, gesture);
             });
+            // @ts-ignore: type hint for `_boxPointer` is missing in girs
+            const boxPointerRefs = menus.map(m => new Ref(m.menu._boxPointer));
             return () => {
-                // @ts-ignore
-                menus.forEach(m => m.menu._boxPointer.remove_action_by_name('touchup-panel-menus-swipe-to-close'));
+                boxPointerRefs.forEach(bp => bp.take()?.remove_action_by_name('touchup-panel-menus-swipe-to-close'));
             };
         });
     }
