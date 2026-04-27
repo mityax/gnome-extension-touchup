@@ -13,7 +13,7 @@ type _ConnectionOpts = {
 }
 
 
-export default class EventEmitter<A extends Record<string, [...any]>> {
+export default class EventEmitter<A extends Record<string, any[]>> {
     private readonly _listeners: _ListenerRecord<A, any>[] = [];
     private _idCounter = 0;
 

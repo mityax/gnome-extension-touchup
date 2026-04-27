@@ -9,14 +9,13 @@ import BaseNavigationBar from "$src/features/navigationBar/widgets/baseNavigatio
 import * as Widgets from "$src/utils/ui/widgets";
 import {GestureRecognizer, GestureState} from "$src/utils/gestures/gestureRecognizer";
 import {Monitor} from "resource:///org/gnome/shell/ui/layout.js";
-import {Delay} from "$src/utils/delay";
 import GObject from "gi://GObject";
 import Mtk from "gi://Mtk";
-import {logger} from "$src/core/logging";
 import {settings} from "$src/settings";
 import GLib from "gi://GLib";
 import Cogl from "gi://Cogl";
 import {SmoothNavigationGestureController} from "$src/utils/gestures/smoothNavigationGestureController";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 /**
@@ -36,7 +35,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
     private _isWindowNear: boolean = false;
-    private readonly gestureManager: NavigationBarGestureManager;
+    readonly gestureManager: NavigationBarGestureManager;
 
     constructor(props: {reserveSpace: boolean, invisibleMode: boolean}) {
         super({ reserveSpace: props.reserveSpace });
@@ -205,8 +204,10 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 }
 
 
-class NavigationBarGestureManager {
-    private readonly _gesture: Clutter.PanGesture;
+class NavigationBarGestureManager extends EventEmitter<{
+    'subthreshold-swipe-up': [],
+}> {
+    readonly gesture: Clutter.PanGesture;
     private _recognizer: GestureRecognizer;
 
     private _navigationGestureController: SmoothNavigationGestureController;
@@ -221,8 +222,11 @@ class NavigationBarGestureManager {
     private _isKeyboardGesture: boolean = false;
     private _edgeThreshold: number;
     private readonly _gestureSignalId: number;  // notice: only for shexli
+    private _swipeUpThreshold: number = 0;
 
     constructor(props: {monitor?: Monitor, edgeThreshold: number}) {
+        super();
+
         this._scaleFactor = St.ThemeContext.get_for_stage(global.stage as Clutter.Stage).scaleFactor;
         this._edgeThreshold = props.edgeThreshold;
 
@@ -237,12 +241,12 @@ class NavigationBarGestureManager {
         });
 
         // Action that listens to appropriate events on the stage:
-        this._gesture = this._recognizer.createPanGesture();
+        this.gesture = this._recognizer.createPanGesture();
 
-        this._gestureSignalId = this._gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
+        this._gestureSignalId = this.gesture.connect('should-handle-sequence', (_: any, e: Clutter.Event) =>
             this._shouldHandleSequence(e));
 
-        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this._gesture);
+        global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.gesture);
 
         // To emit virtual events:
         this._virtualTouchscreenDevice = Clutter
@@ -259,8 +263,20 @@ class NavigationBarGestureManager {
         this._edgeThreshold = edgeThreshold;
     }
 
+    /**
+     * Swipe-up recognition will only start if the swiped distance exceeds this threshold.
+     *
+     * If a swipe-up occurs that does not exceed the threshold, the `subthreshold-motion`
+     * signal is emitted.
+     *
+     * @param threshold Swipe-up min distance, in physical pixels
+     */
+    setSwipeUpThreshold(threshold: number) {
+        this._swipeUpThreshold = threshold;
+    }
+
     setEnabled(enabled: boolean) {
-        this._gesture.enabled = enabled;
+        this.gesture.enabled = enabled;
     }
 
     private _getMonitorRect(x: number, y: number): Mtk.Rectangle {
@@ -272,7 +288,7 @@ class NavigationBarGestureManager {
 
     private _shouldHandleSequence(event: Clutter.Event): boolean {
         // If we're already during a gesture, capture all other events too to prevent other interactions:
-        if (this._gesture.state === Clutter.GestureState.RECOGNIZING) {
+        if (this.gesture.state === Clutter.GestureState.RECOGNIZING) {
             return true;
         }
 
@@ -290,11 +306,18 @@ class NavigationBarGestureManager {
 
         if (this._isKeyboardGesture) {
             Main.keyboard._keyboard.gestureProgress(-state.totalMotionDelta.y);
-        } else {
+            return;
+        }
+
+        const initialDirection = state.firstMotionDirection?.direction;
+        const highestPoint = state.events.reduce((prev, curr) => prev.y < curr.y ? prev : curr);
+        const maxYDist = state.events[0].y - highestPoint.y;
+
+        if (maxYDist > this._swipeUpThreshold || (initialDirection && initialDirection !== 'up')) {
             const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
             const d = state.totalMotionDelta;
             this._navigationGestureController.gestureProgress(
-                -d.y / (this._navigationGestureController.overviewBaseDist * baseDistFactor),
+                (-d.y - this._swipeUpThreshold) / (this._navigationGestureController.overviewBaseDist * baseDistFactor),
                 -d.x / (this._navigationGestureController.workspaceBaseDist * 0.62)
             );
         }
@@ -323,19 +346,11 @@ class NavigationBarGestureManager {
     }
 
     private _onGestureCompleted(state: GestureState) {
+        const lastMotion = state.lastMotionDirection;
+        const direction = lastMotion?.direction ?? null;
 
-        const direction = state.lastMotionDirection?.direction ?? null;
-
-        if (state.isTap) {
+        if (lastMotion === null) {
             this._navigationGestureController.gestureCancel();
-
-            logger.debug("Emitting virtual tap");
-
-            this._virtualTouchscreenDevice.notify_touch_down(state.events[0].timeUS, 0,
-                state.pressCoordinates.x, state.pressCoordinates.y);
-            Delay.ms(45).then(() => {
-                this._virtualTouchscreenDevice.notify_touch_up(state.events.at(-1)!.timeUS, 0);
-            });
         } else if (this._isKeyboardGesture) {
             if (direction === 'up') {
                 Main.keyboard._keyboard?.gestureActivate();
@@ -343,7 +358,12 @@ class NavigationBarGestureManager {
                 Main.keyboard._keyboard?.gestureCancel();
             }
         } else {
-            this._navigationGestureController.gestureEnd(direction);
+            if (lastMotion?.axis === 'horizontal' || -state.totalMotionDelta.y > this._swipeUpThreshold) {
+                this._navigationGestureController.gestureEnd(direction);
+            } else {
+                this.emit("subthreshold-swipe-up");
+                this._navigationGestureController.gestureCancel();
+            }
         }
 
         this._hasStarted = false;
@@ -357,8 +377,8 @@ class NavigationBarGestureManager {
     }
 
     destroy() {
-        global.stage.remove_action(this._gesture);
-        this._gesture.disconnect(this._gestureSignalId);  // notice: only for shexli, disconnect is not needed (no class-external references to gesture, gesture is removed from the stage on disabling)
+        global.stage.remove_action(this.gesture);
+        this.gesture.disconnect(this._gestureSignalId);  // notice: only for shexli, disconnect is not needed (no class-external references to gesture, gesture is removed from the stage on disabling)
         this._navigationGestureController.destroy();
     }
 }

@@ -213,6 +213,21 @@ export const settings = {
         enabled: new BoolSetting('virtual-touchpad-enabled', true),
     },
 
+    integrations: {
+        dashToDock: {
+            /**
+             * Whether to enable the Dash To Dock integration.
+             */
+            enabled: new BoolSetting('dash-to-dock-integration-enabled', true),
+
+            /**
+             * Factor by which the overview gesture start threshold distance is scaled (i.e. the bigger this factor,
+             * the longer one can swipe to open DashToDock, before the gesture is recognized as overview gesture).
+             */
+            gestureThresholdFactor: new IntSetting('dash-to-dock-integration-gesture-threshold-factor', 2, 1, 10),
+        },
+    },
+
     donations: {
         installationData: new StringSetting('donations-installation-data', "{}"),
     },

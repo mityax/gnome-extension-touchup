@@ -18,12 +18,13 @@ import {debounce} from "$src/utils/debounce";
 export type NavbarMode = 'gestures' | 'buttons';
 
 
-export class NavigationBarFeature extends ExtensionFeature {
+export class NavigationBarFeature extends ExtensionFeature<{
+    'navigation-bar-changed': [BaseNavigationBar<any>],
+}> {
     private _currentNavBar?: BaseNavigationBar<any>;
     declare private _mode: NavbarMode;
     private _disableOskActionPatch: Patch | null = null;
     private readonly _debouncedPrimaryMonitorPatchSetActive: (props: {active: boolean, force?: boolean}) => void;
-
 
     constructor(pm: PatchManager) {
         super(pm);
@@ -164,6 +165,8 @@ export class NavigationBarFeature extends ExtensionFeature {
             this._mode == 'gestures'
                 ? this._disableOskActionPatch?.enable()
                 : this._disableOskActionPatch?.disable();
+
+            this.emit('navigation-bar-changed', this._currentNavBar);
         } catch (e) {
             logger.error("Error in NavigationBarFeature.setMode: ", e);
         }
@@ -310,6 +313,10 @@ export class NavigationBarFeature extends ExtensionFeature {
         if (this._mode === 'gestures') {
             (this._currentNavBar as GestureNavigationBar).setInvisibleMode(this._invisibleMode);
         }
+    }
+
+    get currentNavBar(): BaseNavigationBar<any> | null {
+        return this._currentNavBar ?? null;
     }
 
     destroy() {

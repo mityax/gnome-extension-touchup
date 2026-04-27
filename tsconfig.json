@@ -5,6 +5,7 @@
     "module": "es2022",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": false,
+    "allowUnusedLabels": true,
     "strict": true,
     "target": "ES2022",
     "paths" : {
@@ -15,7 +16,7 @@
       "ES2023"
     ],
     "jsx": "preserve",
-    "sourceMap": false,
+    "sourceMap": false
   },
   "include": [
     "src/ambient.d.ts",

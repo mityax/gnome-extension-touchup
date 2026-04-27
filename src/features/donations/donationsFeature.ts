@@ -41,7 +41,6 @@ export class DonationsFeature extends ExtensionFeature {
     private async _initializeInstallationData(): Promise<InstallationData> {
         try {
             const data = await this._readInstallationData();
-            logger.debug("Installation data: ", data);
             this._validateInstallationData(data);
             return data;
         } catch (e) {

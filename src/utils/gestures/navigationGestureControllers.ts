@@ -129,7 +129,7 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
             confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
                 this._baseDist = baseDistance;
 
-                // The following tenary expression is needed to fix a bug (presumably in Gnome Shell's
+                // The following ternary expression is needed to fix a bug (presumably in Gnome Shell's
                 // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
                 // gesture begin, even if the overview is not visible:
                 this._initialProgress = Main.overview.visible ? progress : 0;
@@ -158,7 +158,7 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
         } catch (e: any) {
             DEBUG: {
                 if (!e.toString().includes('Invalid overview shown transition from HIDDEN to HIDING')) {
-                    logger.error("Error during overview gesture termination: ", e);
+                    logger.error("Error during overview gesture termination: ", e.message);
                     throw e;
                 } else {
                     logger.debug("(Expected) error during terminating overview gesture: ", e);
@@ -168,7 +168,18 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
     }
 
     protected _doCancel() {
-        Main.overview._gestureEnd(null, 300, this._cancelProgress);
+        try {
+            Main.overview._gestureEnd(null, 0, this._cancelProgress);
+        } catch (e: any) {
+            DEBUG: {
+                if (!e.toString().includes('Invalid overview shown transition from HIDDEN to HIDING')) {
+                    logger.error("Error during overview gesture termination: ", e.message);
+                    throw e;
+                } else {
+                    logger.debug("(Expected) error during terminating overview gesture: ", e);
+                }
+            }
+        }
     }
 
     get baseDist() {

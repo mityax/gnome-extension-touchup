@@ -326,12 +326,16 @@ export class PatchManager {
      *
      * Only use this when you are certain you know what you're doing.
      *
-     * Returns the dropped patch or `null` if it is not managed by this PatchManager.
+     * Returns the dropped patch or `null` if it is not managed by this [PatchManager].
      */
     drop(patch: Patch): Patch | null {
         const idx = this._patches.findIndex(p => p === patch);
 
-        DEBUG: assert(idx !== -1, `Could not find patch to remove: ${repr(patch)}`);
+        DEBUG:
+            assert(idx !== -1, {
+                message: `Could not find patch to drop: ${repr(patch)}`,
+                isWarning: true,
+            });
 
         if (idx === -1) return null;
 
@@ -343,8 +347,9 @@ export class PatchManager {
      *
      * This child [PatchManager] will react to any call to [destroy], [disable] and [enable]
      * on any parent [PatchManager] and will forward those calls to its own descendents, should
-     * it be forked again. This allows for a nice, tree structure and a consistent interface
+     * it be forked again. This allows for a nice tree structure and a consistent interface
      * for managing patches.
+     *
      * @param debugName An optional label used for debug log messages
      */
     fork(debugName?: string): PatchManager {

@@ -1,17 +1,26 @@
 import {PatchManager} from "$src/core/patchManager";
 import {ExtensionFeatureManager, FeatureMeta} from "$src/core/extensionFeatureManager";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 /**
  * Base class for each feature of this extension.
  */
-export default abstract class ExtensionFeature {
+export default abstract class ExtensionFeature<E extends Record<string, any[]> = {}> extends EventEmitter<AsRecord<{
+    'sub-feature-enabled': [ExtensionFeature<any>],
+    'sub-feature-disabled': [string],
+} & E>> {
     protected readonly pm: PatchManager;
     private readonly subFeatureManager: ExtensionFeatureManager;
 
     constructor(patchManager: PatchManager) {
+        super();
+
         this.pm = patchManager;
         this.subFeatureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
+
+        this.subFeatureManager.connect('feature-enabled', (f) => this.emit('sub-feature-enabled', f));
+        this.subFeatureManager.connect('feature-disabled', (name) => this.emit('sub-feature-disabled', name));
     }
 
     /**
@@ -36,14 +45,6 @@ export default abstract class ExtensionFeature {
         return this.subFeatureManager.getFeature(type);
     }
 
-    destroy() {
-        this.pm.destroy();
-
-        // Destroy all sub-features (this has been done already by the PatchManager, but is explicitly done
-        // here again to not make things unnecessarily complicated for reviewers):
-        this.subFeatureManager.destroy();
-    }
-
     /**
      * Called when the Shells session mode has changed, without the extension being disabled
      * and re-enabled.
@@ -54,4 +55,18 @@ export default abstract class ExtensionFeature {
     async notifySessionModeChanged() {
         await this.subFeatureManager.notifySessionModeChanged();
     }
+
+    destroy() {
+        this.pm.destroy();
+
+        // Destroy all sub-features (this has been done already by the PatchManager, but is explicitly done
+        // here again to not make things unnecessarily complicated for reviewers):
+        this.subFeatureManager.destroy();
+    }
 }
+
+
+type AsRecord<T> =
+    T extends Record<any, any> ? { [A in keyof T]: T[A] } : never;
+
+

@@ -85,7 +85,8 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
         })
         this.subpm!.patch(() => {
             keyButton.add_action_full('touchup-quick-ime-switching', Clutter.EventPhase.BUBBLE, gesture);
-            return () => keyButton.remove_action(gesture);
+            const ref = new Ref(keyButton);
+            return () => ref.take()?.remove_action(gesture);
         });
 
         // OSK keys use raw touch events by default, which conflicts with our gesture handling. Thus,
@@ -107,7 +108,7 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
         this.subpm!.patch(() => {
             const indicator = new Ref(this._buildIMEIndicator());
             keyButton.add_child(indicator.current!)
-            return () => indicator.current?.destroy();
+            return () => indicator.take()?.destroy();
         })
     }
 

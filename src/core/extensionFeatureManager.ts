@@ -3,6 +3,7 @@ import ExtensionFeature from "./extensionFeature";
 import {BoolSetting} from "../features/preferences/backend";
 import {assert, logger} from "./logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 /** Enum mapping to the Shell's session mode: */
@@ -20,12 +21,16 @@ export type FeatureMeta<T extends ExtensionFeature> = {
 };
 
 
-export class ExtensionFeatureManager {
+export class ExtensionFeatureManager extends EventEmitter<{
+    'feature-enabled': [ExtensionFeature],
+    'feature-disabled': [string],
+}> {
     private pm: PatchManager;
     private registry: Map<string, FeatureMeta<any>> = new Map();
     private enabledFeatures: Map<string, ExtensionFeature> = new Map();
 
     constructor(pm: PatchManager) {
+        super();
         this.pm = pm;
     }
 
@@ -100,10 +105,15 @@ export class ExtensionFeatureManager {
         if (shouldBeEnabled && !isEnabled) {
             // Enable the feature:
             const feature = await this._tryInitializeFeature(meta);
-            return feature != null;
+            if (feature) {
+                this.emit('feature-enabled', feature);
+                return true;
+            }
+            return false;
         } else if (!shouldBeEnabled && isEnabled) {
             // Disable the feature:
             this._destroyFeature(meta);
+            this.emit('feature-disabled', meta.name);
             return false;
         }
 

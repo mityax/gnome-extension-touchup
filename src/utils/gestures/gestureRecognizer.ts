@@ -251,12 +251,12 @@ export class GestureRecognizer extends EventEmitter<{
 
 
 export class GestureState {
+    readonly events: GestureRecognizerEvent[] = [];
     private readonly _cacheMap = new Map<string, any>();
-    private readonly _events: GestureRecognizerEvent[] = [];
     private readonly _scaleFactor: number;
 
     private constructor(props: {events: GestureRecognizerEvent[], scaleFactor: number}) {
-        this._events = props.events;
+        this.events = props.events;
         this._scaleFactor = props.scaleFactor;
     }
 
@@ -269,7 +269,7 @@ export class GestureState {
 
     copyWith(newEvent: GestureRecognizerEvent) {
         return new GestureState({
-            events: [...this._events, newEvent],
+            events: [...this.events, newEvent],
             scaleFactor: this._scaleFactor,
         });
     }
@@ -281,19 +281,19 @@ export class GestureState {
         return this._cachedValue(
             'is-tap',
             () => {
-                if (this._events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount != 1) {
+                if (this.events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount != 1) {
                     return false;
                 }
 
-                const hold = _matchHold(this._events, {
+                const hold = _matchHold(this.events, {
                     maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                     minTimeUS: 0,
                 });
 
                 if (!hold) return false;
 
-                return this._events.at(-1)!.timeUS - this._events[0].timeUS < MIN_HOLD_TIME_US
-                    && hold.lastIncludedEventIdx + 1 === this._events.length;
+                return this.events.at(-1)!.timeUS - this.events[0].timeUS < MIN_HOLD_TIME_US
+                    && hold.lastIncludedEventIdx + 1 === this.events.length;
             }
         );
     }
@@ -305,17 +305,17 @@ export class GestureState {
         return this._cachedValue(
             'is-long-tap',
             () => {
-                if (this._events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount !== 1) {
+                if (this.events.length < 2 || !this.hasGestureJustEnded || this.totalFingerCount !== 1) {
                     return false;
                 }
 
-                const hold = _matchHold(this._events, {
+                const hold = _matchHold(this.events, {
                     maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                 });
 
                 if (!hold) return false;
 
-                return hold.lastIncludedEventIdx + 1 === this._events.length;
+                return hold.lastIncludedEventIdx + 1 === this.events.length;
             }
         );
     }
@@ -338,16 +338,16 @@ export class GestureState {
         return this._cachedValue(
             'has-movement',
             () => {
-                if (this._events.length < 2) return false;
+                if (this.events.length < 2) return false;
 
-                const hold = _matchHold(this._events, {
+                const hold = _matchHold(this.events, {
                     maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                     minTimeUS: 0,
                 });
 
                 if (!hold) return true;
 
-                return hold.lastIncludedEventIdx + 1 < this._events.length;
+                return hold.lastIncludedEventIdx + 1 < this.events.length;
             }
         );
     }
@@ -361,16 +361,16 @@ export class GestureState {
         return this._cachedValue(
             'has-movement',
             () => {
-                if (this._events.length < 2) return false;
+                if (this.events.length < 2) return false;
 
-                const hold = _matchHold(this._events, {
+                const hold = _matchHold(this.events, {
                     maxMovement: STRONG_MOVEMENT_THRESHOLD * this._scaleFactor,
                     minTimeUS: 0,
                 });
 
                 if (!hold) return false;
 
-                return hold.lastIncludedEventIdx + 1 < this._events.length;
+                return hold.lastIncludedEventIdx + 1 < this.events.length;
             }
         );
     }
@@ -382,7 +382,7 @@ export class GestureState {
     get initialHold(): Hold | null {
         return this._cachedValue(
             `initial-hold`,
-            () => _matchHold(this._events, {
+            () => _matchHold(this.events, {
                 maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
             })?.pattern ?? null,
         );
@@ -395,7 +395,7 @@ export class GestureState {
     get finalHold(): Hold | null {
         return this._cachedValue(
             `final-hold`,
-            () => _matchHold(this._events, {
+            () => _matchHold(this.events, {
                 maxMovement: MOVEMENT_THRESHOLD * this._scaleFactor,
                 matchFromEnd: true,
             })?.pattern ?? null,
@@ -423,7 +423,7 @@ export class GestureState {
         return this._cachedValue(
             'first-motion-direction',
             () => {
-                return _findInitialMotionDirection(this._events, {
+                return _findInitialMotionDirection(this.events, {
                     minDist: MIN_MOTION_DIRECTION_DETECTION_DISTANCE * this._scaleFactor,
                 });
             }
@@ -437,7 +437,7 @@ export class GestureState {
         return this._cachedValue(
             'last-motion-direction',
             () => {
-                return _findInitialMotionDirection(this._events, {
+                return _findInitialMotionDirection(this.events, {
                     minDist: MIN_MOTION_DIRECTION_DETECTION_DISTANCE * this._scaleFactor,
                     matchFromEnd: true,
                 });
@@ -483,7 +483,7 @@ export class GestureState {
     get isTouchGesture(): boolean {
         return this._cachedValue(
             'is-touch-gesture',
-            () => !this._events.some((e) => e.isPointerEvent),
+            () => !this.events.some((e) => e.isPointerEvent),
         );
     }
 
@@ -493,7 +493,7 @@ export class GestureState {
     get totalFingerCount(): number {
         return this._cachedValue(
             'total-finger-count',
-            () => _nSlots(this._events),
+            () => _nSlots(this.events),
         );
     }
 
@@ -515,23 +515,26 @@ export class GestureState {
      * If multiple touch points where present during this gesture, the largest
      * motion delta of those individual touch points is returned.
      */
-    get totalMotionDelta(): {x: number, y: number} {
+    get totalMotionDelta(): {x: number, y: number, dist: number} {
         return this._cachedValue(
             'total-motion-delta',
             () => this._eventsBySlots
                 .map(seq => {
-                    if (seq.length < 2) return {x: 0, y: 0};
+                    if (seq.length < 2) return {x: 0, y: 0, dist: 0};
+                    const xDist = seq.at(-1)!.x - seq[0].x,
+                          yDist = seq.at(-1)!.y - seq[0].y;
                     return {
-                        x: seq.at(-1)!.x - seq[0].x,
-                        y: seq.at(-1)!.y - seq[0].y,
+                        x: xDist,
+                        y: yDist,
+                        dist: Math.hypot(xDist, yDist),
                     };
                 })
                 .reduce(
                     (prev, d) => {
-                        return Math.hypot(prev.x, prev.y) > Math.hypot(d.x, d.y) ? prev : d;
+                        return prev.dist > d.dist ? prev : d;
                     },
-                    { x: 0, y: 0 },
-                )
+                    {x: 0, y: 0, dist: 0},
+                ),
         );
     }
 
@@ -545,8 +548,8 @@ export class GestureState {
             () => {
                 if (this.events.length < 2) return {x: 0, y: 0};
 
-                const lastEvent = this._events.at(-1)!;
-                const prevEvent = this._events
+                const lastEvent = this.events.at(-1)!;
+                const prevEvent = this.events
                     .findLast(e => e !== lastEvent && e.slot === lastEvent.slot);
 
                 if (!prevEvent) return {x: 0, y: 0};
@@ -559,22 +562,18 @@ export class GestureState {
         );
     }
 
-    get events(): GestureRecognizerEvent[] {
-        return [...this._events];
-    }
-
     /**
      * Returns true if the first event has been pushed and no other event is present yet.
      */
     get hasGestureJustStarted(): boolean {
-        return this._events.length === 1;
+        return this.events.length === 1;
     }
 
     /**
      * Returns true if there is at least one event present but the gesture is not yet completed.
      */
     get isDuringGesture(): boolean {
-        return this._events.length > 0 && !this.hasGestureJustEnded;
+        return this.events.length > 0 && !this.hasGestureJustEnded;
     }
 
     /**
@@ -597,7 +596,7 @@ export class GestureState {
      * Returns true if the gesture has been canceled.
      */
     get hasGestureBeenCanceled(): boolean {
-        return this._events.at(-1)?.isCancelEvent ?? false;
+        return this.events.at(-1)?.isCancelEvent ?? false;
     }
 
     /**
@@ -612,7 +611,7 @@ export class GestureState {
     get _eventsBySlots() {
         return this._cachedValue(
             'events-by-slots',
-            () => _eventsBySlots(this._events),
+            () => _eventsBySlots(this.events),
         );
     }
 

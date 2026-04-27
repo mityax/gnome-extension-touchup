@@ -15,6 +15,7 @@ import {initLogger, logger, uninitLogger} from "$src/core/logging";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 import {ExtensionFeatureManager, FeatureMeta, SessionMode} from "$src/core/extensionFeatureManager";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import EventEmitter from "$src/utils/eventEmitter";
 
 
 export default class TouchUpExtension extends Extension {
@@ -22,6 +23,10 @@ export default class TouchUpExtension extends Extension {
 
     private pm?: PatchManager;
     private featureManager?: ExtensionFeatureManager;
+    private eventEmitter?: EventEmitter<{
+        'feature-enabled': [ExtensionFeature],
+        'feature-disabled': [string],
+    }>;
 
     async enable() {
         TouchUpExtension.instance = this;
@@ -54,9 +59,17 @@ export default class TouchUpExtension extends Extension {
             await this.featureManager!.notifySessionModeChanged();
         });
 
+        this.eventEmitter = new EventEmitter();
+
         this.featureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
 
-        // This is the entry point for all services (= small supplementary ExtensionFeature's, that other
+        // Forward feature manager events:
+        // Notice: We're just using [PatchManager.connectTo] to make Shexli happy – it's not actually needed since the
+        // [FeatureManager] instance will be destroyed anyway upon extension disabling
+        this.pm.connectTo(this.featureManager, 'feature-enabled', (f) => this.eventEmitter!.emit("feature-enabled", f));
+        this.pm.connectTo(this.featureManager, 'feature-disabled', (name) => this.eventEmitter!.emit("feature-disabled", name));
+
+        // This is the entry point for all services (= small supplementary [ExtensionFeature]s, that other
         // features need to work):
         await this.defineServices();
 
@@ -167,6 +180,16 @@ export default class TouchUpExtension extends Extension {
                 },
             });
 
+        BETA:
+            await this.defineFeature({
+                name: 'dash-to-dock-integration',
+                setting: settings.integrations.dashToDock.enabled,
+                create: async pm => {
+                    const m = (await import('$src/features/integrations/dashToDockIntegrationFeature'));
+                    return new m.DashToDockIntegrationFeature(pm);
+                }
+            });
+
         await this.defineFeature({
             name: 'donations',
             create: pm => new DonationsFeature(pm),
@@ -187,6 +210,12 @@ export default class TouchUpExtension extends Extension {
         return this.featureManager!.getFeature(type);
     }
 
+    // Delegate event emitter methods:
+    connect: (NonNullable<typeof this.eventEmitter>)['connect'] = (signal, handler) =>
+        this.eventEmitter!.connect(signal, handler);
+    disconnect: (NonNullable<typeof this.eventEmitter>)['disconnect'] = (id) =>
+        this.eventEmitter!.disconnect(id);
+
     /*
      * Session Modes:
      * This extension uses "unlock-dialog" session mode for some lockscreen features:
@@ -204,6 +233,9 @@ export default class TouchUpExtension extends Extension {
         // Destroy all features:
         this.featureManager?.destroy();
         this.featureManager = undefined;
+
+        // Drop the internal [EventEmitter]:
+        this.eventEmitter = undefined;
 
         logger.debug("TouchUp extension successfully unloaded.");
 
