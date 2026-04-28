@@ -1,7 +1,8 @@
+import Gtk from "gi://Gtk";
 import Adw from "gi://Adw";
 import GObject from "gi://GObject";
 import {settings} from "$src/settings";
-import {buildPreferencesGroup, buildSwitchRow} from "$src/features/preferences/uiUtils";
+import {buildPreferencesGroup, buildSpinRow, buildSwitchRow} from "$src/features/preferences/uiUtils";
 
 export class MiscPage extends Adw.PreferencesPage {
     static {
@@ -76,5 +77,28 @@ export class MiscPage extends Adw.PreferencesPage {
                 })
             ]
         }));
+
+        this.add(buildPreferencesGroup({
+            title: "DashToDock Integration",
+            description: "Slightly swipe up the gesture navigation bar to easily open the dock. This feature " +
+                "requires the DashToDock extension.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable DashToDock Integration",
+                    subtitle: "Toggle to enable or disable the DashToDock integration",
+                    setting: settings.integrations.dashToDock.enabled,
+                }),
+                buildSpinRow({
+                    title: 'Swipe Distance Threshold',
+                    subtitle: 'Adjust how far you can swipe the dock before the overview gesture begins',
+                    adjustment: new Gtk.Adjustment({
+                        lower: settings.integrations.dashToDock.gestureThresholdFactor.min,
+                        upper: settings.integrations.dashToDock.gestureThresholdFactor.max,
+                        step_increment: 1,
+                    }),
+                    setting: settings.integrations.dashToDock.gestureThresholdFactor,
+                }),
+            ]
+        }))
     }
 }

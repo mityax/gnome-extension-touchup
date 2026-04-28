@@ -146,7 +146,7 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
 
     protected _doEnd(direction: 'up' | 'down' | null) {
         try {
-            if (this.isGestureRunning) {
+            if (this.isGestureRunning && this.currentProgress !== 0) {
                 if (direction === 'up') {
                     Main.overview._gestureEnd(null, 300, clamp(Math.round(this._currentProgress + 0.5), 1, 2));
                 } else if (direction === 'down') {

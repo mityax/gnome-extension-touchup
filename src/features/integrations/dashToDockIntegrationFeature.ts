@@ -2,7 +2,7 @@ import ExtensionFeature from "../../core/extensionFeature";
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import TouchUpExtension from "../../extension";
 import {NavigationBarFeature} from "../navigationBar/navigationBarFeature";
-import {Delay} from "$src/utils/delay";
+import {CancellablePromise, Delay} from "$src/utils/delay";
 import {ExtensionState} from "resource:///org/gnome/shell/misc/extensionUtils.js";
 import GestureNavigationBar from "$src/features/navigationBar/widgets/gestureNavigationBar";
 import St from "gi://St";
@@ -14,6 +14,7 @@ import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFoll
 
 
 const SWIPE_UP_THRESHOLD = 40;  // in logical pixels (this also scaled by the `dash-to-dock-integration-overview-threshold-factor` setting – default: 2)
+const DOCK_HIDE_DELAY = 2 * 1000;  // in milliseconds
 const DASH_TO_DOCK_EXT_UUID = 'dash-to-dock@micxgx.gmail.com';
 
 
@@ -113,8 +114,9 @@ class _DashToDockIntegration {
     readonly dock: Dock;
     private _swipeUpThresholdPatch: Patch;
     private _isDockInIntermediateState: boolean = false;
-    private transition: EdgeDragTransition;
-    private smoothFollower: SmoothFollower<SmoothFollowerLane[]>;
+    private _hideDelay?: CancellablePromise<void>;
+    private _transition: EdgeDragTransition;
+    private _smoothFollower: SmoothFollower<SmoothFollowerLane[]>;
 
     constructor(pm: PatchManager, navBar: GestureNavigationBar, dock: Dock) {
         this.pm = pm;
@@ -131,28 +133,49 @@ class _DashToDockIntegration {
         this.pm.connectTo(navBar.gestureManager, 'gesture-progress', (state: GestureState) => this._onGestureProgress(state));
         this.pm.connectTo(navBar.gestureManager, 'gesture-ended', (state: GestureState) => this._onGestureEnded(state));
 
-        // Enable swipe up threshold based on whether the dock is visible (the docks `showing` and `hiding` signals
-        // are not always fired, thus we listen to method calls):
+        // React to dock visibility changes  (the docks `showing` and `hiding` signals are not always fired, thus we
+        // listen to method calls):
         const self = this;
         this.pm.appendToMethod(Object.getPrototypeOf(this.dock), ['_animateIn', '_animateOut'], function(this: Dock) {
             if (this === self.dock) {
+                // Enable swipe up threshold based on whether the dock is visible, and always during gesture:
                 self._swipeUpThresholdPatch.setEnabled(!self._dockIsVisible || self._isDockInIntermediateState);
+
+                // If the dock is animated in or out independently of our gesture, cancel the hide delay to hand over
+                // control back to DashToDock:
+                if (!self._isDockInIntermediateState && self._hideDelay) {
+                    self._hideDelay.cancel();
+                    self._hideDelay = undefined;
+                }
             }
         });
 
-        this.transition = new EdgeDragTransition({
-            fullExtent: this._swipeUpThreshold,  // TODO: base animation max distance on dock height, not swipe up threshold
+        this._transition = new EdgeDragTransition({
+            fullExtent: this._swipeUpThreshold,
             initialExtent: this._swipeUpThreshold / 2,
         });
-        this.smoothFollower = new SmoothFollower([
+        this._smoothFollower = new SmoothFollower([
             new SmoothFollowerLane({
                 onUpdate: (motionDelta: number) => {
-                    const val = this.transition.interpolate(motionDelta);
-                    this.dock._slider.slideX = 1 + val.translation / this.transition.fullExtent;
+                    const val = this._transition.interpolate(motionDelta);
+                    this.dock._slider.slideX = 1 + val.translation / this._transition.fullExtent;
                     this.dock.opacity = val.opacity;
                 }
             })
         ]);
+
+        // Adjust transition to dock height changes (use grand child size, since the dock is in a sliding container):
+        this.pm.connectTo(this.dock.get_first_child()!.get_first_child()!, 'notify::height', (child) => {
+            this._transition.fullExtent = child.height;
+            this._transition.initialExtent = child.height / 2;
+        });
+
+        // React to swipe dist threshold setting change:
+        this.pm.connectTo(settings.integrations.dashToDock.gestureThresholdFactor, 'changed', () => {
+            if (this._swipeUpThresholdPatch.isEnabled) {
+                this._swipeUpThresholdPatch.enable(true);  // force re-enabling to update value
+            }
+        });
     }
 
     private get _dockIsVisible() {
@@ -167,7 +190,7 @@ class _DashToDockIntegration {
 
     private _onGestureStarted(state: GestureState) {
         if (this._dockIsVisible) return;
-        this.smoothFollower.start(lane => lane.currentValue = 0);
+        this._smoothFollower.start(lane => lane.currentValue = 0);
     }
 
     private _onGestureProgress(state: GestureState) {
@@ -175,13 +198,13 @@ class _DashToDockIntegration {
         if (this.dock.getDockState() === DockState.SHOWN) return;
 
         if (!this._dockIsVisible) {
-            this.smoothFollower.update(lane => lane.target = -state.totalMotionDelta.y);
+            this._smoothFollower.update(lane => lane.target = -state.totalMotionDelta.y);
             this._isDockInIntermediateState = true;
         }
     }
 
     private _onGestureEnded(state: GestureState) {
-        this.smoothFollower.stop()
+        this._smoothFollower.stop()
 
         if (this._isDockInIntermediateState) {
             this._isDockInIntermediateState = false;
@@ -192,6 +215,7 @@ class _DashToDockIntegration {
                     opacity: 255,
                     duration: 100,
                 });
+                this._scheduleDelayedDockHide();
             } else {
                 this.dock._animateOut(0.1, 0);
                 this.dock.ease({
@@ -203,30 +227,15 @@ class _DashToDockIntegration {
         }
     }
 
-    /**
-     * Show the dock, if it's not shown or showing already, and close it automatically after a delay.
-     */
-    private async _showDock() {
-        const dockIsVisible = [DockState.SHOWN, DockState.SHOWING].includes(this.dock.getDockState());
+    private _scheduleDelayedDockHide() {
+        this._hideDelay?.cancel();
 
-        if (!dockIsVisible) {
-            // Show the dock:
-            this.dock._show();
-
-            // After two seconds, hide the dock again:
-            const delay = Delay.s(2, 'resolve').then(() => {
-                hideConnectPatch.disable();
-                this.pm!.drop(hideConnectPatch);
-
-                if (!Main.overview.visible) {
-                    this.dock._hide();
-                }
-            });
-
-            // If the dock is hidden before the two seconds are over, cancel the hide delay to not cause
-            // unexpected hiding later on:
-            const hideConnectPatch = this.pm!.connectTo(this.dock, 'hiding', () => delay.cancel());
-        }
+        this._hideDelay = Delay.ms(DOCK_HIDE_DELAY).then(() => {
+            if (!Main.overview.visible) {
+                this.dock._hide();
+            }
+            this._hideDelay = undefined;
+        });
     }
 
     destroy() {
