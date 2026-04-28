@@ -53,7 +53,7 @@ suspicion that an error might occurr in a certain scenario, try running
 a nested shell – uncaught errors are then logged to its stdout.
 
 ### Running in a nested shell
-You can also run the extension in a nested instance of Gnome Shell. While
+You can also run the extension in a nested instance of GNOME Shell. While
 this might cause issues in specific cases, it can be sufficient when working
 on unaffected features. To do so, just run the same command from within a 
 normal terminal instead of a TTY:
@@ -74,7 +74,7 @@ npm run dev -- --verbose  # - or: npm run dev:host -- --verbose
 There is an experimental implementation for automatic live-reloading
 during development. This means, that whenever a source code file or
 a stylesheet is changed on disk, the extension is automatically
-rebuilt and reloaded in the running gnome shell instance.
+rebuilt and reloaded in the running GNOME Shell instance.
 
 To use live-relaoding, do:
 
@@ -84,9 +84,9 @@ npm run watch  # - or: `npm run watch:host`
 
 **Note:** While live-reloading can significantly improve the development
 experience, please be aware that it is a very unstable practice due to
-the nature of gnome extensions. When there is a problem during
+the nature of GNOME Shell extensions. When there is a problem during
 extension unloading/disabling, for example, effects of the previous extension
-instance may still be present in the gnome shell instance. In this case,
+instance may still be present in the GNOME Shell instance. In this case,
 a full shell restart (using the restart icon in the top bar, for example)
 will put the shell in a clean state before loading the extension.
 
@@ -223,7 +223,7 @@ documentation in the source code for each utility.
     independent feature for the extension. It provides a `PatchManager`
     instance that you can access using `this.pm` out of the box.
  - **PatchManager** - provides some utilities for patching parts of 
-   gnome shell with automatic cleanup upon extension or feature disabling.
+   GNOME Shell with automatic cleanup upon extension or feature disabling.
    Take a look at the existing features to see how it is used and what 
    helpers it provides. This should generally be used for any code snippet
    that needs cleanup, except for the rare case where it makes code stucture
