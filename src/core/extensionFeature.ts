@@ -19,8 +19,10 @@ export default abstract class ExtensionFeature<E extends Record<string, any[]> =
         this.pm = patchManager;
         this.subFeatureManager = new ExtensionFeatureManager(this.pm.fork("fm"));
 
-        this.subFeatureManager.connect('feature-enabled', (f) => this.emit('sub-feature-enabled', f));
-        this.subFeatureManager.connect('feature-disabled', (name) => this.emit('sub-feature-disabled', name));
+        // Notice: Using the [PatchManager] is not required here (subFeatureManager is destroyed), this is just to
+        // make Shexli happy
+        this.pm.connectTo(this.subFeatureManager, 'feature-enabled', (f) => this.emit('sub-feature-enabled', f));
+        this.pm.connectTo(this.subFeatureManager, 'feature-disabled', (name) => this.emit('sub-feature-disabled', name));
     }
 
     /**
