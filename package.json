@@ -20,7 +20,9 @@
     "prefs": "npm run enable && gnome-extensions prefs touchup@mityax",
     "logs": "journalctl -f -n 20 | grep touchup",
     "logs:file": "source $(pwd)/.env && tail -f $TOUCHUP_LOGFILE",
-    "lint": "tsc --noEmit",
+    "lint": "npm run lint:tsc && npm run lint:shexli",
+    "lint:tsc": "tsc --noEmit",
+    "lint:shexli": "npm run build:release &>/dev/null && shexli $(pwd)/dist/output",
     "tests": "npm run build && tests/run.sh",
     "tests:editor": "npm run build && tests/run.sh editor"
   },

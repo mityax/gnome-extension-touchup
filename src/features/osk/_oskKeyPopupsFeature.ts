@@ -125,6 +125,7 @@ class KeyPopup extends Widgets.Column {
         });
         this.add_child(this._label);
 
+        // @ts-ignore: type hints for `connectObject` missing
         this._sourceActor.connectObject(
             'notify::allocation', () => this._relayout(),
             'notify::mapped', () => this._updateOpen(),
