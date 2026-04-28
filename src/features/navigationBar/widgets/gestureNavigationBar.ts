@@ -162,7 +162,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
                 // Get the color at one pixel centered above the navigation bar using Shell.Screenshot:
                 // Notice: See the bottom of this file for other (non-working) approaches.
                 new Shell.Screenshot()
-                    .pick_color(rect.get_x() + rect.get_width() * 0.5, rect.get_y() - 2)
+                    .pick_color(rect.get_center().x, rect.get_y() - 2)
                     .then((res) => {
                         const color = (res as unknown as [Cogl.Color, any])[0];
                         const luminance = calculateLuminance(color.red, color.green, color.blue);
