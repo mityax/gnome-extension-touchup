@@ -205,7 +205,9 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
 
 class NavigationBarGestureManager extends EventEmitter<{
-    'subthreshold-swipe-up': [],
+    'gesture-started': [GestureState],
+    'gesture-progress': [GestureState],
+    'gesture-ended': [GestureState],
 }> {
     readonly gesture: Clutter.PanGesture;
     private _recognizer: GestureRecognizer;
@@ -309,11 +311,11 @@ class NavigationBarGestureManager extends EventEmitter<{
             return;
         }
 
-        const initialDirection = state.firstMotionDirection?.direction;
+        const direction = state.firstMotionDirection?.direction;
         const highestPoint = state.events.reduce((prev, curr) => prev.y < curr.y ? prev : curr);
         const maxYDist = state.events[0].y - highestPoint.y;
 
-        if (maxYDist > this._swipeUpThreshold || (initialDirection && initialDirection !== 'up')) {
+        if (maxYDist > this._swipeUpThreshold || (direction && direction !== 'up')) {
             const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
             const d = state.totalMotionDelta;
             this._navigationGestureController.gestureProgress(
@@ -321,6 +323,8 @@ class NavigationBarGestureManager extends EventEmitter<{
                 -d.x / (this._navigationGestureController.workspaceBaseDist * 0.62)
             );
         }
+
+        this.emit('gesture-progress', state);
     }
 
     private _startGestures(state: GestureState) {
@@ -343,6 +347,8 @@ class NavigationBarGestureManager extends EventEmitter<{
         if (!this._isKeyboardGesture) {
             this._navigationGestureController.gestureBegin();
         }
+
+        this.emit('gesture-started', this._recognizer.currentState);
     }
 
     private _onGestureCompleted(state: GestureState) {
@@ -358,13 +364,14 @@ class NavigationBarGestureManager extends EventEmitter<{
                 Main.keyboard._keyboard?.gestureCancel();
             }
         } else {
-            if (lastMotion?.axis === 'horizontal' || -state.totalMotionDelta.y > this._swipeUpThreshold) {
-                this._navigationGestureController.gestureEnd(direction);
-            } else {
-                this.emit("subthreshold-swipe-up");
+            if (lastMotion?.axis === 'vertical' && -state.totalMotionDelta.y < this._swipeUpThreshold) {
                 this._navigationGestureController.gestureCancel();
+            } else {
+                this._navigationGestureController.gestureEnd(direction);
             }
         }
+
+        this.emit('gesture-ended', state);
 
         this._hasStarted = false;
     }
@@ -372,6 +379,8 @@ class NavigationBarGestureManager extends EventEmitter<{
     private _onGestureCanceled() {
         Main.keyboard._keyboard?.gestureCancel();
         this._navigationGestureController.gestureCancel();
+
+        this.emit('gesture-ended', this._recognizer.currentState);
 
         this._hasStarted = false;
     }
