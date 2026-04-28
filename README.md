@@ -3,9 +3,9 @@
 
 An extension for GNOME Shell that enhances the user experience for devices with a touchscreen – primarily focused (and tested) on tablets.
 
-TouchUp does not strive to reinvent the wheel and instead provides many features well known from mobile OSes, such as a system navigation bar, notification swipe gestures or onscreen keyboard enhancements. Have a look at the roadmap below for a full list.
+TouchUp does not strive to reinvent the wheel and instead provides many features well known from mobile OSes, such as a system navigation bar, notification swipe gestures or onscreen keyboard enhancements. Have a look at the roadmap below for the full picture.
 
-The aim is to provide an intuitive, elegant, configurable and stable interface that feels native to the touch form factor. However, please be aware this is not always possible nor easy since GNOME extension development does not come without challenges or limits – in case you find a bug please do not hesitate to [open an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so it can be fixed quickly.
+The aim is to make Linux on mobile more competitive and accessible by providing an intuitive, elegant, configurable and stable interface that feels native to the touch form factor and stays out of your way. However, please be aware this is not always possible nor easy since GNOME Shell extension development does not come without challenges or limits – should you find a bug please do not hesitate to [open an issue](https://github.com/mityax/gnome-extension-touchup/issues/new) so it can be fixed quickly.
 
 
 ## Installation
