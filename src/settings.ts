@@ -182,6 +182,13 @@ export const settings = {
         }
     },
 
+    panel: {
+        /**
+         * Whether to allow opening and closing the panel menus via a swipe gesture.
+         */
+        panelMenusSwipeToOpenEnabled: new BoolSetting('panel-menus-swipe-to-open-enabled', true),
+    },
+
     screenRotateUtils: {
         /**
          * Whether to show a floating screen rotate button when GNOME Shell's auto-rotate setting is disabled,
