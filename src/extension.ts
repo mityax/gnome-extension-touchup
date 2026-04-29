@@ -104,7 +104,7 @@ export default class TouchUpExtension extends Extension {
 
         // Optional features (that can be toggled on or off via a setting) are imported dynamically, for two reasons:
         //  - make the extension as slim as possible (users only "pay" for what they use)
-        //  - make the extension more compatible with modified shells (e.g. Ubuntu or Gnome Mobile): turned off
+        //  - make the extension more compatible with modified shells (e.g. Ubuntu or GNOME Shell Mobile): turned off
         //    features cannot cause errors
 
         await this.defineFeature({

@@ -184,7 +184,7 @@ export const settings = {
 
     screenRotateUtils: {
         /**
-         * Whether to show a floating screen rotate button when Gnome's auto-rotate setting is disabled,
+         * Whether to show a floating screen rotate button when GNOME Shell's auto-rotate setting is disabled,
          * and the device is physically rotated.
          *
          * Note: This has no effect if the device does not have an accelerometer.

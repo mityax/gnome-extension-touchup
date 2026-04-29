@@ -29,7 +29,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
             styleClass: 'touchup-navbar',
             onRealize: () => GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                 // Since the navigation bar's button sizes are not yet available before/at realization (at least
-                // in Gnome >= 49), we schedule reallocation here once:
+                // in GNOME Shell >= 49), we schedule reallocation here once:
                 this.reallocate();
                 return GLib.SOURCE_REMOVE;
             }),
