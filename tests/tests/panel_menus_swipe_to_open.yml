@@ -1,0 +1,87 @@
+
+from: base
+
+
+env:
+  NOTIFICATION_PANEL_REGION: 13.0% 4.5% 43.6% 84.8%  # left half to ignore calendar
+
+defs:
+  close_current_menu:
+    - invoke_key: esc
+    - wait:
+        for: desktop
+
+
+steps:
+  # Drag downwards on calendar panel button, check mid-gesture and end:
+  - touch_press:   50% 1%
+  - touch_move:    50% 10%
+  - touch_move:    50% 20%
+  - touch_move:    50% 30%
+  - touch_move:    50% 40%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_open_mid_gesture
+      regions: $NOTIFICATION_PANEL_REGION
+      timeout: 5s
+  - touch_release: 50% 50%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_open
+      regions: $NOTIFICATION_PANEL_REGION
+      timeout: 5s
+
+  - sleep: 1s
+
+  # Drag up to close, check mid-gesture and end:
+  - touch_press:   50% 50%
+  - touch_move:    50% 40%
+  - touch_move:    50% 30%
+  - touch_move:    50% 20%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_close_mid_gesture
+      regions: $NOTIFICATION_PANEL_REGION
+      timeout: 5s
+  - touch_move:    50% 10%
+  - touch_release: 50% 0%
+  - wait:
+      for: desktop
+      timeout: 5s
+      
+  # Open calendar again, and this time don't drag on the button but only close to it on the panel:
+  - touch:
+      - 67% 1%
+      - 67% 10%
+      - 67% 20%
+      - 67% 30%
+      - 67% 40%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_open
+      regions: $NOTIFICATION_PANEL_REGION
+  - close_current_menu:
+
+  # Check quick settings, but start dragging on the right panel, not directly on the quick settings button:
+  - touch:
+      - 85% 1%
+      - 85% 10%
+      - 85% 20%
+      - 85% 30%
+      - 85% 40%
+  - wait:
+      for: panel_menus_swipe_to_open/quicksettings_open
+  - close_current_menu:
+
+  # Check that just a tap on the calendar button works:
+  - touch: 50% 1%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_open
+      regions: $NOTIFICATION_PANEL_REGION
+  - close_current_menu:
+
+  # Check that clicking on the calendar button opens the menu already on press, not only on release:
+  - mouse_press: 50% 1%
+  - wait:
+      for: panel_menus_swipe_to_open/calendar_open
+      regions: $NOTIFICATION_PANEL_REGION
+  - mouse_release: 50% 1%
+
+
+
