@@ -107,7 +107,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
      * This callback is invoked when the context in which the navigation bar appears on screen is changed, e.g. when
      * the overview is toggled or a window is moved close to the navigation bar or away from it.
      */
-    protected abstract onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean }): void;
+    protected abstract onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean, isKeyboardOpen: boolean}): void;
 
     protected onBeforeReallocate(): void {}
 
@@ -124,6 +124,7 @@ export default abstract class BaseNavigationBar<A extends St.Widget> extends Eve
                 this.onUpdateToSurrounding({
                     isWindowNear,
                     isInOverview: Main.overview.visible,
+                    isKeyboardOpen: Main.keyboard.visible,
                 });
             }
         });

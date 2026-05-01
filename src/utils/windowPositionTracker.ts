@@ -18,6 +18,8 @@ export default class WindowPositionTracker {
         Main.overview.connectObject('shown', this._update.bind(this), this);
         Main.overview.connectObject('hidden', this._update.bind(this), this);
 
+        Main.keyboard.connectObject('visibility-changed', this._update.bind(this), this);
+
         Main.sessionMode.connectObject('updated', this._update.bind(this), this);
 
         for (const metaWindowActor of global.get_window_actors()) {
@@ -85,6 +87,7 @@ export default class WindowPositionTracker {
 
     destroy() {
         Main.overview.disconnectObject(this);
+        Main.keyboard.disconnectObject(this);
         Main.sessionMode.disconnectObject(this);
         // @ts-ignore
         global.windowGroup.disconnectObject(this);

@@ -34,7 +34,7 @@ const NAV_BAR_HEIGHT = 22;
 export default class GestureNavigationBar extends BaseNavigationBar<_EventPassthroughActor> {
     declare private pill: St.Bin;
     private styleClassUpdateInterval: IntervalRunner;
-    private _isWindowNear: boolean = false;
+    private _isWindowNearAndNotOnSystemChrome: boolean = false;
     readonly gestureManager: NavigationBarGestureManager;
 
     constructor(props: {reserveSpace: boolean, invisibleMode: boolean}) {
@@ -78,12 +78,14 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
         });
     }
 
-    protected onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean}): void {
-        this._isWindowNear = surrounding.isWindowNear && !surrounding.isInOverview;
+    protected onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean, isKeyboardOpen: boolean}): void {
+        this._isWindowNearAndNotOnSystemChrome =
+            surrounding.isWindowNear && !(surrounding.isInOverview || surrounding.isKeyboardOpen);
 
         if (!this.reserveSpace) {
             let newInterval = surrounding.isInOverview || !surrounding.isWindowNear ? 3000 : 500;
-            // if a window is moved onto/away from the navigation bar or overview is toggled, schedule update soonish:
+            // if a window is moved onto/away from the navigation bar or overview/keyboard is toggled, schedule
+            // update soonish:
             this.styleClassUpdateInterval.scheduleOnce(250);
             this.styleClassUpdateInterval.setInterval(newInterval);
 
@@ -127,7 +129,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
     }
 
     private updateStyleClasses() {
-        if (this.reserveSpace && this._isWindowNear) {
+        if (this.reserveSpace && this._isWindowNearAndNotOnSystemChrome) {
             // Make navbar opaque (black or white, based on shell theme brightness):
             this.actor.remove_style_class_name('touchup-navbar--transparent');
             this.pill.remove_style_class_name('touchup-navbar__pill--dark');
