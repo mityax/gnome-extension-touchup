@@ -38,7 +38,7 @@ export const feedbackPlatforms = Object.freeze([
         buttonLabel: 'Create Issue',
     },
     {
-        title: 'Leave a review on Gnome Extensions',
+        title: 'Leave a Review on GNOME Extensions',
         url: 'https://extensions.gnome.org/extension/8102',
         buttonLabel: 'Leave Review',
     },

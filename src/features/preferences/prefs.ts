@@ -10,6 +10,7 @@ import {settings} from "$src/settings";
 import {MiscPage} from "$src/features/preferences/pages/miscPage";
 import Gio from "gi://Gio";
 import {assetsGResourceFile} from "$src/config";
+import {GesturesPage} from "$src/features/preferences/pages/gesturesPage";
 
 
 export default class TouchUpPreferences extends ExtensionPreferences {
@@ -26,6 +27,7 @@ export default class TouchUpPreferences extends ExtensionPreferences {
         const pages = [
             new NavigationBarPage(),
             new OskPage(),
+            new GesturesPage(),
             new MiscPage(),
             new DonationsPage(),
         ];

@@ -129,7 +129,7 @@ export class OverviewGestureController extends GestureController<['up' | 'down']
             confirmSwipe: (baseDistance: number, points: number[], progress: number, cancelProgress: number) => {
                 this._baseDist = baseDistance;
 
-                // The following ternary expression is needed to fix a bug (presumably in Gnome Shell's
+                // The following ternary expression is needed to fix a bug (presumably in GNOME Shell's
                 // OverviewControls) that causes a `progress` of 1 to be passed to this callback on the first
                 // gesture begin, even if the overview is not visible:
                 this._initialProgress = Main.overview.visible ? progress : 0;

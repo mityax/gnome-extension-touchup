@@ -51,7 +51,7 @@ export class NavigationBarPage extends Adw.PreferencesPage {
                 }),
                 buildSwitchRow({
                     title: "Ignore Touch Mode",
-                    subtitle: "Enable the navigation bar regardless of whether Gnome's touch mode is enabled " +
+                    subtitle: "Enable the navigation bar regardless of whether GNOME Shell's touch mode is enabled " +
                         "or supported on this device",
                     setting: settings.navigationBar.ignoreTouchMode,
                 }),

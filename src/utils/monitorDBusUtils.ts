@@ -71,7 +71,7 @@ export class Monitor {
     isBuiltin: boolean = false;
 
     constructor(variant: GLib.Variant) {
-        // variant.deepUnpack() yields (in Gnome 48):
+        // variant.deepUnpack() yields (in GNOME Shell 48):
         // (see for docs: https://gitlab.gnome.org/GNOME/mutter/-/blob/main/data/dbus-interfaces/org.gnome.Mutter.DisplayConfig.xml#L385)
         // [
         //   [ // - [0] - meta information

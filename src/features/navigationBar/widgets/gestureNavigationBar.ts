@@ -490,7 +490,7 @@ DEBUG:
     // };
     // const verticalPadding = (area.h - this.pill.height) / 2;
 
-    // High-level attempt (works but has memory leak - at least since Gnome Shell 46, maybe before too):
+    // High-level attempt (works but has memory leak - at least since GNOME Shell 46, maybe before too):
     // const stream = Gio.MemoryOutputStream.new_resizable();
     // // @ts-ignore (ts doesn't understand Gio._promisify())
     // // noinspection JSVoidFunctionReturnValueUsed

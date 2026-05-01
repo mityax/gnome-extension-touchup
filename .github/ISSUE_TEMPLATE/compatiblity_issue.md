@@ -33,7 +33,7 @@ If applicable, add screenshots to help explain your problem.
 **System:**
 
  - OS: [e.g. Fedora 45, Ubuntu 22.01, ...]
- - Gnome Version [e.g. 49.1]
+ - GNOME Shell Version [e.g. 49.1]
 
 **Additional context**
 Add any other context about the problem here.

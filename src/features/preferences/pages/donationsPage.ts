@@ -59,13 +59,14 @@ export class DonationsPage extends Adw.PreferencesPage {
             naturalWrapMode: Gtk.NaturalWrapMode.WORD,
             hexpand: true,
             label:
-                'Mobile platforms are dominated by big tech oligarchs, and Gnome itself is tough to use on touch ' +
-                'devices in everyday life. TouchUp helps improve Gnome’s usability on touchscreen devices and ' +
-                'makes it a viable, free alternative: tablet users are no longer forced to sacrifice user experience ' +
-                'for freedom, control and privacy.\n\nBy donating, you’re supporting a project that helps users regain ' +
-                'control over their own devices and gives them another option than profit-driven ecosystems. ' +
-                'Every contribution – be it code, monetary, suggestions or feedback – helps keep open software ' +
-                'such as TouchUp competitive and accessible.\n\nThank you for making a difference! ❤️'
+                'Mobile platforms are dominated by big tech oligarchs, and GNOME Shell itself was not designed for ' +
+                'use on touch devices in everyday life. TouchUp helps improve the Shell\'s usability on touchscreen ' +
+                'devices and makes it a viable, free alternative: tablet users are no longer forced to sacrifice ' +
+                'user experience for freedom, control and privacy.\n\n' +
+                'By donating, you’re supporting a project that helps users regain control over their own devices and ' +
+                'gives them another option than profit-driven ecosystems. Every contribution – be it code, monetary, ' +
+                'suggestions or feedback – helps keep open software such as TouchUp competitive and accessible.\n\n' +
+                'Thank you for making a difference! ❤️'
         }));
 
         return box;

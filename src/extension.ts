@@ -104,7 +104,7 @@ export default class TouchUpExtension extends Extension {
 
         // Optional features (that can be toggled on or off via a setting) are imported dynamically, for two reasons:
         //  - make the extension as slim as possible (users only "pay" for what they use)
-        //  - make the extension more compatible with modified shells (e.g. Ubuntu or Gnome Mobile): turned off
+        //  - make the extension more compatible with modified shells (e.g. Ubuntu or GNOME Shell Mobile): turned off
         //    features cannot cause errors
 
         await this.defineFeature({
@@ -141,15 +141,14 @@ export default class TouchUpExtension extends Extension {
             },
         });
 
-        BETA:
-            await this.defineFeature({
-                name: 'panel-menus-swipe-to-open',
-                // TODO: add setting
-                create: async pm => {
-                    const m = (await import('$src/features/panel/panelMenusSwipeToOpenFeature'));
-                    return new m.PanelMenusSwipeToOpenFeature(pm);
-                },
-            });
+        await this.defineFeature({
+            name: 'panel-menus-swipe-to-open',
+            setting: settings.panel.panelMenusSwipeToOpenEnabled,
+            create: async pm => {
+                const m = (await import('$src/features/panel/panelMenusSwipeToOpenFeature'));
+                return new m.PanelMenusSwipeToOpenFeature(pm);
+            },
+        });
 
         await this.defineFeature({
             name: 'floating-screen-rotate-button',
