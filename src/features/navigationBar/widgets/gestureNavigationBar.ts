@@ -80,11 +80,19 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
 
     protected onUpdateToSurrounding(surrounding: {isWindowNear: boolean, isInOverview: boolean}): void {
         this._isWindowNear = surrounding.isWindowNear && !surrounding.isInOverview;
+
         if (!this.reserveSpace) {
             let newInterval = surrounding.isInOverview || !surrounding.isWindowNear ? 3000 : 500;
             // if a window is moved onto/away from the navigation bar or overview is toggled, schedule update soonish:
             this.styleClassUpdateInterval.scheduleOnce(250);
             this.styleClassUpdateInterval.setInterval(newInterval);
+
+            // If any window is near, notify the actor to passthrough events **only** in the region of the focused
+            // window (to avoid focus change on navigation gestures while also allowing interaction with the focused
+            // window if it is behind the navigation bar):
+            this.actor.passthroughRect = surrounding.isWindowNear
+                    ? global.display.get_focus_window().get_frame_rect()
+                    : null;
         } else {
             void this.updateStyleClasses();
         }
@@ -394,18 +402,73 @@ class NavigationBarGestureManager extends EventEmitter<{
 
 
 /**
- * An actor that is invisible to events, i.e. passes them through to any actors below.
+ * An actor that is invisible to events, i.e. passes them through to any actors below, in the given
+ * [passthroughRegion] while intercepting all events outside of it.
+ *
+ * If [passthroughRegion] is set to `null`, the actor intercepts all events as usual.
  */
 class _EventPassthroughActor extends Widgets.Bin {
     static {
         GObject.registerClass(this);
     }
 
+    private _passthroughRect: Mtk.Rectangle | null = null;
+
+    get passthroughRect(): Mtk.Rectangle | null {
+        return this._passthroughRect;
+    }
+
+    set passthroughRect(value: Mtk.Rectangle | null) {
+        this._passthroughRect = value;
+    }
+
     vfunc_pick(pick_context: Clutter.PickContext) {
-        // By not making any call to this.pick_box(...) here, we make this actor pass through all events to
-        // any actor potentially below it. Therefore, this actor is only a visuals and does not react to
-        // events.
-        return;
+        if (!this.should_pick(pick_context))
+            return;
+
+        // If there's no rect to pass events through in, resort to default behavior (intercept all events on
+        // this actor):
+        if (!this._passthroughRect) {
+            super.vfunc_pick(pick_context);
+            return;
+        }
+
+        const actorFrame = Mtk.Rectangle.from_graphene_rect(
+            this.get_transformed_extents(),
+            Mtk.RoundingStrategy.ROUND,
+        );
+        const [doesIntersect, intersect] = this._passthroughRect.intersect(actorFrame);
+
+        // If the passthrough rect overlaps with this actor, construct rectangles to pick such that all events outside
+        // the passthrough rect are intercepted:
+        if (doesIntersect) {
+            const leftRect = new Clutter.ActorBox({
+                x1: 0,
+                y1: 0,
+                x2: Math.max(0, intersect.x - actorFrame.x),
+                y2: actorFrame.height,
+            });
+            const bottomRect = new Clutter.ActorBox({
+                x1: intersect.x - actorFrame.x,
+                y1: intersect.height,
+                x2: intersect.x - actorFrame.x + intersect.width,
+                y2: actorFrame.height,
+            });
+            const rightRect = new Clutter.ActorBox({
+                x1: (intersect.x - actorFrame.x) + intersect.width,
+                y1: 0,
+                x2: actorFrame.width,
+                y2: actorFrame.height,
+            });
+
+            this.pick_box(pick_context, leftRect);
+            this.pick_box(pick_context, bottomRect);
+            this.pick_box(pick_context, rightRect);
+
+        // If there is no overlap, resort to default behavior again:
+        } else {
+            super.vfunc_pick(pick_context);
+        }
     }
 }
 
