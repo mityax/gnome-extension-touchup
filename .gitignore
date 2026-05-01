@@ -1,12 +1,12 @@
-/dist/
-
 /node_modules/
+/.idea/
+/.venv/
 
+/dist/
 /tools/.gnome-shell
 
 /tests/assets/dist/*
 /tests/img/*
+/tests/miniqa-cache/
 
 !.gitkeep
-
-/.idea/
