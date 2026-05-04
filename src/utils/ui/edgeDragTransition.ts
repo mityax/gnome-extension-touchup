@@ -32,28 +32,42 @@ export class EdgeDragTransition {
     }
 
     interpolate(extent: number): TransitionValues {
-        const initialProg = this.initialExtent / this.fullExtent;
+        const initialProg   = this.initialExtent / this.fullExtent;
         const unboundedProg = (extent / this.fullExtent) + initialProg;
-        const prog = clamp(unboundedProg, 0, 1);
+        const prog          = clamp(unboundedProg, 0, 1);
+        const ease          = EdgeDragTransition.easeInOut(prog);
 
-        let scale = prog * 0.3 + 0.7;
+        let scale       = ease * 0.3 + 0.7;
+        let translation = -this.fullExtent * (1 - ease);
 
-        let opacity = Math.min((prog - initialProg) / (1 - initialProg), 1);
-        let translation = Math.min(-this.fullExtent * scale * (1-prog), 0);
+        const activeRange = 1 - initialProg;
+        const opacity     = activeRange > 0
+            ? clamp((prog - initialProg) / activeRange, 0, 1)
+            : 1;
 
-        const overshoot = Math.max(Math.log(unboundedProg), 0);
+        const excess    = Math.max(unboundedProg - 1, 0) * this.fullExtent;
+        const overshoot = EdgeDragTransition.rubberBand(excess, this.fullExtent);
 
         if (this.overshootMode === OvershootMode.translation) {
-            translation += overshoot * 20;
+            translation += overshoot;
         } else if (this.overshootMode === OvershootMode.scale) {
-            scale += overshoot * 0.05;
+            scale += (overshoot / this.fullExtent) * 0.08;
         }
 
         return {
-            translation: translation,
+            translation,
             opacity: opacity * 255,
-            scale: scale,
-        }
+            scale,
+        };
+    }
+
+    private static rubberBand(displacement: number, dim: number, coefficient = 0.55): number {
+        if (displacement <= 0 || dim <= 0) return 0;
+        return (1 - 1 / (displacement * coefficient / dim + 1)) * dim;
+    }
+
+    private static easeInOut(t: number): number {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
     }
 
     interpolateRelative(progress: number): TransitionValues {
@@ -68,4 +82,5 @@ export class EdgeDragTransition {
         return this.interpolateRelative(1);
     }
 }
+
 
