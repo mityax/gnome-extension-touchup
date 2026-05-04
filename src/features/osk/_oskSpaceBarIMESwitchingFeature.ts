@@ -34,7 +34,10 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
                     const d = state.finalMotionDirection.direction === 'left'
                         ? 'backward'
                         : 'forward';
-                    this._activateInputSource(this._getNextInputSource(d));
+                    const nextSource = this._getNextInputSource(d);
+                    if (nextSource) {
+                        this._activateInputSource(nextSource);
+                    }
                 }
             }
         });
@@ -115,6 +118,8 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
     private _buildIMEIndicator() {
         const {sources, currentSource} = this._getInputSources();
 
+        if (!currentSource) return;
+
         const mode = settings.osk.spaceBarIMESwitching.indicatorMode.get();
         let markup = ''
 
@@ -140,6 +145,8 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
     private _getNextInputSource(direction: 'forward' | 'backward' = 'forward') {
         const {sources, currentSource} = this._getInputSources();
 
+        if (!currentSource || sources.length < 2) return null;
+
         const currIdx = sources.indexOf(currentSource);
         const d = direction === 'forward' ? 1 : -1;
         const newIdx = (sources.length + currIdx + d) % sources.length;
@@ -156,7 +163,7 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
             .sort()
             .map(k => sourcesObj[k as keyof typeof sourcesObj]) as InputSource[];
 
-        const currentSource: InputSource = manager.currentSource;
+        const currentSource: InputSource | null = manager.currentSource;
         return {sources, currentSource};
     }
 
