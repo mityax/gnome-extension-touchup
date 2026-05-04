@@ -18,9 +18,7 @@ export class _TouchPadActor extends Widgets.Column {
     }
 
     private readonly _onClose: () => void;
-    private readonly _virtualInputDevice = Clutter.get_default_backend().get_default_seat().create_virtual_device(
-        Clutter.InputDeviceType.TOUCHPAD_DEVICE
-    );
+    private _virtualInputDevice?: Clutter.VirtualInputDevice;
     private readonly _overviewController = new OverviewGestureController();
     private readonly _wsController = new WorkspaceGestureController({
         monitorIndex: Main.layoutManager.primaryIndex ?? 0,
@@ -134,12 +132,12 @@ export class _TouchPadActor extends Widgets.Column {
                 const d = state.currentMotionDelta;
                 const [dx, dy] = this._clampMovementToMonitor(d.x, d.y);
                 this._lastPos = [dx, dy];
-                this._virtualInputDevice.notify_absolute_motion(state.events.at(-1)!.timeUS, dx, dy);
+                this._virtualInputDevice!.notify_absolute_motion(state.events.at(-1)!.timeUS, dx, dy);
             } else if (state.totalFingerCount === 2) {
                 // TODO: support pinch gestures
 
                 const d = state.currentMotionDelta;
-                this._virtualInputDevice.notify_scroll_continuous(
+                this._virtualInputDevice!.notify_scroll_continuous(
                     state.events.at(-1)!.timeUS, -d.x, -d.y,
                     Clutter.ScrollSource.FINGER, Clutter.ScrollFinishFlags.NONE
                 );
@@ -156,28 +154,36 @@ export class _TouchPadActor extends Widgets.Column {
             this._overviewController.gestureEnd(oneOf(state.lastMotionDirection?.direction, ['up', 'down']));
             this._wsController.gestureEnd(oneOf(state.lastMotionDirection?.direction, ['left', 'right']));
         } else if (state.isTap) {
-            this._virtualInputDevice.notify_absolute_motion(state.events.at(-1)!.timeUS, this._lastPos![0], this._lastPos![1]);
+            this._virtualInputDevice!.notify_absolute_motion(state.events.at(-1)!.timeUS, this._lastPos![0], this._lastPos![1]);
 
             const button = state.totalFingerCount === 2 ? Clutter.BUTTON_SECONDARY : Clutter.BUTTON_PRIMARY;
-            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
+            this._virtualInputDevice!.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.PRESSED);
             await Delay.ms(100);
-            this._virtualInputDevice.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
+            this._virtualInputDevice!.notify_button(GLib.get_monotonic_time(), button, Clutter.ButtonState.RELEASED);
         } else if (state.totalFingerCount === 1) {
             // After pointer movements have finished, we emit a (shortly delayed) pointer event to ensure that
             // the shell continues showing the cursor – as otherwise, the last touch event (touch release) would
             // come after the previously emitted pointer events and hide the cursor.
             await Delay.ms(20);
-            this._virtualInputDevice.notify_relative_motion(state.events.at(-1)!.timeUS, 0, 0);
+            this._virtualInputDevice!.notify_relative_motion(state.events.at(-1)!.timeUS, 0, 0);
         }
     }
 
     show() {
+        this._virtualInputDevice ??= Clutter.get_default_backend().get_default_seat().create_virtual_device(
+            Clutter.InputDeviceType.TOUCHPAD_DEVICE
+        );
         super.show();
         this._placeCursorOnOtherMonitor();
     }
 
     hide() {
         super.hide();
+
+        // Don't wait for next GC cycle to dispose the virtual device to ensure not to prevent the OSK from opening
+        // (the Shell's upstream OSK code handles its virtual keyboard the same way):
+        this._virtualInputDevice?.run_dispose();
+        this._virtualInputDevice = undefined;
     }
 
     set monitor(index: number) {
@@ -246,7 +252,7 @@ export class _TouchPadActor extends Widgets.Column {
     private _placeCursorOnOtherMonitor() {
         let idx = (this._monitorIndex + 1) % global.display.get_n_monitors();
         let geometry = global.display.get_monitor_geometry(idx);
-        this._virtualInputDevice.notify_absolute_motion(
+        this._virtualInputDevice!.notify_absolute_motion(
             global.get_current_time(),
             geometry.x + geometry.width / 2,
             geometry.y + geometry.height / 2,
@@ -254,6 +260,11 @@ export class _TouchPadActor extends Widgets.Column {
     }
 
     vfunc_destroy() {
+        // Don't wait for next GC cycle to dispose the virtual device to ensure not to prevent the OSK from opening
+        // (the Shell's upstream OSK code handles its virtual keyboard the same way):
+        this._virtualInputDevice?.run_dispose();
+        this._virtualInputDevice = undefined;
+
         this._overviewController.destroy();
         this._wsController.destroy();
         super.vfunc_destroy();
