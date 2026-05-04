@@ -93,7 +93,7 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             // window (to avoid focus change on navigation gestures while also allowing interaction with the focused
             // window if it is behind the navigation bar):
             this.actor.passthroughRect = surrounding.isWindowNear
-                    ? global.display.get_focus_window().get_frame_rect()
+                    ? global.display.get_focus_window()?.get_frame_rect()
                     : null;
         } else {
             void this.updateStyleClasses();
