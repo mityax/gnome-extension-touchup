@@ -1,6 +1,6 @@
 # Human-facing version names for release and debug builds:
-version: &version 1.5.0
-version-debug: &version-debug 1.5.0.debug
+version: &version 1.6.0
+version-debug: &version-debug 1.6.0.debug
 
 # The description that appears on EGO (extensions.gnome.org) and inside applications such
 # as "Extensions" or "Extension Manager":
@@ -8,9 +8,9 @@ description: &description |-
   Enhances various aspects of the GNOME experience when using a touch device.
 
   Current features:
-    - Navigation bar (gestures and buttons mode), as known from Android
-    - Touch gestures for notifications (dismiss, collapse, expand)
-    - Make the notification area touch-scrollable
+    - Navigation bar (gestures and buttons mode), as known from Android (supports Dash2Dock and Dash2Panel)
+    - Touch gestures for notifications (scroll, dismiss, collapse, expand, hide banner)
+    - Swipe down the panel to smoothly open any menu, swipe up open menus to dismiss
     - Onscreen Keyboard: key popups, extended keys, swipe to close, quick paste button, switch layouts by space bar swiping
     - Manually open the keyboard by swiping up the bottom left navigation bar edge
     - Floating rotate button when auto-rotation is off, as known from Android
