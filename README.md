@@ -14,8 +14,6 @@ The aim is to make Linux on mobile more competitive and accessible by providing 
 
 🛠️ or build and install from source: `npm run enable:release`
 
-> **Heads Up:** The GNOME Shell extension review process is severely delayed at the moment – in order to get the latest features (including GNOME Shell v50 support), grab a release from the [releases page](https://github.com/mityax/gnome-extension-touchup/releases) or build from source.
-
 ## Roadmap &amp; Implementation Status
 
 This is a rough overview over the implemented features and goals
