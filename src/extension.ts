@@ -179,15 +179,14 @@ export default class TouchUpExtension extends Extension {
                 },
             });
 
-        BETA:
-            await this.defineFeature({
-                name: 'dash-to-dock-integration',
-                setting: settings.integrations.dashToDock.enabled,
-                create: async pm => {
-                    const m = (await import('$src/features/integrations/dashToDockIntegrationFeature'));
-                    return new m.DashToDockIntegrationFeature(pm);
-                }
-            });
+        await this.defineFeature({
+            name: 'dash-to-dock-integration',
+            setting: settings.integrations.dashToDock.enabled,
+            create: async pm => {
+                const m = (await import('$src/features/integrations/dashToDockIntegrationFeature'));
+                return new m.DashToDockIntegrationFeature(pm);
+            }
+        });
 
         await this.defineFeature({
             name: 'donations',

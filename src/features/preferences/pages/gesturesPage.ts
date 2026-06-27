@@ -79,28 +79,27 @@ export class GesturesPage extends Adw.PreferencesPage {
             ]
         }));
 
-        BETA:
-            this.add(buildPreferencesGroup({
-                title: "DashToDock Swipe Up Gesture",
-                description: "Slightly swipe up the gesture navigation bar to easily open the dock. This feature " +
-                    "requires the DashToDock extension.",
-                children: [
-                    buildSwitchRow({
-                        title: "Enable DashToDock Swipe Up Gesture",
-                        subtitle: "Toggle to enable or disable the DashToDock swipe up gesture",
-                        setting: settings.integrations.dashToDock.enabled,
+        this.add(buildPreferencesGroup({
+            title: "DashToDock Swipe Up Gesture",
+            description: "Slightly swipe up the gesture navigation bar to easily open the dock. This feature " +
+                "requires the DashToDock extension.",
+            children: [
+                buildSwitchRow({
+                    title: "Enable DashToDock Swipe Up Gesture",
+                    subtitle: "Toggle to enable or disable the DashToDock swipe up gesture",
+                    setting: settings.integrations.dashToDock.enabled,
+                }),
+                buildSpinRow({
+                    title: 'Swipe Distance Threshold',
+                    subtitle: 'Adjust how far you can swipe the dock before the overview gesture begins',
+                    adjustment: new Gtk.Adjustment({
+                        lower: settings.integrations.dashToDock.gestureThresholdFactor.min,
+                        upper: settings.integrations.dashToDock.gestureThresholdFactor.max,
+                        step_increment: 1,
                     }),
-                    buildSpinRow({
-                        title: 'Swipe Distance Threshold',
-                        subtitle: 'Adjust how far you can swipe the dock before the overview gesture begins',
-                        adjustment: new Gtk.Adjustment({
-                            lower: settings.integrations.dashToDock.gestureThresholdFactor.min,
-                            upper: settings.integrations.dashToDock.gestureThresholdFactor.max,
-                            step_increment: 1,
-                        }),
-                        setting: settings.integrations.dashToDock.gestureThresholdFactor,
-                    }),
-                ]
-            }));
+                    setting: settings.integrations.dashToDock.gestureThresholdFactor,
+                }),
+            ]
+        }));
     }
 }
