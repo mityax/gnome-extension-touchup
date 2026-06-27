@@ -163,8 +163,8 @@ export default class GestureNavigationBar extends BaseNavigationBar<_EventPassth
             // it could result in capturing a screenshot outside the screens dimensions). In JS, we don't have
             // precise enough control over what runs when to ensure this in another way.
             // @ts-ignore
-            GLib.idle_add_once(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                if (!this.styleClassUpdateInterval.enabled)
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {  // TODO: Migrate to GLib.idle_add_once when dropping v49 support
+                if (!this.styleClassUpdateInterval.enabled)  // if the interval/extension is disabled, cancel idle directly
                     return GLib.SOURCE_REMOVE;
 
                 let rect = this.pill.get_transformed_extents();
