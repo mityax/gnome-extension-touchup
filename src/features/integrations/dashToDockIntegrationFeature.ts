@@ -68,7 +68,7 @@ export class DashToDockIntegrationFeature extends ExtensionFeature {
         });
         this.pm.connectTo(TouchUpExtension.instance!, 'feature-disabled', (name) => {
             if (name === 'navigation-bar') {
-                this.pm.drop(navBarChangedConnectPatch);
+                this.pm.drop(navBarChangedConnectPatch);  // feature has been destroyed; no need to disconnect anymore
                 this._syncEnabled();
             }
         });
@@ -109,6 +109,13 @@ export class DashToDockIntegrationFeature extends ExtensionFeature {
 }
 
 
+/**
+ * This is the core integration with DashToDock – it glues together TouchUps gesture navigation bar with DashToDocks
+ * dock, allowing to swipe up the dock before the navigation bar starts modulating overview progress.
+ *
+ * To keep things clean, the lifecycle of this class is tied to one specific dock instance and one specific
+ * navigation bar instance; if any of them is re-created, a new instance of this class will replace the old one.
+ */
 class _DashToDockIntegration {
     readonly pm: PatchManager;
     readonly dock: Dock;
@@ -131,6 +138,7 @@ class _DashToDockIntegration {
 
         this.pm.connectTo(navBar.gestureManager, 'gesture-started', (state: GestureState) => this._onGestureStarted(state));
         this.pm.connectTo(navBar.gestureManager, 'gesture-progress', (state: GestureState) => this._onGestureProgress(state));
+        this.pm.connectTo(navBar.gestureManager, 'navigation-started', () => this._onNavigationStarted());
         this.pm.connectTo(navBar.gestureManager, 'gesture-ended', (state: GestureState) => this._onGestureEnded(state));
 
         // React to dock visibility changes  (the docks `showing` and `hiding` signals are not always fired, thus we
@@ -203,28 +211,45 @@ class _DashToDockIntegration {
         }
     }
 
+    /**
+     * Called when the navigation bar decides it's time to let the navigation gesture effect take over; this is our
+     * signal to complete the dock transition.
+     */
+    private _onNavigationStarted() {
+        this._smoothFollower.stop();
+        this._easeDockVisible();
+    }
+
     private _onGestureEnded(state: GestureState) {
-        this._smoothFollower.stop()
+        this._smoothFollower.stop();
 
         if (this._isDockInIntermediateState) {
             this._isDockInIntermediateState = false;
 
             if (state.lastMotionDirection?.direction === 'up' || Main.overview.visible) {
                 this.dock._show();
-                this.dock.ease({
-                    opacity: 255,
-                    duration: 100,
-                });
+                this._easeDockVisible();
                 this._scheduleDelayedDockHide();
             } else {
                 this.dock._animateOut(0.1, 0);
-                this.dock.ease({
-                    opacity: 0,
-                    duration: 100,
-                    onStopped: () => this.dock.opacity = 255,
-                });
+                this._easeDockInvisible();
             }
         }
+    }
+
+    private _easeDockVisible() {
+        this.dock.ease({
+            opacity: 255,
+            duration: 100,
+        });
+    }
+
+    private _easeDockInvisible() {
+        this.dock.ease({
+            opacity: 0,
+            duration: 100,
+            onStopped: () => this.dock.opacity = 255,
+        });
     }
 
     private _scheduleDelayedDockHide() {

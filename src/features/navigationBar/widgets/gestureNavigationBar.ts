@@ -218,6 +218,7 @@ class NavigationBarGestureManager extends EventEmitter<{
     'gesture-started': [GestureState],
     'gesture-progress': [GestureState],
     'gesture-ended': [GestureState],
+    'navigation-started': [],
 }> {
     readonly gesture: Clutter.PanGesture;
     private _recognizer: GestureRecognizer;
@@ -227,11 +228,11 @@ class NavigationBarGestureManager extends EventEmitter<{
     /**
      * This virtual input device is used to emulate touch events in click-through-navbar scenarios.
      */
-    private readonly _virtualTouchscreenDevice: Clutter.VirtualInputDevice;
     private readonly _scaleFactor: number;
 
     private _hasStarted: boolean = false;
     private _isKeyboardGesture: boolean = false;
+    private _isSubthresholdGesture: boolean = false;
     private _edgeThreshold: number;
     private readonly _gestureSignalId: number;  // notice: only for shexli
     private _swipeUpThreshold: number = 0;
@@ -259,12 +260,6 @@ class NavigationBarGestureManager extends EventEmitter<{
             this._shouldHandleSequence(e));
 
         global.stage.add_action_full('touchup-navigation-bar', Clutter.EventPhase.CAPTURE, this.gesture);
-
-        // To emit virtual events:
-        this._virtualTouchscreenDevice = Clutter
-            .get_default_backend()
-            .get_default_seat()
-            .create_virtual_device(Clutter.InputDeviceType.TOUCHSCREEN_DEVICE);
     }
 
     setMonitor(monitorIndex: number) {
@@ -321,17 +316,22 @@ class NavigationBarGestureManager extends EventEmitter<{
             return;
         }
 
-        const direction = state.firstMotionDirection?.direction;
+        const finalDirection = state.firstMotionDirection?.direction;
         const highestPoint = state.events.reduce((prev, curr) => prev.y < curr.y ? prev : curr);
         const maxYDist = state.events[0].y - highestPoint.y;
 
-        if (maxYDist > this._swipeUpThreshold || (direction && direction !== 'up')) {
+        if (maxYDist > this._swipeUpThreshold || (finalDirection && finalDirection !== 'up')) {
             const baseDistFactor = settings.navigationBar.gesturesBaseDistFactor.get() / 10.0;
             const d = state.totalMotionDelta;
             this._navigationGestureController.gestureProgress(
                 (-d.y - this._swipeUpThreshold) / (this._navigationGestureController.overviewBaseDist * baseDistFactor),
                 -d.x / (this._navigationGestureController.workspaceBaseDist * 0.62)
             );
+
+            if (this._isSubthresholdGesture) {
+                this.emit('navigation-started');
+                this._isSubthresholdGesture = false;
+            }
         }
 
         this.emit('gesture-progress', state);
@@ -340,6 +340,7 @@ class NavigationBarGestureManager extends EventEmitter<{
     private _startGestures(state: GestureState) {
         this._hasStarted = true;
         this._isKeyboardGesture = false;
+        this._isSubthresholdGesture = true;
 
         if (Main.keyboard.visible) {
             // Close the keyboard if it's visible:
