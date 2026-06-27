@@ -1,14 +1,16 @@
 import ExtensionFeature from "$src/core/extensionFeature";
 import {PatchManager} from "$src/core/patchManager";
 import Clutter from "gi://Clutter";
-import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+// @ts-ignore: Type hints missing
+import {UnlockDialog} from "resource:///org/gnome/shell/ui/unlockDialog.js";
 import {GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import * as SystemActions from "resource:///org/gnome/shell/misc/systemActions.js";
 import TouchUpExtension from "$src/extension";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 import {SessionMode} from "$src/core/extensionFeatureManager";
 import {Delay} from "$src/utils/delay";
+import {assert} from "$src/core/logging";
 
 
 export class DoubleTapToSleepFeature extends ExtensionFeature {
@@ -43,15 +45,24 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
             };
         });
 
+        // Ensure the default ClickAction on the UnlockDialog cannot cancel our double-click gesture:
+        this.pm.appendToMethod(UnlockDialog.prototype, "_init", function(this: UnlockDialog) {
+            const action = this.get_actions().find((a: Clutter.Action) => a instanceof Clutter.ClickGesture);
+            action?.can_not_cancel(screenShieldGesture);
+
+            DEBUG: assert(!!action, "Could not find click action on UnlockDialog")
+        });
+
+        // Make the ScreenShield reactive:
         this.pm.setProperty(Main.layoutManager.screenShieldGroup, "reactive", true);
 
+        // Disallow touch-dragging on the panel, since that would cancel our double-click gesture:
         TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
     }
 
     private _sleep() {
         if (Main.sessionMode.currentMode !== SessionMode.unlockDialog) {
             const systemActions = SystemActions.getDefault();
-
             // @ts-ignore
             systemActions.activateLockScreen();
         } else {
@@ -68,7 +79,6 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
                 Main.screenShield._setActive(true);
             });
         }
-
     }
 
     destroy() {
@@ -78,27 +88,15 @@ export class DoubleTapToSleepFeature extends ExtensionFeature {
 }
 
 
+/**
+ * Creates a double-click gesture that only reacts to touch events
+ * */
 function createDoubleTapGesture(props: {onActivate: () => void, timeout?: number}): Clutter.ClickGesture {
-    const timeout = props.timeout ?? 250;  // in ms
-    let lastClick: number = -1;
-
-    const gesture = new Clutter.ClickGesture();
-
-    gesture.connect("may-recognize", () => {
-        return GestureRecognizerEvent.isTouch(Clutter.get_current_event());
+    const gesture = new Clutter.ClickGesture({
+        nClicksRequired: 2,
     });
-
-    gesture.connect("recognize", () => {
-        const now = GLib.get_monotonic_time() / 1000; // convert to ms
-
-        if (lastClick !== -1 && now - lastClick < timeout) {
-            props.onActivate();
-            lastClick = -1;
-        } else {
-            lastClick = now;
-        }
-    });
-
+    gesture.connect("may-recognize", () => GestureRecognizerEvent.isTouch(Clutter.get_current_event()));
+    gesture.connect("recognize", () => props.onActivate());
     return gesture;
 }
 
