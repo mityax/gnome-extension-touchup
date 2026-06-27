@@ -186,7 +186,8 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                 const gesture = new Clutter.ClickGesture();
                 gesture.connect("recognize", () => m.menu.open());
                 m.add_action_full("touchup-panel-menus-tap-gesture", Clutter.EventPhase.BUBBLE, gesture);
-                return () => m.remove_action(gesture);
+                const mRef = new Ref(m);
+                return () => mRef.take()?.remove_action(gesture);
             });
         }
     }
