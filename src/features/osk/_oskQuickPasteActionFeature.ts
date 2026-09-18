@@ -38,8 +38,8 @@ export class OSKQuickPasteAction extends ExtensionFeature {
         });
 
         // To emit the "paste" keyboard events:
-        this._virtualKeyboard = Clutter
-                .get_default_backend()
+        this._virtualKeyboard = global.stage.context
+                .get_backend()
                 .get_default_seat()
                 .create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
 
