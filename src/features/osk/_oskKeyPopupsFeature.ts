@@ -3,19 +3,21 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import Clutter from "gi://Clutter";
 import GObject from "gi://GObject";
-
-import {logger} from "$src/core/logging";
+import St from "gi://St";
 import ExtensionFeature from "$src/core/extensionFeature";
 import {settings} from "$src/settings";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/core/patchManager";
 import {extractKeyPrototype} from "./_oskUtils";
+import {findAllActorsBy} from "$src/utils/utils"
 import * as Widgets from '$src/utils/ui/widgets';
+
+type KeyboardKey = Keyboard.Key & St.BoxLayout & {keyButton: St.Button};  // the `Key` class is not exported by the Shell
 
 
 export class OSKKeyPopupFeature extends ExtensionFeature {
     private _keyPopupsCache: Map<Clutter.Actor, KeyPopup> = new Map();
-    private _hasPatchedKeyProto: boolean = false;
+    private _subpm: PatchManager | null = null;
 
     constructor(pm: PatchManager, keyboard: Keyboard.Keyboard | null) {
         super(pm);
@@ -31,38 +33,55 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
         }
     }
 
-    private _patchKeyMethods(keyProto: any) {
-        const self = this;
+    private _patchKeys(keyboard: Keyboard.Keyboard) {
+        // Extract all `Key` instances, that have a commit string (inferred from the key buttons label, as
+        // commitString is only a local variable):
+        const keyProto = extractKeyPrototype(keyboard);
+        const keys = findAllActorsBy(
+            keyboard,
+            a => keyProto.isPrototypeOf(a) && (a as KeyboardKey).keyButton.label?.trim(),
+        ) as KeyboardKey[];
 
-        // Show the key popup on key press:
-        this.pm.appendToMethod(keyProto, '_press', function (this: Keyboard.Key & Clutter.Actor, button, commitString) {
-            if (!commitString || commitString.trim().length === 0) {
-                return;
-            }
+        for (const key of keys) {
+            const commitString = key.keyButton.label;
 
-            if (!self._keyPopupsCache.get(this)) {
-                self._createKeyPopup(this, commitString);
-            }
+            // We base the `KeyPopup` open state upon the key buttons "active" pseudo-class instead of its `pressed`
+            // state, as this allows the key popup to be synthetically triggered by the extended keys feature and also
+            // is quite appropriate given the purely cosmetic nature of key popups:
+            let hasActivePseudo = false;  // keep track of "active" pseudo class manually, since other classes (like "hover") trigger the same signal
 
-            self._keyPopupsCache.get(this)?.open();
+            this._subpm!.connectTo(key.keyButton, "notify::pseudo-class", (_: St.Button) => {
+                const prevHasActivePseudo = hasActivePseudo;
+                hasActivePseudo = key.keyButton.has_style_pseudo_class("active");
 
-            Delay.ms(2000).then(() => {
-                self._keyPopupsCache.get(this)?.close();
+                // Lazily create the key popup when a key is pressed:
+                if (!prevHasActivePseudo && hasActivePseudo) {
+                    if (!this._keyPopupsCache.get(key)) {
+                        this._createKeyPopup(key, commitString);
+                    }
+
+                    this._keyPopupsCache.get(key)?.open();
+
+                    Delay.ms(2000).then(() => {
+                        this._keyPopupsCache.get(key)?.close();
+                    });
+
+                // Close popups when a key is released:
+                } else if (prevHasActivePseudo && !hasActivePseudo) {
+                    Delay.ms(settings.osk.keyPopups.duration.get()).then(() => {
+                        this._keyPopupsCache.get(key)?.close();
+                    });
+                }
             });
-        });
 
-        // Hide the key popup a few ms after a key has been released:
-        this.pm.appendToMethod(keyProto, '_release', function (this: Keyboard.Key & Clutter.Actor, button, commitString) {
-            Delay.ms(settings.osk.keyPopups.duration.get()).then(() => {
-                self._keyPopupsCache.get(this)?.close();
-            })
-        });
-
-        // Hide the key popup when the key's subkeys (umlauts etc.) popup is shown or the keypress is cancelled:
-        this.pm.appendToMethod(keyProto, ['_showSubkeys', 'cancel'], function (this: Clutter.Actor) {
-            // @ts-ignore
-            self._keyPopupsCache.get(this)?.close();
-        });
+            // Hide key popup when subkeys are shown (i.e. long pressing a key):
+            if (key._menu) {
+                this._subpm!.connectTo(key._menu, "open", () => {
+                    // @ts-ignore
+                    self._keyPopupsCache.get(key)?.close();
+                });
+            }
+        }
     }
 
     private _createKeyPopup(key: Keyboard.Key & Clutter.Actor, commitString: string) {
@@ -84,16 +103,11 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
     }
 
     public onNewKeyboard(keyboard: Keyboard.Keyboard) {
-        if (!this._hasPatchedKeyProto) {
-            let proto = extractKeyPrototype(keyboard);
+        // Use a singleton child `PatchManager` to reliably ensure we never operate twice on a keyboard:
+        this._subpm?.destroy();
+        this._subpm = this.pm.fork("subpm");
 
-            if (proto !== null) {
-                this._patchKeyMethods(proto);
-                this._hasPatchedKeyProto = true;
-            } else {
-                logger.error("Could not extract Key prototype, thus not patching OSK key popups.");
-            }
-        }
+        this._patchKeys(keyboard);
     }
 }
 

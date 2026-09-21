@@ -2,14 +2,14 @@
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import St from "gi://St";
 import Clutter from "gi://Clutter";
-
 import ExtensionFeature from "../../core/extensionFeature";
-import {PatchManager} from "$src/core/patchManager";
+import {Patch, PatchManager} from "$src/core/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import {settings} from "$src/settings";
 import {findAllActorsBy} from "$src/utils/utils";
 import Graphene from "gi://Graphene";
 import {isKeyboardKey} from "$src/features/osk/_oskUtils";
+import {Ref} from "$src/utils/ui/widgets";
 
 
 /** Maximum distance around a key that's still pressable */
@@ -61,6 +61,7 @@ export class OSKGesturesFeature extends ExtensionFeature {
         });
 
         let currentKey: Keyboard.Key | null = null;
+        let pseudoClassPatch: Patch | null = null;
 
         const onEvent = (evt: Clutter.Event) => {
             const state = recognizer.push(GestureRecognizerEvent.fromClutterEvent(evt));
@@ -76,26 +77,38 @@ export class OSKGesturesFeature extends ExtensionFeature {
                     currentKey
                     && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
                 ) {
-                    // @ts-ignore
-                    currentKey?.keyButton.emit("touch-event", evt);
+                    pseudoClassPatch = this.pm.patch(() => {
+                        const key = new Ref(currentKey);
+                        key.current!.keyButton.add_style_pseudo_class("active");
+                        return () => key.take()?.keyButton.remove_style_pseudo_class("active");
+                    });
                 }
             } else if (state.hasStrongMovement) {
                 // Cancel keypress:
-                if (currentKey) {
-                    // @ts-ignore
-                    currentKey._pressed = false;  // this prevents the key from being activated
-                    currentKey.cancel();  // this is used by the shell when swiping the emoji pager to cancel keypress; basically exactly what we want here
-                    currentKey = null;
+                currentKey = null;
+
+                if (pseudoClassPatch) {
+                    pseudoClassPatch.disable();
+                    this.pm.drop(pseudoClassPatch);
+                    pseudoClassPatch = null;
                 }
             } else if (state.hasGestureJustEnded) {
                 if (
                     currentKey
                     && !currentKey.keyButton.get_transformed_extents().contains_point(new Graphene.Point(state.pressCoordinates))
                 ) {
-                    currentKey?.keyButton.emit("touch-event", evt);
+                    if (state.isTap) {
+                        currentKey.keyButton.emit("clicked", evt);
+                    }
                 }
 
                 currentKey = null;
+
+                if (pseudoClassPatch) {
+                    pseudoClassPatch.disable();
+                    this.pm.drop(pseudoClassPatch);
+                    pseudoClassPatch = null;
+                }
             }
         }
 

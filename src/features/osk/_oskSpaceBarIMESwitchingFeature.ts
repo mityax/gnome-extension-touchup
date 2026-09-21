@@ -4,8 +4,11 @@ import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 import {getInputSourceManager, InputSource} from 'resource:///org/gnome/shell/ui/status/keyboard.js';
 
 import ExtensionFeature from "$src/core/extensionFeature";
+import TouchUpExtension from "../../extension";
+import {NavigationBarFeature} from "../navigationBar/navigationBarFeature";
+import GestureNavigationBar from "$src/features/navigationBar/widgets/gestureNavigationBar";
 import {PatchManager} from "$src/core/patchManager";
-import {assertExhaustive, findAllActorsBy} from "$src/utils/utils";
+import {assertExhaustive, findAllActorsBy, SHELL_VERSION} from "$src/utils/utils";
 import {extractKeyPrototype} from "$src/features/osk/_oskUtils";
 import St from "gi://St";
 import {GestureRecognizer} from "$src/utils/gestures/gestureRecognizer";
@@ -85,27 +88,46 @@ export class OskSpaceBarIMESwitchingFeature extends ExtensionFeature {
         // Create and add our gesture:
         const gesture = this.recognizer.createPanGesture({
             panAxis: Clutter.PanAxis.X,
-        })
+        });
         this.subpm!.patch(() => {
             keyButton.add_action_full('touchup-quick-ime-switching', Clutter.EventPhase.BUBBLE, gesture);
             const ref = new Ref(keyButton);
             return () => ref.take()?.remove_action(gesture);
         });
 
-        // OSK keys use raw touch events by default, which conflicts with our gesture handling. Thus,
-        // we'll disable the raw touch event listener, and instead make functional the built-in
-        // [Clutter.ClickGesture] that [St.Button]s have anyway:
-        const clickGesture = keyButton.get_actions()[0] as Clutter.ClickGesture;
-        this.subpm!.patchSignalHandler(keyButton, 'touch-event', () => null);
-        this.subpm!.connectTo(clickGesture, 'may-recognize', () => {
-            key._press(keyButton, ' ');
-            keyButton.add_style_pseudo_class('active');
-            return true;
+        if (SHELL_VERSION < [51]) {
+            // OSK keys use raw touch events by default until GNOME Shell v51, which conflicts with our gesture
+            // handling. Thus, we'll disable the raw touch event listener, and instead make functional the built-in
+            // [Clutter.ClickGesture] that [St.Button]s have anyway (this is consistent with the default behavior
+            // in v51 and later):
+            const clickGesture = keyButton.get_actions()[0] as Clutter.ClickGesture;
+            this.subpm!.patchSignalHandler(keyButton, 'touch-event', () => null);
+            this.subpm!.connectTo(clickGesture, 'may-recognize', () => {
+                key._press(keyButton, ' ');
+                keyButton.add_style_pseudo_class('active');
+                return true;
+            });
+            this.subpm!.connectTo(clickGesture, 'recognize', () => {
+                key._release(keyButton, ' ');
+                keyButton.remove_style_pseudo_class('active');
+            });
+        }
+
+        // Ensure the space bar IME switching gesture takes precedence over a possibly overlayed, invisible navigation
+        // bar's gesture:
+        function onNewNavBar() {
+            const navBar = TouchUpExtension.instance!.getFeature(NavigationBarFeature)?.currentNavBar;
+            if (navBar instanceof GestureNavigationBar) {
+                navBar.gestureManager.gesture.can_not_cancel(gesture);  // can_not_cancel cannot be undone; no need to use PatchManager here
+            }
+        }
+        this.subpm!.connectTo(TouchUpExtension.instance!, 'feature-enabled', (f) => {
+            if (f instanceof NavigationBarFeature) {
+                this.subpm!.connectTo(f, 'navigation-bar-changed', () => onNewNavBar());
+                onNewNavBar();
+            }
         });
-        this.subpm!.connectTo(clickGesture, 'recognize', () => {
-            key._release(keyButton, ' ');
-            keyButton.remove_style_pseudo_class('active');
-        });
+        onNewNavBar();
 
         // Add the IME indicator widget to the space bar:
         this.subpm!.patch(() => {
