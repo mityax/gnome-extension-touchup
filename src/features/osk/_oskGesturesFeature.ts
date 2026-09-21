@@ -34,6 +34,11 @@ export class OSKGesturesFeature extends ExtensionFeature {
                     && state.firstMotionDirection?.direction === 'down'
                 ) {
                     keyboard.gestureProgress(keyboard.height - state.totalMotionDelta.y);
+
+                    // If there is any keyboard key currently pressed, release it:
+                    const pressedKey = findAllActorsBy(
+                        keyboard, a => a instanceof St.Button && a.pressed).at(0) as St.Button | undefined;
+                    pressedKey?.fake_release();
                 }
             },
             onGestureEnded: state => {
