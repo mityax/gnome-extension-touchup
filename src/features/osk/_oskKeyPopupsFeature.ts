@@ -31,19 +31,30 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
         if (keyboard !== null) {
             this.onNewKeyboard(keyboard);
         }
+
+        // Recreate our patches whenever the keyboard is rebuilt:
+        const self = this;
+        this.pm.appendToMethod(Keyboard.Keyboard.prototype, '_updateKeys', function (this: Keyboard.Keyboard) {
+            self.onNewKeyboard(this);
+        });
     }
 
     private _patchKeys(keyboard: Keyboard.Keyboard) {
-        // Extract all `Key` instances, that have a commit string (inferred from the key buttons label, as
-        // commitString is only a local variable):
+        // Extract all `Key` instances:
         const keyProto = extractKeyPrototype(keyboard);
         const keys = findAllActorsBy(
             keyboard,
-            a => keyProto.isPrototypeOf(a) && (a as KeyboardKey).keyButton.label?.trim(),
+            a => keyProto.isPrototypeOf(a),
         ) as KeyboardKey[];
 
         for (const key of keys) {
             const commitString = key.keyButton.label;
+
+            // If the key has no commitString (inferred from its label) or has an action assigned, it doesn't
+            // get a popup:
+            if (key._hasAction || !commitString?.trim()) {
+                continue;
+            }
 
             // We base the `KeyPopup` open state upon the key buttons "active" pseudo-class instead of its `pressed`
             // state, as this allows the key popup to be synthetically triggered by the extended keys feature and also
