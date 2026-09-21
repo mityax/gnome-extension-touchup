@@ -36,6 +36,6 @@ fi
 echo "Successfully created toolbox \"$TOOLBOX_NAME\""
 
 echo "Building gnome-shell…"
-./meson-build.sh --toolbox "$TOOLBOX_NAME"
+./meson-build.sh --toolbox "$TOOLBOX_NAME" --reconfigure
 
 echo "✅ Done setting up toolbox: $TOOLBOX_NAME"
