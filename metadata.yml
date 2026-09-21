@@ -40,6 +40,7 @@ release: &release
   shell-version:
     - "49"
     - "50"
+    - "51"
   gettext-domain: touchup
   settings-schema: org.gnome.shell.extensions.touchup
   session-modes:

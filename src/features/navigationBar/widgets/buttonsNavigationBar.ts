@@ -19,7 +19,7 @@ export default class ButtonsNavigationBar extends BaseNavigationBar<St.BoxLayout
     constructor() {
         super({ reserveSpace: true });
 
-        let seat = Clutter.get_default_backend().get_default_seat();
+        let seat = global.stage.context.get_backend().get_default_seat();
         this._virtualKeyboardDevice = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
     }
 

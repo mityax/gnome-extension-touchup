@@ -12,7 +12,7 @@ export class TouchModeService extends ExtensionFeature {
         super(pm);
 
         this.pm.connectTo(
-            Clutter.get_default_backend().get_default_seat(),
+            global.stage.context.get_backend().get_default_seat(),
             'notify::touch-mode',
             () => this._onChanged(),
         );
@@ -23,7 +23,7 @@ export class TouchModeService extends ExtensionFeature {
     }
 
     get isTouchModeActive(): boolean {
-        return this.enforceTouchMode || Clutter.get_default_backend().get_default_seat().touchMode;
+        return this.enforceTouchMode || global.stage.context.get_backend().get_default_seat().touchMode;
     }
 
     get enforceTouchMode(): boolean {
