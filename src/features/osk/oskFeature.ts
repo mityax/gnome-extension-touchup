@@ -8,6 +8,7 @@ import {OSKKeyPopupFeature} from "$src/features/osk/_oskKeyPopupsFeature";
 import {OSKGesturesFeature} from "$src/features/osk/_oskGesturesFeature";
 import {OSKQuickPasteAction} from "$src/features/osk/_oskQuickPasteActionFeature";
 import {OskSpaceBarIMESwitchingFeature} from "$src/features/osk/_oskSpaceBarIMESwitchingFeature";
+import {OskSwipeGesturesFeature} from "$src/features/osk/_oskSwipeGesturesFeature";
 
 
 export class OskFeature extends ExtensionFeature {
@@ -30,9 +31,15 @@ export class OskFeature extends ExtensionFeature {
         });
 
         await this.defineSubFeature({
+            name: 'osk-swipe-gestures',
+            create: (pm) => new OskSwipeGesturesFeature(pm, Main.keyboard._keyboard),
+        });
+
+        await this.defineSubFeature({
             name: 'osk-space-bar-ime-switching',
             create: (pm) => new OskSpaceBarIMESwitchingFeature(pm, Main.keyboard._keyboard),
-            setting: settings.osk.spaceBarIMESwitching.enabled,
+            setting: settings.osk.swipeGestures.spaceAction,
+            enabled: () => settings.osk.swipeGestures.spaceAction.get() === 'ime',
         })
 
         // When the keyboard is replaced/a new keyboard is created, notify all sub-features:
@@ -41,6 +48,7 @@ export class OskFeature extends ExtensionFeature {
             self.getSubFeature(OSKKeyPopupFeature)?.onNewKeyboard(this);
             self.getSubFeature(OSKGesturesFeature)?.onNewKeyboard(this);
             self.getSubFeature(OSKQuickPasteAction)?.onNewKeyboard(this);
+            self.getSubFeature(OskSwipeGesturesFeature)?.onNewKeyboard(this);
             self.getSubFeature(OskSpaceBarIMESwitchingFeature)?.onNewKeyboard(this);
         });
     }
