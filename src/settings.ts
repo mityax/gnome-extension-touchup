@@ -171,14 +171,33 @@ export const settings = {
 
         spaceBarIMESwitching: {
             /**
-             * Whether to allow swiping on the OSK space bar to switch IMEs/languages.
-             */
-            enabled: new BoolSetting('osk-space-bar-ime-switching-enabled', true),
-
-            /**
              * How to indicate the IMEs/languages in the space bar:
              */
             indicatorMode: new EnumSetting<'all' | 'current' | 'none'>('osk-space-bar-ime-switching-indicator-mode', 'current')
+        },
+
+        swipeGestures: {
+            /**
+             * What swiping horizontally across the OSK space bar does.
+             *
+             * Available choices are:
+             *  - "cursor" - move the text cursor; tap anywhere with a second finger while swiping to select text
+             *  - "ime" - switch keyboard layouts/IMEs (see the space bar IME indicator mode)
+             *  - "none" - do nothing
+             */
+            spaceAction: new EnumSetting<'cursor' | 'ime' | 'none'>('osk-space-bar-swipe-action', 'cursor'),
+
+            /**
+             * Whether swiping left across the OSK backspace key selects whole words, deleting the
+             * selection when the swipe is released. A tap still deletes a single character.
+             */
+            backspace: new BoolSetting('osk-backspace-swipe-enabled', true),
+
+            /**
+             * How sensitive the OSK swipe gestures are: higher values move the cursor further (or
+             * select more words) for the same drag distance. 5 is the default.
+             */
+            sensitivity: new IntSetting('osk-swipe-sensitivity', 5, 1, 10),
         }
     },
 

@@ -1,16 +1,5 @@
 import Clutter from "gi://Clutter";
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 
-
-/**
- * The GNOME Shell version, as a `[major, minor]` array usable for version-gated code, e.g.
- *
- * ```ts
- * if (SHELL_VERSION > [50]) { ... }
- * if (SHELL_VERSION <= [50, 2]) { ... }
- * ```
- */
-export const SHELL_VERSION = Config.PACKAGE_VERSION.split(".").map(Number);
 
 /**
  * Used as a placeholder for external classes that we have no

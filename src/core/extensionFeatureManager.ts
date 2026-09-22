@@ -1,6 +1,6 @@
 import {PatchManager} from "./patchManager";
 import ExtensionFeature from "./extensionFeature";
-import {BoolSetting} from "../features/preferences/backend";
+import {BoolSetting, Setting} from "../features/preferences/backend";
 import {assert, logger} from "./logging";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import EventEmitter from "$src/utils/eventEmitter";
@@ -16,7 +16,12 @@ export enum SessionMode {
 export type FeatureMeta<T extends ExtensionFeature> = {
     name: string;
     create: (pm: PatchManager) => (Promise<T> | T);
-    setting?: BoolSetting;
+    setting?: Setting<any>;
+    /**
+     * Custom predicate deciding whether the feature should be enabled. When given, it takes
+     * precedence over the value of [setting] (which is then only used to re-evaluate on change).
+     */
+    enabled?: () => boolean;
     sessionModes?: SessionMode[];
 };
 
@@ -93,7 +98,9 @@ export class ExtensionFeatureManager extends EventEmitter<{
      */
     private async _syncFeatureEnabled<T extends ExtensionFeature>(meta: FeatureMeta<T>): Promise<boolean | null> {
         const isEnabled = this.enabledFeatures.has(meta.name);
-        let shouldBeEnabled = !meta.setting || meta.setting.get();
+        let shouldBeEnabled = meta.enabled
+            ? meta.enabled()
+            : (!meta.setting || !!meta.setting.get());
 
         // If `meta` has session modes set, but the current session mode is not listed there,
         // the feature must be disabled:
@@ -141,7 +148,7 @@ export class ExtensionFeatureManager extends EventEmitter<{
             logger.error(`Error while activating feature "${meta.name}":`, e);
 
             // Disable the feature for future launches:
-            PROD: meta.setting?.set(false);
+            PROD: if (meta.setting instanceof BoolSetting) meta.setting.set(false);
 
             // Show a notification:
             import('$src/utils/showFeatureInitializationErrorNotification')

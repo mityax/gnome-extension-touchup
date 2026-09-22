@@ -3,6 +3,7 @@ import GObject from "gi://GObject";
 import {settings} from "$src/settings";
 import Gtk from "gi://Gtk";
 import {
+    buildComboRow,
     buildPreferencesGroup,
     buildSpinRow,
     buildSwitchRow,
@@ -85,23 +86,46 @@ export class OskPage extends Adw.PreferencesPage {
         }));
 
         this.add(buildPreferencesGroup({
-            title: "Space Bar IME Switching",
-            description: "Switch keyboard layouts by swiping the space bar.",
+            title: "Space Bar & Backspace Swipes",
+            description: "Slide across the space bar to move the cursor or switch layouts, and across " +
+                "the backspace key to select whole words and delete them.",
             children: [
-                buildSwitchRow({
-                    title: "Enable Space Bar IME Switching",
-                    subtitle: "Whether to enable the space bar IME switching gesture or not",
-                    setting: settings.osk.spaceBarIMESwitching.enabled,
+                buildComboRow({
+                    title: "Space Bar Swipe",
+                    subtitle: "What sliding horizontally across the space bar does",
+                    items: [
+                        { label: "Move cursor (2nd finger tap selects)", value: "cursor" },
+                        { label: "Switch keyboard layout (IME)", value: "ime" },
+                        { label: "Do nothing", value: "none" },
+                    ],
+                    setting: settings.osk.swipeGestures.spaceAction,
                 }),
-                buildToggleButtonRow({
-                    title: "Space Bar IME Indicator Mode",
-                    subtitle: "Choose which layouts to show in the space bar",
+                buildComboRow({
+                    title: "Space Bar IME Indicator",
+                    subtitle: "Which layouts to show in the space bar when switching layouts by swiping",
                     items: [
                         { label: 'All',     value: 'all' },
                         { label: 'Current', value: 'current' },
                         { label: 'None',    value: 'none' },
                     ],
                     setting: settings.osk.spaceBarIMESwitching.indicatorMode,
+                }),
+                buildSwitchRow({
+                    title: "Backspace Swipe",
+                    subtitle: "Slide left across the backspace key to select whole words; releasing " +
+                        "deletes the selection. A tap still deletes one character.",
+                    setting: settings.osk.swipeGestures.backspace,
+                }),
+                buildSpinRow({
+                    title: "Swipe Sensitivity",
+                    subtitle: "How far the cursor moves, or how many words are selected, for a given slide",
+                    setting: settings.osk.swipeGestures.sensitivity,
+                    adjustment: new Gtk.Adjustment({
+                        lower: settings.osk.swipeGestures.sensitivity.min,
+                        upper: settings.osk.swipeGestures.sensitivity.max,
+                        step_increment: 1,
+                        page_increment: 1,
+                    }),
                 }),
             ]
         }));

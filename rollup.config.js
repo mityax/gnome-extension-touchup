@@ -173,7 +173,10 @@ export default {
         // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
         disallowImportsPlugin({
             include: `src/prefs.ts`,
-            blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
+            // The `resource:///org/gnome/shell/...` gresource only exists inside the Shell
+            // process; the preferences process is a separate process without it, so importing
+            // any of it from prefs code makes the preferences window fail to open.
+            blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell', 'resource:///org/gnome/shell'],
         }),
 
         // Add metadata.json:
