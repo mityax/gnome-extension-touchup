@@ -79,7 +79,7 @@ steps:
   - wait:
       for: gesture_navbar/app_grid_ws2
       regions:
-        - 0% 0% 100% 80%  # region such that we ignore the lower 20% of the screen, since the dock has inconsistent size
+        - 29.2% 12.6% 44.3% 17.7%  # only the two workspace previews at the app grid's top, since app icons change across versions
         - $NAVBAR_PILL_REGION
       diff: 5%
       timeout: 10s
@@ -99,8 +99,8 @@ steps:
       for: gesture_navbar/mid_gesture_up_right
       diff: 10%
       regions: 0% 0% 100% 80%  # ignore lower 20% of the screen (app icons, dock)
-
   - touch_release: 70% -40%
+
   # Check that the above gesture correctly resulted in overview (ws1):
   - wait:
       for: gesture_navbar/overview_ws1
@@ -124,14 +124,15 @@ steps:
   - wait:
       for: gesture_navbar/desktop_with_navbar
       timeout: 10s
+  - sleep: 5s
 
   # Open the OSK by dragging up the left nav bar edge:
   - touch:
-    - 25px -2px
-    - 25px -5%
-    - 25px -10%
-    - 25px -15%
-    - 25px -20%
+    - 5px -2px
+    - 5px -5%
+    - 5px -10%
+    - 5px -15%
+    - 5px -20%
     speed: slow
   - wait:
       for: gesture_navbar/osk_opened

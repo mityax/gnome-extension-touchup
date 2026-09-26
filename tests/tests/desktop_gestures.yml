@@ -38,5 +38,5 @@ steps:
   - wait:
       for: desktop_gestures/desktop_ws2
       regions: 
-        - 0% 0% 7% 4.5%  # the workspace indicator in the upper-left corner
+        - 3% 1.75% 2% 1%  # the workspace indicator in the upper-left corner (and of that only the pill indicating the active second workspace, since the overall indicator's background changes slightly across versions)
       timeout: 10s

@@ -39,6 +39,7 @@ fi
 
 # Copy the latest .zip file from ../dist to test assets:
 EXTENSION_ZIP="$(ls -t ../dist/*.zip 2>/dev/null | head -n1)"
+echo "Picking up test build $EXTENSION_ZIP"
 cp $EXTENSION_ZIP ./assets/dist/
 
 

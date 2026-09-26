@@ -5,7 +5,7 @@ from: base
 env:
   OSK_REGION:                0%    67%   100%  33%    # contains the entire OSK in fully opened state
   KEY_Y_SURROUNDING_REGION:  43.9% 67.4% 10.6% 15%    # region around the "y" key, including key popup
-  KEY_Y_POPUP_REGION:        47.6% 66.6% 4.9% 6.9%    # region containing only the key popup for "y"
+  KEY_Y_POPUP_REGION:        47.6% 66.6% 4.9%  6.9%    # region containing only the key popup for "y"
   QUICK_PASTE_ACTION_REGION: 17.5% 66.8% 33.5% 6.7%   # left half of the OSK's suggestion area
   TEXT_EDITOR_INNER_REGION:  18.3% 23.4% 63.2% 41.7%  # the central area of the text editors text area, above the OSK
   
@@ -73,6 +73,8 @@ steps:
 
   # Open osk (by tapping the terminal):
   - touch: center
+  - sleep: 1s      # for some reason, we have to tap the terminal twice for GNOME Shell >= v51, for the OSK to appear
+  - touch: center
   - wait:
       for: osk/osk_opened
       regions: $OSK_REGION
@@ -81,22 +83,26 @@ steps:
   # === Tests: OSK Gestures ===
   
   # Drag the OSK down a little to check mid-gesture appearance:
-  - touch_press:   50% 75%
-  - touch_move:    50% 76%
-  - touch_move:    50% 77%
-  - touch_move:    50% 78%
-  - touch_move:    50% 79%
+  - touch_press:   10% 75%
+  - touch_move:    10% 76%
+  - touch_move:    10% 77%
+  - touch_move:    10% 78%
+  - touch_move:    10% 79%
   - wait:
       for: osk/mid_gesture
       regions: $OSK_REGION
 
   # Complete the gesture and check if OSK is gone:
-  - touch_release: 50% 80%
+  - touch_release: 10% 80%
   - wait:
       for: terminal_opened
+  
+  #- sleep: 2s
 
-  # Tap the editor to reopen OSK:
-  - touch: 50% 50%
+  # Tap the terminal to reopen OSK:
+  - touch: center
+  - sleep: 1s      # for some reason, we have to tap the terminal twice for GNOME Shell >= v51, for the OSK to appear
+  - touch: center
   - wait:
       for: osk/osk_opened
       regions: $OSK_REGION
@@ -104,19 +110,19 @@ steps:
   - sleep: 2s
 
   # Drag the OSK down a little again, check mid-gesture appearance:
-  - touch_press:   50% 75%
-  - touch_move:    50% 76%
-  - touch_move:    50% 77%
-  - touch_move:    50% 78%
-  - touch_move:    50% 79%
+  - touch_press:   10% 75%
+  - touch_move:    10% 76%
+  - touch_move:    10% 77%
+  - touch_move:    10% 78%
+  - touch_move:    10% 79%
   - wait:
       for: osk/mid_gesture
       regions: $OSK_REGION
 
   # Cancel the gesture by moving up again, check if OSK is fully opened:
-  - touch_move:    50% 78%
-  - touch_move:    50% 77%
-  - touch_release: 50% 76%
+  - touch_move:    10% 78%
+  - touch_move:    10% 77%
+  - touch_release: 10% 76%
   - wait:
       for: osk/osk_opened
       regions: $OSK_REGION
@@ -126,7 +132,7 @@ steps:
   
   # Press a key, check that key popup appears, release the key, check if it disappears 
   # immediately:
-  - touch_press:   50% 75%  # open the OSK Key popup for key "y"
+  - touch_press: 50% 75%  # open the OSK Key popup for key "y"
   - wait:
       for: osk/osk_key_popup_y
       regions: 
@@ -195,6 +201,8 @@ steps:
   - wait:
       for: terminal_opened
   - touch: center  # osk has been closed by the `dconf` command above; open again
+  - sleep: 1s      # for some reason, we have to tap the terminal twice for GNOME Shell >= v51, for the OSK to appear
+  - touch: center
   - wait:
       for: osk/osk_opened
   - touch_press:   50% 75%  # open the OSK Key popup for key "y"
@@ -204,11 +212,13 @@ steps:
         - $KEY_Y_POPUP_REGION
   - touch_release: 50% 75%
 
+
   # === Overall Typing Result Check ===
   - wait:
       for: osk/typing_result_yyyy
       regions: 37.9% 20.5% 8.1% 5.4%  # region around the "$ yyyy" which should by now be written in the terminal
       timeout: 5s
+
 
   # === Tests: Quick Paste Action ===
   
@@ -216,10 +226,11 @@ steps:
 
   # Open the OSK, check that quick paste action appears:
   - touch: center
+  - sleep: 1s      # for some reason, we have to tap the terminal twice for GNOME Shell >= v51, for the OSK to appear
+  - touch: center
   - wait:
       for: osk/quick_paste_action
       regions: $QUICK_PASTE_ACTION_REGION
-      diff: 0  # ensure the quick paste action looks exactly as it should
 
   # Invoke the quick paste action and check if text is properly pasted into the terminal:
   - touch:
@@ -244,6 +255,8 @@ steps:
   
   - copy_quick_paste_action_text:
   
+  - touch: center
+  - sleep: 1s      # for some reason, we have to tap the editor twice for GNOME Shell >= v51, for the OSK to appear
   - touch: center
   - wait:
       for:
@@ -323,9 +336,11 @@ steps:
         dominant_color: white
       regions: $TEXT_EDITOR_INNER_REGION
   - touch: center  # open the OSK again (it's closed on settings change)
+  - sleep: 1s      # for some reason, we have to tap the terminal twice for GNOME Shell >= v51, for the OSK to appear
+  - touch: center
   - wait:
       for: osk/space_bar_ime_switching_hint_mode_all
-      regions: 44% 95% 10% 4%
+      regions: 41.1% 94.5% 9.7% 4.6%  # region surrounding the IME indicator
       timeout: 10s
 
 

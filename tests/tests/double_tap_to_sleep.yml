@@ -11,10 +11,15 @@ steps:
         dominant_color: black
   
   # Wake up again:
-  - touch: 50% 50%
+  #- touch: 50% 50%
+  #- wait:
+  #    for:
+  #      dominant_color: "#002d8e"  # desktop background blue, darkened by the Shell's screen shield
   
   # Unlock:
-  - type_text: $VM_USER_PASSWORD
+  - type_text: $VM_USER_PASSWORD  # typing the password also wakes up the machine
+    speed: slow
+  - sleep: 1s
   - invoke_key: ret
   - wait:
       for: desktop

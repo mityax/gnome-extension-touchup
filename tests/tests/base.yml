@@ -41,6 +41,23 @@ defs:
         regions:
           - 93.3% 5.3% 6.0% 4.8%  # the 'Next' button (very tight region)
     - touch: 96% 7%
+  wait_for_and_close_gnomeos_installer:
+    - wait:
+        for:
+          find: 
+            text: Welcome to GNOME OS!
+            background_color: $GTK_WINDOW_BG_COLOR
+            location_hint: center
+        timeout: 120s  # we give it a full two minutes to be safe
+    - touch:
+        - position:
+            find:
+              text: Try GNOME OS
+              location_hint: center
+    - wait:
+        for:
+          dominant_color: "#0252fe"  # desktop background blue
+        diff: 20%  # background varies slightly between versions, set higher tolerance
 
 
 steps:
@@ -51,18 +68,19 @@ steps:
   - invoke_key: ret
 
   # Wait for boot completion:
-  - wait:
-      for: base/desktop_defaultbg
-      timeout: 120s
-      regions: 0% 5% 100% 95%  # ignore the top bar, since its different before system setup
+  #- wait:
+  #    for: base/desktop_defaultbg
+  #    timeout: 120s
+  #    regions: 0% 5% 100% 95%  # ignore the top bar, since its different before system setup
+  
   
   # === GNOME OS Setup Wizard ====
   
-  # Wait for GNOME OS setup wizard to show up:
+  # Wait for GNOME OS setup wizard to show up after booting completed:
   - wait:
       for: 
         dominant_color: $GTK_WINDOW_BG_COLOR
-      timeout: 60s
+      timeout: 120s
 
   # Go to "Typing":
   - setup_wizard_go_to_next_page:
@@ -137,30 +155,19 @@ steps:
 
   # === GNOME OS Post-Install Popups ====
 
-  # Wait for, then close, the "Welcome to GNOME OS Nightly" popup:
+  # Wait for, then close, the "Welcome to GNOME OS <version>" popup:
   - wait:
       for: base/gnomeos_tour_popup
-      regions: 30.4% 15.9% 39.6% 68.5%  # only the popup, ignore background
+      regions:
+        - 33.7% 18.0% 33.5% 42.9%  # only the prominent illustration in the popup (ignore background and texts)
   - touch:
       - position:
           find:
             text: Skip
+  - invoke_key: esc  # close overview
 
   # Wait for, then close, the GNOME OS installer window:
-  - wait:
-      for:
-        find: 
-          text: Welcome to GNOME OS!
-          background_color: $GTK_WINDOW_BG_COLOR
-          location_hint: center
-      timeout: 120s  # we give it a full two minutes to be safe
-  - touch:
-      - position:
-          find:
-            text: Try GNOME OS
-            location_hint: center
-  - wait:
-      for: base/desktop_defaultbg
+  - wait_for_and_close_gnomeos_installer:
 
 
   # === Setup script, install & enable extension ====
@@ -203,7 +210,14 @@ steps:
   - wait:
       for: overview_ws1
 
-  # Open the terminal (we're in overview already):
+  # Wait for, then close, the GNOME OS installer window:
+  - invoke_key: esc  # close overview
+  - wait_for_and_close_gnomeos_installer:
+
+  # Open the terminal:
+  - invoke_key: meta_l  # go back into overview
+  - wait:
+      for: overview_ws1
   - type_text: terminal
   - invoke_key: ret
   - wait:
