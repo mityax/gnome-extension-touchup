@@ -9,7 +9,7 @@ import {settings} from "$src/settings";
 import {Delay} from "$src/utils/delay";
 import {PatchManager} from "$src/core/patchManager";
 import {extractKeyPrototype} from "./_oskUtils";
-import {findAllActorsBy} from "$src/utils/utils"
+import {findAllActorsBy, SHELL_VERSION} from "$src/utils/shellUtils"
 import * as Widgets from '$src/utils/ui/widgets';
 
 type KeyboardKey = Keyboard.Key & St.BoxLayout & {keyButton: St.Button};  // the `Key` class is not exported by the Shell
@@ -65,8 +65,20 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
                 const prevHasActivePseudo = hasActivePseudo;
                 hasActivePseudo = key.keyButton.has_style_pseudo_class("active");
 
+                /** @deprecated GNOME Shell < 51 */
+                const isPressedLegacy = key._pressed && key.keyButton.hover;  // add `hover` guard since this handler is only called on pseudo-class changes, not after the button is actually released
+
+                const isPressed = SHELL_VERSION < [51]
+                    ? isPressedLegacy
+                    : !prevHasActivePseudo && hasActivePseudo;
+                const isReleased = SHELL_VERSION < [51]
+                    ? !isPressedLegacy
+                    : prevHasActivePseudo && !hasActivePseudo;
+
+                const popupIsOpen = this._keyPopupsCache.get(key)?.isOpen;
+
                 // Lazily create the key popup when a key is pressed:
-                if (!prevHasActivePseudo && hasActivePseudo) {
+                if (isPressed && !popupIsOpen) {
                     if (!this._keyPopupsCache.get(key)) {
                         this._createKeyPopup(key, commitString);
                     }
@@ -78,7 +90,7 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
                     });
 
                 // Close popups when a key is released:
-                } else if (prevHasActivePseudo && !hasActivePseudo) {
+                } else if (isReleased && popupIsOpen) {
                     Delay.ms(settings.osk.keyPopups.duration.get()).then(() => {
                         this._keyPopupsCache.get(key)?.close();
                     });
@@ -180,6 +192,10 @@ class KeyPopup extends Widgets.Column {
     close() {
         this._open = false;
         this._updateOpen()
+    }
+
+    get isOpen() {
+        return this._open;
     }
 
     private get _isActuallyOpen() {

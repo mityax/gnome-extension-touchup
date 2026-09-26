@@ -173,7 +173,7 @@ export default {
         // https://gjs.guide/extensions/review-guidelines/review-guidelines.html#do-not-import-gtk-libraries-in-gnome-shell
         disallowImportsPlugin({
             include: `src/prefs.ts`,
-            blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell'],
+            blacklist: ['gi://Clutter', 'gi://Meta', 'gi://St', 'gi://Shell', 'resource:///org/gnome/shell'],
         }),
 
         // Add metadata.json:

@@ -3,7 +3,7 @@ import {PatchManager} from "$src/core/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import Clutter from "gi://Clutter";
 import * as Main from "resource:///org/gnome/shell/ui/main.js"
-import {findAllActorsBy} from "$src/utils/utils";
+import {findAllActorsBy} from "$src/utils/shellUtils";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";

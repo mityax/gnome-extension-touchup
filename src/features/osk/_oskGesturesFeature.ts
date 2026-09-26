@@ -6,7 +6,7 @@ import ExtensionFeature from "../../core/extensionFeature";
 import {Patch, PatchManager} from "$src/core/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import {settings} from "$src/settings";
-import {findAllActorsBy} from "$src/utils/utils";
+import {findAllActorsBy} from "$src/utils/shellUtils";
 import Graphene from "gi://Graphene";
 import {isKeyboardKey} from "$src/features/osk/_oskUtils";
 import {Ref} from "$src/utils/ui/widgets";

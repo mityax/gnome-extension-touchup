@@ -1,7 +1,7 @@
 //@ts-ignore
 import * as Keyboard from 'resource:///org/gnome/shell/ui/keyboard.js';
 
-import {findActorBy} from "../../utils/utils";
+import {findActorBy} from "../../utils/shellUtils";
 import Clutter from "gi://Clutter";
 
 
