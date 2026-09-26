@@ -117,7 +117,7 @@ export class OSKKeyPopupFeature extends ExtensionFeature {
 
         // When the popup is destroyed (which it is automatically, when the key it's attached to is),
         // remove it from the cache and drop this patch (to not destroy again later):
-        popup.connect('destroy', () => this._keyPopupsCache.delete(key));
+        this.pm.connectTo(popup, 'destroy', () => this._keyPopupsCache.delete(key));  // notice: pm is just used to make Shexli happy (not needed here as popups are destroyed anyways when the extension is disabled) :)
 
         // Destroy the popup on extension (or feature) disabling:
         this.pm.autoDestroy(popup);
