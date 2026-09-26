@@ -3,7 +3,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Widgets from "$src/utils/ui/widgets";
 import Clutter from "gi://Clutter";
 import {clamp} from "$src/utils/utils";
-import {findActorBy} from "$src/utils/shellUtils";
+import {findActorBy, SHELL_VERSION} from "$src/utils/shellUtils";
 import {css} from "$src/utils/ui/css";
 import {addLogCallback, LogCallback, LogCallbackArguments, removeLogCallback} from "$src/core/logging";
 import GObject from "gi://GObject";
@@ -181,6 +181,7 @@ class LogDisplay extends Widgets.Column {
                     }),
                     hscrollbarPolicy: PolicyType.AUTOMATIC,
                     vscrollbarPolicy: PolicyType.AUTOMATIC,
+                    ...(SHELL_VERSION >= [51] ? {enableTouchScrolling: true} : {}),
                 })
             ],
         });
@@ -193,7 +194,8 @@ class LogDisplay extends Widgets.Column {
     addLogMessage(msg: LogCallbackArguments) {
         // Check whether the log display is scrolled to the bottom and schedule auto-scroll down if so:
         const a = this.scrollView.current?.get_vadjustment();
-        if (a && a.value < a.upper - this.scrollView.current!.contentBox.get_height() - 25 * this._scaleFactor) {
+
+        if (a && a.value + a.pageSize > a.upper - 25 * this._scaleFactor) {
             Delay.ms(100).then(() => {
                 if (this.scrollView.current) a.set_value(a.upper);
             });
