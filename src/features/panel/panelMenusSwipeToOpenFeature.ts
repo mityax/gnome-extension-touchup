@@ -3,7 +3,7 @@ import {PatchManager} from "$src/core/patchManager";
 import {GestureRecognizer, GestureRecognizerEvent} from "$src/utils/gestures/gestureRecognizer";
 import Clutter from "gi://Clutter";
 import * as Main from "resource:///org/gnome/shell/ui/main.js"
-import {findAllActorsBy} from "$src/utils/shellUtils";
+import {findAllActorsBy, SHELL_VERSION} from "$src/utils/shellUtils";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as BoxPointer from "resource:///org/gnome/shell/ui/boxpointer.js";
 import {PopupMenu} from "resource:///org/gnome/shell/ui/popupMenu.js";
@@ -12,6 +12,9 @@ import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFoll
 import TouchUpExtension from "$src/extension";
 import {DisablePanelDragService} from "$src/services/disablePanelDragService";
 import {Ref} from "$src/utils/ui/widgets";
+import {logger} from "$src/core/logging";
+import St from "gi://St";
+import {Panel} from "resource:///org/gnome/shell/ui/panel.js";
 
 
 export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
@@ -19,15 +22,12 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
     private currentMenu: PanelMenu.Button | null = null;
     private smoothFollower: SmoothFollower<[SmoothFollowerLane]>;
     private isDuringOpenGesture: boolean = false;
+    private subpm: PatchManager | null = null;
 
     constructor(pm: PatchManager) {
         super(pm);
 
-        // Collect all menus we support:
-        const menus = this._collectMenus();
-
-        // Setup menu patches:
-        this._adjustClickGesturesForTouchEvents(menus);
+        // Applies globally (via prototype) to all panel menus:
         this._suppressOpenStateChangedSignalDuringOpenGesture();
 
         // Use a [SmoothFollower] for our gestures:
@@ -40,23 +40,53 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             }),
         ]);
 
+        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
+
+        // Patch all existing panel menus:
+        this._clearAndPatchAllMenus();
+
+        // When a new panel menu is added (e.g. accessibility settings, or from another extension), undo everything
+        // and re-patch to keep things simple:
+        this.pm.appendToMethod(Panel.prototype, '_addToPanelBox', () => {
+            this._clearAndPatchAllMenus();
+        });
+    }
+
+    private _clearAndPatchAllMenus() {
+        this.subpm?.destroy();
+        this.subpm = this.pm.fork("subpm");
+
+        // Collect all menus we support:
+        const menus = this._collectMenus();
+
         // Setup the gestures:
+        this._adjustClickGesturesForTouchEvents(menus);
         this._setupOpenGesture(menus);
         this._setupCloseGestures(menus);
-
-        TouchUpExtension.instance?.getFeature(DisablePanelDragService)?.inhibitPanelDrag();
     }
 
     private _setupOpenGesture(menus: PanelMenu.Button[]) {
+        const menuRefs = menus.map(m => new Ref(m));
+
         const recognizer = new GestureRecognizer({
             onGestureStarted: state => {
                 this.isDuringOpenGesture = true;
-                this.currentMenu = _findClosestMenu(menus, state.pressCoordinates.x);
-                this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
+
+                const validMenus = menuRefs.map(m => m.current).filter(m => !!m);
+                this.currentMenu = _findClosestMenu(validMenus, state.pressCoordinates.x);
+
+                if (SHELL_VERSION >= [51]) {
+                    // @ts-ignore: GNOME Shell >= v51 API, girs not yet available:
+                    this.currentMenu!.menu.open({animate: false});
+                } else {
+                    this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
+                }
+
                 this.currentTransition = new EdgeDragTransition({
                     fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
                 });
                 this._applyValues(this.currentTransition!.initialValues);
+
                 this.smoothFollower.start(lane => lane.currentValue = 0);
             },
             onGestureProgress: state => {
@@ -83,20 +113,26 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
         // Setup our `Clutter.PanGesture` instance:
         const gesture = recognizer.createPanGesture({ panAxis: Clutter.PanAxis.Y });
 
-        this.pm.patch(() => {
+        this.subpm!.patch(() => {
             Main.panel.add_action_full('touchup-panel-menus-swipe-to-open', Clutter.EventPhase.CAPTURE, gesture);
             return () => Main.panel.remove_action(gesture);
         });
     }
 
-
     private _setupCloseGestures(menus: PanelMenu.Button[]) {
-        this.pm.patch(() => {
+        this.subpm!.patch(() => {
             menus.forEach(m => {
                 const recognizer = new GestureRecognizer({
                     onGestureStarted: () => {
                         this.currentMenu = m;
-                        this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
+                        if (SHELL_VERSION >= [51]) {
+                            // @ts-ignore: GNOME Shell >= v51 API, girs not yet available:
+                            this.currentMenu!.menu.open({animate: false});
+                        } else {
+                            this.currentMenu!.menu.open(BoxPointer.PopupAnimation.NONE);
+                        }
+
+                        // TODO: consider: this.currentMenu._onOpenStateChanged?.();
                         this.currentTransition = new EdgeDragTransition({
                             fullExtent: this.currentBoxPointer?.get_preferred_height(-1)[1]!,
                         });
@@ -133,12 +169,37 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                 // @ts-ignore: type hint for `_boxPointer` is missing in girs
                 m.menu._boxPointer.add_action_full('touchup-panel-menus-swipe-to-close', Clutter.EventPhase.BUBBLE, gesture);
             });
+
             // @ts-ignore: type hint for `_boxPointer` is missing in girs
             const boxPointerRefs = menus.map(m => new Ref(m.menu._boxPointer));
             return () => {
                 boxPointerRefs.forEach(bp => bp.take()?.remove_action_by_name('touchup-panel-menus-swipe-to-close'));
             };
         });
+
+        // Teach all [St.ScrollView]'s pan gestures to not recognize if scrolling is currently not possible in
+        // the direction the user intends to – this allows the panel menu close gesture to kick in instead; for
+        // example, when the user swipes up the notification list in the panel while it is already scrolled to
+        // the bottom, the menu would close instead:
+        for (const m of menus) {
+            // @ts-ignore: type hint for `_boxPointer` is missing in girs
+            const scrollViews = findAllActorsBy(m.menu._boxPointer, (a) => {
+                return a instanceof St.ScrollView && a.get_actions().length > 0;
+            }) as St.ScrollView[];
+
+            for (const scrollView of scrollViews) {
+                this.subpm!.connectTo(scrollView.get_actions()[0], "may-recognize", () => {
+                    const adj = scrollView.get_vadjustment();
+                    const delta = (scrollView.get_actions()[0] as Clutter.PanGesture).get_accumulated_delta().get_y();
+
+                    if (delta < 0) {
+                        return adj.value < adj.upper - adj.pageSize;
+                    } else {
+                        return adj.value > adj.lower;
+                    }
+                });
+            }
+        }
     }
 
     /**
@@ -174,7 +235,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             if (!m._clickGesture) continue;
 
             // Step 01 - Make built-in click gesture (which recognizes on press) ignore touch input:
-            this.pm.connectTo(
+            this.subpm!.connectTo(
                 // @ts-ignore
                 m._clickGesture,
                 "may-recognize",
@@ -182,7 +243,7 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             );
 
             // Step 02 - Add another click gesture (that only recognizes on release) for touch interaction:
-            this.pm.patch(() => {
+            this.subpm!.patch(() => {
                 const gesture = new Clutter.ClickGesture();
                 gesture.connect("recognize", () => m.menu.open());
                 m.add_action_full("touchup-panel-menus-tap-gesture", Clutter.EventPhase.BUBBLE, gesture);
@@ -206,8 +267,11 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
                 if (this === self.currentMenu?.menu
                     && signalName === 'open-state-changed'
                     && self.isDuringOpenGesture) {
+                    logger.debug("Preventing open-state-changed signal");
                     return;
                 }
+
+                if (signalName === 'open-state-changed') logger.debug("Allowing open-state-changed signal")
 
                 originalMethod(signalName, ...args);
             },
@@ -236,7 +300,12 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
             target: this.currentTransition!.initialValues,
             duration: duration ?? 150,
             onStopped: () => {
-                this.currentMenu!.menu.close(BoxPointer.PopupAnimation.NONE);
+                if (SHELL_VERSION >= [51]) {
+                    // @ts-ignore: GNOME Shell >= v51 API, girs not yet available:
+                    this.currentMenu!.menu.close({animate: false});
+                } else {
+                    this.currentMenu!.menu.close(BoxPointer.PopupAnimation.NONE);
+                }
 
                 // Reset values for the next time the menu is opened:
                 this._applyValues(this.currentTransition!.finalValues);
