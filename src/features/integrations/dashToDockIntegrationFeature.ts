@@ -32,7 +32,7 @@ type Dock = {
     _hide(): void,
     _animateOut(duration: number, delay: number): void,
     get _slider(): { slideX: number },
-    getDockState(): DockState,
+    get dockState(): DockState,
     connect(signal: 'showing' | 'hiding', handler: () => void): number,
     disconnect(id: number): void,
 } & St.Bin;
@@ -187,7 +187,7 @@ class _DashToDockIntegration {
     }
 
     private get _dockIsVisible() {
-        return [DockState.SHOWN, DockState.SHOWING].includes(this.dock.getDockState());
+        return [DockState.SHOWN, DockState.SHOWING].includes(this.dock.dockState);
     }
 
     private get _swipeUpThreshold() {
@@ -203,7 +203,7 @@ class _DashToDockIntegration {
 
     private _onGestureProgress(state: GestureState) {
         // If the dock is already fully shown, do nothing:
-        if (this.dock.getDockState() === DockState.SHOWN) return;
+        if (this.dock.dockState === DockState.SHOWN) return;
 
         if (!this._dockIsVisible) {
             this._smoothFollower.update(lane => lane.target = -state.totalMotionDelta.y);
