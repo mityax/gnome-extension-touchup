@@ -14,7 +14,7 @@ import {SmoothFollower, SmoothFollowerLane} from "$src/utils/gestures/smoothFoll
 
 
 const SWIPE_UP_THRESHOLD = 40;  // in logical pixels (this also scaled by the `dash-to-dock-integration-overview-threshold-factor` setting – default: 2)
-const DOCK_HIDE_DELAY = 2 * 1000;  // in milliseconds
+const DOCK_HIDE_DELAY = 4 * 1000;  // in milliseconds
 const DASH_TO_DOCK_EXT_UUID = 'dash-to-dock@micxgx.gmail.com';
 
 
@@ -28,8 +28,8 @@ type DashToDockExtModule = {
 }
 
 type Dock = {
-    _show(): void,
-    _hide(): void,
+    showDock(): void,
+    updateDashVisibility(): void,
     _animateOut(duration: number, delay: number): void,
     get _slider(): { slideX: number },
     get dockState(): DockState,
@@ -227,7 +227,7 @@ class _DashToDockIntegration {
             this._isDockInIntermediateState = false;
 
             if (state.lastMotionDirection?.direction === 'up' || Main.overview.visible) {
-                this.dock._show();
+                this.dock.showDock();
                 this._easeDockVisible();
                 this._scheduleDelayedDockHide();
             } else {
@@ -257,7 +257,7 @@ class _DashToDockIntegration {
 
         this._hideDelay = Delay.ms(DOCK_HIDE_DELAY).then(() => {
             if (!Main.overview.visible) {
-                this.dock._hide();
+                this.dock.updateDashVisibility();   // lets Dash to Dock decide (intellihide, open icon menu, hover)
             }
             this._hideDelay = undefined;
         });
