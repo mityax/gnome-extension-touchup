@@ -33,6 +33,7 @@ type Dock = {
     _animateOut(duration: number, delay: number): void,
     get _slider(): { slideX: number },
     get dockState(): DockState,
+    set dockState(state: DockState),
     connect(signal: 'showing' | 'hiding', handler: () => void): number,
     disconnect(id: number): void,
 } & St.Bin;
@@ -231,6 +232,7 @@ class _DashToDockIntegration {
                 this._easeDockVisible();
                 this._scheduleDelayedDockHide();
             } else {
+                this.dock.dockState = DockState.SHOWING;  // Tell the dock that it is not yet in `HIDDEN` state
                 this.dock._animateOut(0.1, 0);
                 this._easeDockInvisible();
             }
