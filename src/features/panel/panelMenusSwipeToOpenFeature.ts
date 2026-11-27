@@ -244,10 +244,17 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
 
             // Step 02 - Add another click gesture (that only recognizes on release) for touch interaction:
             this.subpm!.patch(() => {
+                const mRef = new Ref(m);
                 const gesture = new Clutter.ClickGesture();
+
+                // Make sure to only react to touch events:
+                gesture.connect(
+                    "may-recognize",
+                    () => GestureRecognizerEvent.isTouch(Clutter.get_current_event()),
+                );
                 gesture.connect("recognize", () => m.menu.open());
                 m.add_action_full("touchup-panel-menus-tap-gesture", Clutter.EventPhase.BUBBLE, gesture);
-                const mRef = new Ref(m);
+
                 return () => mRef.take()?.remove_action(gesture);
             });
         }
