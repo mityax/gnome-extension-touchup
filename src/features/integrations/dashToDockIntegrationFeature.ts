@@ -23,6 +23,7 @@ type DashToDockExtModule = {
     dockManager?: {
         getDockByMonitor: (monitorIndex: number) => Dock,
         connect(signal: 'docks-ready', handler: () => void): number,
+        connect(signal: 'toggled', handler: () => void): number,  // like `docks-ready`, but also fires after dock destruction
         disconnect(id: number): void,
     }
 }
@@ -94,7 +95,16 @@ export class DashToDockIntegrationFeature extends ExtensionFeature {
     private async _onExtensionStateChanged(ext: any) {
         // @ts-ignore: ExtensionState.ACTIVE type hint is missing in girs
         if (ext?.state === ExtensionState.ACTIVE) {
+            let prevDockManager = this._extModule?.dockManager;
+
             this._extModule ??= await import('file://' + ext.path! + '/extension.js');
+
+            // Re-sync enabled whenever the `DockManager` created/removed all docks:
+            if (this._extModule?.dockManager && this._extModule?.dockManager !== prevDockManager) {
+                this.pm.connectTo(this._extModule!.dockManager, 'toggled', () => {
+                    this._syncEnabled();
+                });
+            }
         } else {
             this._extModule = undefined;
         }
@@ -256,15 +266,16 @@ class _DashToDockIntegration {
     private _scheduleDelayedDockHide() {
         this._hideDelay?.cancel();
 
-        this._hideDelay = Delay.ms(DOCK_HIDE_DELAY).then(() => {
+        this._hideDelay = Delay.ms(DOCK_HIDE_DELAY, 'resolve').then(() => {
             if (!Main.overview.visible) {
-                this.dock.updateDashVisibility();   // lets Dash to Dock decide (intellihide, open icon menu, hover)
+                this.dock.updateDashVisibility();   // lets Dash to Dock decide whether to hide or not (intellihide, open icon menu, hover)
             }
             this._hideDelay = undefined;
         });
     }
 
     destroy() {
+        this._hideDelay?.cancel();
         this.pm.destroy();
     }
 }
