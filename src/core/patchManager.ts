@@ -77,6 +77,9 @@ export class PatchManager {
     /**
      * Connect to a signal from any GObject/widget and automatically disconnect when the [PatchManager]
      * is disabled or destroyed.
+     *
+     * Notice: If [instance] allows connecting to a `destroy` signal, the given [signal] will be disconnected and this
+     * patch dropped upon `destroy` firing.
      */
     connectTo<A extends any[], R, S extends string>(instance: Connectable<A, R, S>, signal: S, handler: AnyFunc, debugName?: string): Patch {
         DEBUG: assert(!this._isDestroyed, `The PatchManager ${this.debugName ? `"${this.debugName}" ` : ' '}has already been and cannot be used anymore.`);
@@ -86,12 +89,13 @@ export class PatchManager {
                 instance.connect(signal, handler)
             ];
 
-            // If the given instance is a [Clutter.Actor], we drop this patch on actor destruction as it is
-            // an error to disconnect from a signal on a destroyed actor (which we would do if we would disable
-            // the patch):
-            if (instance instanceof Clutter.Actor) {
+            // If [instance] has a `destroy` signal (e.g. [Clutter.Actor]s), drop this patch on destruction as
+            // there is no need to disconnect from any signals on destroyed instances (and we won't keep a reference
+            // to the destroyed instance this way, allowing the GC to kick in):
+            try {
+                // @ts-ignore: TS doesn't know if there is a `destroy` signal:
                 signalIds.push(instance.connect('destroy', () => this.drop(patch)));
-            }
+            } catch {}
 
             return () => signalIds.forEach(s => instance.disconnect(s));
         }, debugName ?? `connectTo(${instance.constructor.name}:${signal})`);

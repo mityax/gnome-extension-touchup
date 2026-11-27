@@ -83,9 +83,8 @@ export class DashToDockIntegrationFeature extends ExtensionFeature {
 
         if (navBar instanceof GestureNavigationBar && dock) {
             this._integration = new _DashToDockIntegration(this.pm.fork('integration'), navBar, dock);
-            const connectPatch = this.pm.connectTo(dock as any as St.Bin, 'destroy', () => {
+            this.pm.connectTo(dock as any as St.Bin, 'destroy', () => {
                 this._syncEnabled();
-                this.pm.drop(connectPatch);
             });
         } else {
             this._integration = undefined;
