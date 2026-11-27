@@ -244,21 +244,17 @@ export class PanelMenusSwipeToOpenFeature extends ExtensionFeature {
 
             // Step 02 - Add another click gesture (that only recognizes on release) for touch interaction:
             this.subpm!.patch(() => {
+                const mRef = new Ref(m);
                 const gesture = new Clutter.ClickGesture();
-                // Only recognize touch input: pointer clicks are already handled by the
-                // built-in click gesture (see Step 01) and by the panel menu button.
-                // If this gesture also fired for pointer releases, it would open menus
-                // that other extensions intentionally open only later (e.g. the
-                // AppIndicator extension opens tray menus after its double-click
-                // arbitration window), and that later toggle would close them again
-                // immediately, making the menu flash open and shut.
+
+                // Make sure to only react to touch events:
                 gesture.connect(
                     "may-recognize",
-                    () => !GestureRecognizerEvent.isPointer(Clutter.get_current_event()),
+                    () => GestureRecognizerEvent.isTouch(Clutter.get_current_event()),
                 );
                 gesture.connect("recognize", () => m.menu.open());
                 m.add_action_full("touchup-panel-menus-tap-gesture", Clutter.EventPhase.BUBBLE, gesture);
-                const mRef = new Ref(m);
+
                 return () => mRef.take()?.remove_action(gesture);
             });
         }
